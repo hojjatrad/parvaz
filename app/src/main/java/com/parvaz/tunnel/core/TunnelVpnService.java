@@ -1,0 +1,1036 @@
+package com.parvaz.tunnel.core;
+
+import android.app.Notification;
+import androidx.core.app.NotificationCompat;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.SharedPreferences;
+import android.net.ConnectivityManager;
+import android.net.ProxyInfo;
+import android.net.VpnService;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.ParcelFileDescriptor;
+import android.os.StrictMode;
+import android.util.Log;
+import androidx.core.content.ContextCompat;
+import androidx.core.graphics.drawable.IconCompat;
+import com.parvaz.tunnel.MainActivity;
+import com.parvaz.tunnel.config.XrayConfigBuilder;
+import com.parvaz.tunnel.core.CoreManager;
+import com.parvaz.tunnel.core.LogBuffer;
+import com.parvaz.tunnel.core.NetworkMonitor;
+import com.parvaz.tunnel.model.Profile;
+import com.parvaz.tunnel.store.Prefs;
+import com.parvaz.tunnel.store.ProfileStore;
+import com.parvaz.tunnel.R;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.Locale;
+import libv2ray.CoreController;
+
+/* loaded from: classes.dex */
+public class TunnelVpnService extends VpnService {
+    public static final String CHANNEL_ID = "parvaz_vpn";
+    public static final int NOTIFY_ID = 8811;
+
+
+    /* renamed from: t */
+    public static final String[] ROUTED_IPV4 = {"0.0.0.0/5", "8.0.0.0/7", "11.0.0.0/8", "12.0.0.0/6", "16.0.0.0/4", "32.0.0.0/3", "64.0.0.0/2", "128.0.0.0/3", "160.0.0.0/5", "168.0.0.0/6", "172.0.0.0/12", "172.32.0.0/11", "172.64.0.0/10", "172.128.0.0/9", "173.0.0.0/8", "174.0.0.0/7", "176.0.0.0/4", "192.0.0.0/9", "192.128.0.0/11", "192.160.0.0/13", "192.169.0.0/16", "192.170.0.0/15", "192.172.0.0/14", "192.176.0.0/12", "192.192.0.0/10", "193.0.0.0/8", "194.0.0.0/7", "196.0.0.0/6", "200.0.0.0/5", "208.0.0.0/4"};
+
+    /* renamed from: u */
+    public static volatile boolean serviceRunning = false;
+
+    /* renamed from: v */
+    public static volatile int currentState = 0;
+
+    /* renamed from: a */
+    public int dayFlushTick;
+    public m b;
+    public NetworkMonitor c;
+
+    /* renamed from: d */
+    public long pendingDayDown;
+
+    /* renamed from: e */
+    public long pendingDayUp;
+    public Prefs f;
+
+    /* renamed from: g */
+    public Profile profile;
+    public i h;
+
+    /* renamed from: i */
+    public ParcelFileDescriptor tunInterface;
+
+    /* renamed from: j */
+    public long startedAt = 0;
+
+    /* renamed from: k */
+    public final Handler handler = new Handler(Looper.getMainLooper());
+
+    /* renamed from: l */
+    public int strikes = 0;
+
+    /* renamed from: m */
+    public int chainedSwitches = 0;
+
+    /* renamed from: n */
+    public long lastConnectAt = 0;
+
+    /* renamed from: o */
+    public volatile boolean switching = false;
+    public final HashMap p = new HashMap();
+
+    /* renamed from: q */
+    public long sessionUp = 0;
+
+    /* renamed from: r */
+    public long sessionDown = 0;
+    public final d s = new d();
+
+    /* JADX WARN: Can't change package for inner class: com.parvaz.tunnel.core.TunnelVpnService.a to com.parvaz.tunnel.core.TunnelVpnService$a */
+    /* loaded from: classes.dex */
+    public class a implements Runnable {
+        public a() {
+        }
+
+        @Override // java.lang.Runnable
+        public final void run() {
+            TunnelVpnService.this.lambda$lambda$autoSwitch$2$2();
+        }
+    }
+
+    /* JADX WARN: Can't change package for inner class: com.parvaz.tunnel.core.TunnelVpnService.b to com.parvaz.tunnel.core.TunnelVpnService$b */
+    /* loaded from: classes.dex */
+    public class b implements Runnable {
+        public b() {
+        }
+
+        @Override // java.lang.Runnable
+        public final void run() {
+            TunnelVpnService tunnelVpnService = TunnelVpnService.this;
+            tunnelVpnService.stopStatsTicker();
+            i iVar = new i();
+            tunnelVpnService.h = iVar;
+            tunnelVpnService.handler.postDelayed(iVar, 1000L);
+            tunnelVpnService.startHealthTicker();
+        }
+    }
+
+    /* JADX WARN: Can't change package for inner class: com.parvaz.tunnel.core.TunnelVpnService.c to com.parvaz.tunnel.core.TunnelVpnService$c */
+    /* loaded from: classes.dex */
+    public class c implements Runnable {
+        public c() {
+        }
+
+        @Override // java.lang.Runnable
+        public final void run() {
+            TunnelVpnService tunnelVpnService = TunnelVpnService.this;
+            tunnelVpnService.fail(tunnelVpnService.getString(R.string.no_alternative));
+        }
+    }
+
+    /* JADX WARN: Can't change package for inner class: com.parvaz.tunnel.core.TunnelVpnService.d to com.parvaz.tunnel.core.TunnelVpnService$d */
+    /* loaded from: classes.dex */
+    public class d extends BroadcastReceiver {
+        public d() {
+        }
+
+        @Override // android.content.BroadcastReceiver
+        public final void onReceive(Context context, Intent intent) {
+            if ("com.parvaz.tunnel.STOP".equals(intent.getAction())) {
+                TunnelVpnService.this.shutdown(true, false);
+            }
+        }
+    }
+
+    /* JADX WARN: Can't change package for inner class: com.parvaz.tunnel.core.TunnelVpnService.e to com.parvaz.tunnel.core.TunnelVpnService$e */
+    /* loaded from: classes.dex */
+    public class e implements NetworkMonitor.c {
+        public e() {
+        }
+
+        @Override
+        public TunnelVpnService outer() {
+            return TunnelVpnService.this;
+        }
+
+        @Override
+        public Runnable newReconnect() {
+            return TunnelVpnService.this.new f();
+        }
+    }
+
+    /* JADX WARN: Can't change package for inner class: com.parvaz.tunnel.core.TunnelVpnService.f to com.parvaz.tunnel.core.TunnelVpnService$f */
+    /* loaded from: classes.dex */
+    public class f implements Runnable {
+
+        /* JADX WARN: Can't change package for inner class: com.parvaz.tunnel.core.TunnelVpnService.f.a to com.parvaz.tunnel.core.TunnelVpnService$f$a */
+        /* loaded from: classes.dex */
+        public class a implements Runnable {
+            public a() {
+            }
+
+            @Override // java.lang.Runnable
+            public final void run() {
+                TunnelVpnService.this.lambda$lambda$autoSwitch$2$2();
+            }
+        }
+
+        /* JADX WARN: Can't change package for inner class: com.parvaz.tunnel.core.TunnelVpnService.f.b to com.parvaz.tunnel.core.TunnelVpnService$f$b */
+        /* loaded from: classes.dex */
+        public class b implements Runnable {
+            public b() {
+            }
+
+            @Override // java.lang.Runnable
+            public final void run() {
+                TunnelVpnService tunnelVpnService = TunnelVpnService.this;
+                tunnelVpnService.stopStatsTicker();
+                i iVar = new i();
+                tunnelVpnService.h = iVar;
+                tunnelVpnService.handler.postDelayed(iVar, 1000L);
+                tunnelVpnService.startHealthTicker();
+            }
+        }
+
+        /* JADX WARN: Can't change package for inner class: com.parvaz.tunnel.core.TunnelVpnService.f.c to com.parvaz.tunnel.core.TunnelVpnService$f$c */
+        /* loaded from: classes.dex */
+        public class c implements Runnable {
+            public c() {
+            }
+
+            @Override // java.lang.Runnable
+            public final void run() {
+                TunnelVpnService tunnelVpnService = TunnelVpnService.this;
+                tunnelVpnService.fail(tunnelVpnService.getString(R.string.no_alternative));
+            }
+        }
+
+        public f() {
+        }
+
+        @Override // java.lang.Runnable
+        public final void run() {
+            TunnelVpnService tunnelVpnService = TunnelVpnService.this;
+            try {
+                tunnelVpnService.h(tunnelVpnService.profile.remark, 5);
+                tunnelVpnService.stopStatsTicker();
+                tunnelVpnService.stopHealthTicker();
+                CoreManager.b().stop();
+                try {
+                    Thread.sleep(300L);
+                } catch (InterruptedException unused) {
+                }
+                ParcelFileDescriptor parcelFileDescriptor = tunnelVpnService.tunInterface;
+                CoreManager.b().start(tunnelVpnService, tunnelVpnService.profile, parcelFileDescriptor == null ? 0 : parcelFileDescriptor.getFd(), new a());
+                tunnelVpnService.lastConnectAt = System.currentTimeMillis();
+                tunnelVpnService.switching = false;
+                TunnelVpnService.serviceRunning = true;
+                tunnelVpnService.h(tunnelVpnService.profile.remark, 2);
+                tunnelVpnService.updateNotification(tunnelVpnService.profile.remark, tunnelVpnService.getString(R.string.reconnected));
+                tunnelVpnService.handler.post(new b());
+            } catch (Throwable th) {
+                Log.e("ParvazVpn", "reconnect failed", th);
+                tunnelVpnService.switching = false;
+                tunnelVpnService.handler.post(new c());
+            }
+        }
+    }
+
+    /* JADX WARN: Can't change package for inner class: com.parvaz.tunnel.core.TunnelVpnService.g to com.parvaz.tunnel.core.TunnelVpnService$g */
+    /* loaded from: classes.dex */
+    public class g implements Runnable {
+        public g() {
+        }
+
+        @Override // java.lang.Runnable
+        public final void run() {
+            String str;
+            String message;
+            String string;
+            TunnelVpnService tunnelVpnService = TunnelVpnService.this;
+            if (!tunnelVpnService.switching) {
+                tunnelVpnService.h(tunnelVpnService.getString(R.string.state_connecting), 1);
+            }
+            if (tunnelVpnService.switching) {
+                str = "switching server…";
+            } else {
+                str = "connecting…";
+            }
+            LogBuffer.listener(str);
+            try {
+                Prefs prefs = new Prefs(tunnelVpnService);
+                tunnelVpnService.f = prefs;
+                Profile byId = ProfileStore.f(tunnelVpnService).getById(prefs.f343a.getString("selected_profile", ""));
+                tunnelVpnService.profile = byId;
+                if (byId == null) {
+                    string = tunnelVpnService.getString(R.string.err_no_server);
+                } else if (VpnService.prepare(tunnelVpnService) != null) {
+                    string = tunnelVpnService.getString(R.string.err_no_permission);
+                } else {
+                    ParcelFileDescriptor c = tunnelVpnService.c(tunnelVpnService.f);
+                    tunnelVpnService.tunInterface = c;
+                    if (c == null) {
+                        string = tunnelVpnService.getString(R.string.err_tun);
+                    } else {
+                        CoreManager.b().start(tunnelVpnService, tunnelVpnService.profile, tunnelVpnService.tunInterface.getFd(), new h());
+                        TunnelVpnService.serviceRunning = true;
+                        if (tunnelVpnService.startedAt == 0) {
+                            tunnelVpnService.startedAt = System.currentTimeMillis();
+                        }
+                        tunnelVpnService.lastConnectAt = System.currentTimeMillis();
+                        tunnelVpnService.strikes = 0;
+                        tunnelVpnService.switching = false;
+                        tunnelVpnService.h(tunnelVpnService.profile.remark, 2);
+                        LogBuffer.listener("connected: " + tunnelVpnService.profile.remark + " (" + tunnelVpnService.profile.protocol + " " + tunnelVpnService.profile.displayAddress() + ")");
+                        tunnelVpnService.updateNotification(tunnelVpnService.profile.remark, tunnelVpnService.getString(R.string.state_connected));
+                        tunnelVpnService.stopStatsTicker();
+                        i iVar = new i();
+                        tunnelVpnService.h = iVar;
+                        tunnelVpnService.handler.postDelayed(iVar, 1000L);
+                        tunnelVpnService.startHealthTicker();
+                        return;
+                    }
+                }
+                tunnelVpnService.fail(string);
+            } catch (XrayConfigBuilder.a e) {
+                Log.e("ParvazVpn", "unsupported protocol", e);
+                message = tunnelVpnService.getString(R.string.err_unsupported_protocol, e.f6218b);
+                tunnelVpnService.fail(message);
+            } catch (Throwable th) {
+                Log.e("ParvazVpn", "connect failed", th);
+                if (th.getMessage() == null) {
+                    message = th.getClass().getSimpleName();
+                } else {
+                    message = th.getMessage();
+                }
+                tunnelVpnService.fail(message);
+            }
+        }
+    }
+
+    /* JADX WARN: Can't change package for inner class: com.parvaz.tunnel.core.TunnelVpnService.h to com.parvaz.tunnel.core.TunnelVpnService$h */
+    /* loaded from: classes.dex */
+    public class h implements Runnable {
+        public h() {
+        }
+
+        @Override // java.lang.Runnable
+        public final void run() {
+            TunnelVpnService.this.lambda$lambda$autoSwitch$2$2();
+        }
+    }
+
+    /* JADX WARN: Can't change package for inner class: com.parvaz.tunnel.core.TunnelVpnService.i to com.parvaz.tunnel.core.TunnelVpnService$i */
+    /* loaded from: classes.dex */
+    public class i implements Runnable {
+        public i() {
+        }
+
+        /* JADX WARN: Can't wrap try/catch for region: R(20:3|4|5|(16:44|8|9|10|(11:41|13|(1:19)|20|(3:22|(2:24|(1:29)(1:28))|30)|31|(1:33)|34|(1:36)(1:40)|37|38)|12|13|(2:15|19)|20|(0)|31|(0)|34|(0)(0)|37|38)|7|8|9|10|(0)|12|13|(0)|20|(0)|31|(0)|34|(0)(0)|37|38) */
+        /* JADX WARN: Removed duplicated region for block: B:15:0x0052  */
+        /* JADX WARN: Removed duplicated region for block: B:22:0x009f  */
+        /* JADX WARN: Removed duplicated region for block: B:33:0x00ed  */
+        /* JADX WARN: Removed duplicated region for block: B:36:0x00fb  */
+        /* JADX WARN: Removed duplicated region for block: B:40:0x0103  */
+        /* JADX WARN: Removed duplicated region for block: B:41:0x002c A[Catch: all -> 0x002a, TRY_LEAVE, TryCatch #1 {all -> 0x002a, blocks: (B:10:0x0026, B:41:0x002c), top: B:9:0x0026 }] */
+        @Override // java.lang.Runnable
+        /*
+            Code decompiled incorrectly, please refer to instructions dump.
+            To view partially-correct add '--show-bad-code' argument
+        */
+        public final void run() {
+            /*
+                Method dump skipped, instructions count: 306
+                To view this dump add '--comments-level debug' option
+            */
+            throw new UnsupportedOperationException("Method not decompiled: com.parvaz.tunnel.core.TunnelVpnService.i.run():void");
+        }
+    }
+
+    /* JADX WARN: Can't change package for inner class: com.parvaz.tunnel.core.TunnelVpnService.j to com.parvaz.tunnel.core.TunnelVpnService$j */
+    /* loaded from: classes.dex */
+    public class j implements Runnable {
+        public j() {
+        }
+
+        @Override // java.lang.Runnable
+        public final void run() {
+            TunnelVpnService.this.lambda$onCoreStopped$1();
+        }
+    }
+
+    /* JADX WARN: Can't change package for inner class: com.parvaz.tunnel.core.TunnelVpnService.k to com.parvaz.tunnel.core.TunnelVpnService$k */
+    /* loaded from: classes.dex */
+    public class k implements Runnable {
+        public k() {
+        }
+
+        @Override // java.lang.Runnable
+        public final void run() {
+            TunnelVpnService tunnelVpnService = TunnelVpnService.this;
+            tunnelVpnService.fail(tunnelVpnService.getString(R.string.state_disconnected));
+        }
+    }
+
+    /* JADX WARN: Can't change package for inner class: com.parvaz.tunnel.core.TunnelVpnService.l to com.parvaz.tunnel.core.TunnelVpnService$l */
+    /* loaded from: classes.dex */
+    public class l implements Runnable {
+
+        /* renamed from: b */
+        public final Profile f6237b;
+
+        /* renamed from: c */
+        public final String f6238c;
+
+        public l(Profile profile, String str) {
+            this.f6237b = profile;
+            this.f6238c = str;
+        }
+
+        @Override // java.lang.Runnable
+        public final void run() {
+            int fd;
+            TunnelVpnService tunnelVpnService = TunnelVpnService.this;
+            Profile profile = this.f6237b;
+            String str = this.f6238c;
+            tunnelVpnService.stopStatsTicker();
+            tunnelVpnService.stopHealthTicker();
+            CoreManager.b().stop();
+            try {
+                Thread.sleep(300L);
+            } catch (InterruptedException unused) {
+            }
+            try {
+                tunnelVpnService.profile = profile;
+                CoreManager b = CoreManager.b();
+                Profile profile2 = tunnelVpnService.profile;
+                ParcelFileDescriptor parcelFileDescriptor = tunnelVpnService.tunInterface;
+                if (parcelFileDescriptor == null) {
+                    fd = 0;
+                } else {
+                    fd = parcelFileDescriptor.getFd();
+                }
+                b.start(tunnelVpnService, profile2, fd, new a());
+                tunnelVpnService.lastConnectAt = System.currentTimeMillis();
+                tunnelVpnService.switching = false;
+                TunnelVpnService.serviceRunning = true;
+                tunnelVpnService.h(tunnelVpnService.profile.remark, 2);
+                tunnelVpnService.updateNotification(tunnelVpnService.profile.remark, tunnelVpnService.getString(R.string.switched_to, str));
+                tunnelVpnService.handler.post(new b());
+            } catch (Throwable th) {
+                Log.e("ParvazVpn", "auto-switch failed", th);
+                tunnelVpnService.switching = false;
+                tunnelVpnService.handler.post(new c());
+            }
+        }
+    }
+
+    /* JADX WARN: Can't change package for inner class: com.parvaz.tunnel.core.TunnelVpnService.m to com.parvaz.tunnel.core.TunnelVpnService$m */
+    /* loaded from: classes.dex */
+    public class m implements Runnable {
+
+        public TunnelVpnService outer() {
+            return TunnelVpnService.this;
+        }
+
+        /* renamed from: b */
+        public final long f6240b;
+
+        /* JADX WARN: Can't change package for inner class: com.parvaz.tunnel.core.TunnelVpnService.m.a to com.parvaz.tunnel.core.TunnelVpnService$m$a */
+        /* loaded from: classes.dex */
+        public class a implements Runnable {
+            public a() {
+            }
+
+            @Override // java.lang.Runnable
+            public final void run() {
+                boolean z;
+                CoreController coreController;
+                m mVar = m.this;
+                mVar.getClass();
+                if (TunnelVpnService.serviceRunning) {
+                    TunnelVpnService tunnelVpnService = TunnelVpnService.this;
+                    if (!tunnelVpnService.switching) {
+                        CoreManager b = CoreManager.b();
+                        if (b.running && (coreController = b.controller) != null && coreController.getIsRunning()) {
+                            z = true;
+                        } else {
+                            z = false;
+                        }
+                        boolean z2 = !z;
+                        long j = -1;
+                        if (!z2) {
+                            CoreManager b2 = CoreManager.b();
+                            String string = tunnelVpnService.f.f343a.getString("ping_url", "https://www.gstatic.com/generate_204");
+                            b2.getClass();
+                            try {
+                                CoreController coreController2 = b2.controller;
+                                if (coreController2 != null) {
+                                    j = coreController2.measureDelay(string);
+                                }
+                            } catch (Exception unused) {
+                            }
+                        }
+                        int i = tunnelVpnService.f.f343a.getInt("ping_threshold", 1200);
+                        if (!z2 && j >= 0 && j <= i) {
+                            tunnelVpnService.strikes = 0;
+                            tunnelVpnService.chainedSwitches = 0;
+                            if (tunnelVpnService.profile != null) {
+                                ProfileStore.f(tunnelVpnService).i(tunnelVpnService.profile.id, (int) j);
+                                // A healthy probe is the strongest signal this server
+                                // works here and now (idea 1.1).
+                                new ServerMemory(tunnelVpnService).recordSuccess(
+                                        tunnelVpnService, tunnelVpnService.profile.id, (int) j);
+                            }
+                            Intent intent = new Intent("com.parvaz.tunnel.STATE");
+                            intent.setPackage(tunnelVpnService.getPackageName());
+                            intent.putExtra("state", 4);
+                            intent.putExtra("ping", (int) j);
+                            Profile profile = tunnelVpnService.profile;
+                            if (profile != null) {
+                                intent.putExtra("profile_id", profile.id);
+                            }
+                            tunnelVpnService.sendBroadcast(intent);
+                            return;
+                        }
+                        tunnelVpnService.strikes++;
+                        Log.w("ParvazVpn", "health strike " + tunnelVpnService.strikes + " (coreDead=" + z2 + " delay=" + j + " threshold=" + i + ")");
+                        if (tunnelVpnService.strikes >= 2) {
+                            tunnelVpnService.handler.post(new TunnelVpnService_RunnableC0008AnonymousClass3_2(mVar));
+                        }
+                    }
+                }
+            }
+        }
+
+        public m(long j) {
+            this.f6240b = j;
+        }
+
+        @Override // java.lang.Runnable
+        public final void run() {
+            if (TunnelVpnService.serviceRunning) {
+                TunnelVpnService tunnelVpnService = TunnelVpnService.this;
+                if (tunnelVpnService.switching) {
+                    return;
+                }
+                tunnelVpnService.handler.postDelayed(this, this.f6240b);
+                if (System.currentTimeMillis() - tunnelVpnService.lastConnectAt < 10000) {
+                    return;
+                }
+                new Thread(new a()).start();
+            }
+        }
+    }
+
+    /* renamed from: e */
+    public static String fmtSpeed(long j2) {
+        double d2 = j2;
+        String[] strArr = {"B/s", "KB/s", "MB/s", "GB/s"};
+        int i2 = 0;
+        while (d2 >= 1024.0d && i2 < 3) {
+            d2 /= 1024.0d;
+            i2++;
+        }
+        return String.format(Locale.US, d2 < 10.0d ? "%.1f %s" : "%.0f %s", Double.valueOf(d2), strArr[i2]);
+    }
+
+    public final void a(VpnService.Builder builder, Prefs prefs) {
+        String string = prefs.f343a.getString("per_app_mode", "off");
+        LinkedHashSet c2 = prefs.c();
+        if ((!"bypass".equals(string) && !"only".equals(string)) || c2.isEmpty()) {
+            try {
+                builder.addDisallowedApplication(getPackageName());
+                return;
+            } catch (Exception unused) {
+                return;
+            }
+        }
+        try {
+            if ("bypass".equals(string)) {
+                Iterator it = c2.iterator();
+                while (it.hasNext()) {
+                    String str = (String) it.next();
+                    if (!str.equals(getPackageName())) {
+                        try {
+                            builder.addDisallowedApplication(str);
+                        } catch (Exception e2) {
+                            Log.w("ParvazVpn", "disallow " + str + " failed: " + e2.getMessage());
+                        }
+                    }
+                }
+                builder.addDisallowedApplication(getPackageName());
+                return;
+            }
+            Iterator it2 = c2.iterator();
+            boolean z = false;
+            while (it2.hasNext()) {
+                String str2 = (String) it2.next();
+                if (!str2.equals(getPackageName())) {
+                    try {
+                        builder.addAllowedApplication(str2);
+                        z = true;
+                    } catch (Exception e3) {
+                        Log.w("ParvazVpn", "allow " + str2 + " failed: " + e3.getMessage());
+                    }
+                }
+            }
+            if (z) {
+                return;
+            }
+            builder.addDisallowedApplication(getPackageName());
+        } catch (Exception unused2) {
+        }
+    }
+
+    /**
+     * Builds the ongoing foreground notification: title = server name, text = live
+     * speeds, plus a Disconnect action wired to the STOP broadcast.
+     */
+    /* renamed from: b */
+    public final Notification buildNotification(String str, String str2) {
+        PendingIntent activity = PendingIntent.getActivity(
+                this, 0, new Intent(this, (Class<?>) MainActivity.class), 201326592);
+        PendingIntent broadcast = PendingIntent.getBroadcast(
+                this, 1,
+                new Intent("com.parvaz.tunnel.STOP").setPackage(getPackageName()),
+                201326592);
+
+        NotificationCompat.Builder builder =
+                new NotificationCompat.Builder(this, CHANNEL_ID);
+        builder.setSmallIcon(R.drawable.ic_tile);
+        builder.setContentTitle(str);
+        builder.setContentText(str2);
+        builder.setContentIntent(activity);
+        builder.setOngoing(true);
+        builder.setShowWhen(false);
+        builder.setOnlyAlertOnce(true);
+        builder.setPriority(NotificationCompat.PRIORITY_MIN);
+        builder.setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
+        builder.setCategory(NotificationCompat.CATEGORY_SERVICE);
+        builder.addAction(R.drawable.ic_tile, getString(R.string.disconnect), broadcast);
+        return builder.build();
+    }
+
+    public final ParcelFileDescriptor c(Prefs prefs) {
+        try {
+            VpnService.Builder builder = new VpnService.Builder();
+            builder.setSession(getString(R.string.app_name));
+            SharedPreferences sharedPreferences = prefs.f343a;
+            builder.setMtu(sharedPreferences.getInt("vpn_mtu", 1500));
+            builder.addAddress("26.26.26.1", 30);
+            if (sharedPreferences.getBoolean("bypass_lan", true)) {
+                String[] strArr = ROUTED_IPV4;
+                for (int i2 = 0; i2 < 30; i2++) {
+                    String[] split = strArr[i2].split("/");
+                    builder.addRoute(split[0], Integer.parseInt(split[1]));
+                }
+            } else {
+                builder.addRoute("0.0.0.0", 0);
+            }
+            if (sharedPreferences.getBoolean("ipv6_enabled", false)) {
+                builder.addAddress("da26:2626::1", 126);
+                builder.addRoute("::", 0);
+            }
+            for (String str : sharedPreferences.getString("remote_dns", "1.1.1.1,8.8.8.8").split(",")) {
+                String trim = str.trim();
+                if (trim != null && !trim.isEmpty() && (trim.matches("^\\d{1,3}(\\.\\d{1,3}){3}$") || (trim.contains(":") && !trim.contains("/")))) {
+                    builder.addDnsServer(trim);
+                }
+            }
+            a(builder, prefs);
+            if (Build.VERSION.SDK_INT >= 29) {
+                builder.setMetered(false);
+                try {
+                    builder.setHttpProxy(ProxyInfo.buildDirectProxy("127.0.0.1", 10809));
+                } catch (Throwable th) {
+                    Log.w("ParvazVpn", "setHttpProxy unavailable", th);
+                }
+            }
+            builder.setConfigureIntent(PendingIntent.getActivity(this, 0, new Intent(this, (Class<?>) MainActivity.class), 201326592));
+            return builder.establish();
+        } catch (Exception e2) {
+            Log.e("ParvazVpn", "establish failed", e2);
+            return null;
+        }
+    }
+
+    /* renamed from: d */
+    public final void fail(String str) {
+        boolean z;
+        Log.e("ParvazVpn", "fail: " + str);
+        LogBuffer.listener("ERROR: " + str);
+        Prefs prefs = this.f;
+        if (prefs != null && prefs.f343a.getBoolean("kill_switch", false) && this.tunInterface != null) {
+            z = true;
+        } else {
+            z = false;
+        }
+        h(str, 3);
+        if (z) {
+            LogBuffer.listener("kill switch active - traffic blocked");
+            shutdown(false, true);
+            updateNotification(getString(R.string.kill_switch), getString(R.string.kill_switch_desc));
+            return;
+        }
+        shutdown(true, false);
+    }
+
+    /* renamed from: f */
+    public final void lambda$lambda$autoSwitch$2$2() {
+        Handler handler;
+        Runnable kVar;
+        if (!serviceRunning || this.switching) {
+            return;
+        }
+        Log.w("ParvazVpn", "core stopped unexpectedly");
+        LogBuffer.listener("core stopped unexpectedly");
+        Prefs prefs = this.f;
+        if (prefs == null || !prefs.f343a.getBoolean("auto_switch", true)) {
+            handler = this.handler;
+            kVar = new k();
+        } else {
+            handler = this.handler;
+            kVar = new j();
+        }
+        handler.post(kVar);
+    }
+
+    /* JADX WARN: Removed duplicated region for block: B:84:0x00ce  */
+    /* JADX WARN: Removed duplicated region for block: B:90:0x00eb  */
+    /* renamed from: g */
+    /*
+        Code decompiled incorrectly, please refer to instructions dump.
+        To view partially-correct add '--show-bad-code' argument
+    */
+    /**
+     * Picks a replacement server after the health check failed, and switches to it.
+     *
+     * <p>Rather than walking the list one at a time waiting out each timeout, the top
+     * candidates are raced in parallel (idea 1.2) and ordered by what has actually
+     * worked on this network at this hour (idea 1.1). Servers tried in the last five
+     * minutes are skipped so a flapping server cannot capture the rotation, and after
+     * four chained switches we stop and report failure rather than loop forever.
+     */
+    public final void lambda$onCoreStopped$1() {
+        if (this.switching || !serviceRunning) {
+            return;
+        }
+        if (this.chainedSwitches >= 4) {
+            Log.w("ParvazVpn", "too many chained switches, giving up");
+            fail(getString(R.string.no_alternative));
+            return;
+        }
+        LogBuffer.listener("health check failed, looking for a better server");
+
+        Profile current = this.profile;
+        String currentId = current == null ? "" : current.id;
+
+        // Remember that the current server just let us down.
+        if (!currentId.isEmpty()) {
+            new ServerMemory(this).recordFailure(this, currentId);
+        }
+
+        ArrayList<Profile> all = ProfileStore.f(this).e();
+        long now = System.currentTimeMillis();
+
+        ArrayList<Profile> candidates = new ArrayList<>();
+        for (int i = 0; i < all.size(); i++) {
+            Profile candidate = all.get(i);
+            if (candidate == null || candidate.id.equals(currentId)) {
+                continue;
+            }
+            Long triedAt = (Long) this.p.get(candidate.id);
+            if (triedAt != null && now - triedAt.longValue() < 300000) {
+                continue;   // tried very recently, give it a rest
+            }
+            candidates.add(candidate);
+        }
+
+        // Everything is on cooldown: clear it and allow a second pass.
+        if (candidates.isEmpty()) {
+            this.p.clear();
+            for (int i = 0; i < all.size(); i++) {
+                Profile candidate = all.get(i);
+                if (candidate != null && !candidate.id.equals(currentId)) {
+                    candidates.add(candidate);
+                }
+            }
+        }
+
+        if (candidates.isEmpty()) {
+            fail(getString(R.string.no_alternative));
+            return;
+        }
+
+        this.switching = true;
+        this.chainedSwitches++;
+        h(getString(R.string.state_switching), 5);
+
+        HappyEyeballs.Result race = HappyEyeballs.race(this, candidates);
+        Profile winner = race.winner;
+
+        if (winner == null) {
+            this.switching = false;
+            fail(getString(R.string.no_alternative));
+            return;
+        }
+
+        this.p.put(winner.id, Long.valueOf(System.currentTimeMillis()));
+        ProfileStore.f(this).i(winner.id, race.delayMs);
+        LogBuffer.listener("switching to " + winner.remark);
+        this.handler.post(new l(winner, getString(R.string.state_switching)));
+    }
+
+    public final void h(String str, int i2) {
+        currentState = i2;
+        Intent intent = new Intent("com.parvaz.tunnel.STATE");
+        intent.setPackage(getPackageName());
+        intent.putExtra("state", i2);
+        if (str == null) {
+            str = "";
+        }
+        intent.putExtra("message", str);
+        sendBroadcast(intent);
+        try {
+            android.service.quicksettings.TileService.requestListeningState(this, new ComponentName(this, (Class<?>) TileService.class));
+        } catch (Throwable unused) {
+        }
+        ParvazWidget.a(this);
+    }
+
+    /* renamed from: i */
+    public final void shutdown(boolean z, boolean z2) {
+        stopStatsTicker();
+        stopHealthTicker();
+        serviceRunning = false;
+        this.switching = false;
+        this.strikes = 0;
+        this.chainedSwitches = 0;
+        this.startedAt = 0L;
+        this.sessionUp = 0L;
+        this.sessionDown = 0L;
+        CoreManager.b().stop();
+        if (z) {
+            stopForeground(true);
+            stopSelf();
+        }
+        if (z2) {
+            return;
+        }
+        try {
+            ParcelFileDescriptor parcelFileDescriptor = this.tunInterface;
+            if (parcelFileDescriptor != null) {
+                parcelFileDescriptor.close();
+                this.tunInterface = null;
+            }
+        } catch (Exception e2) {
+            Log.w("ParvazVpn", "close tun failed", e2);
+        }
+        h("", 0);
+    }
+
+    /* renamed from: j */
+    public final void startHealthTicker() {
+        stopHealthTicker();
+        Prefs prefs = this.f;
+        if (prefs == null || !prefs.f343a.getBoolean("auto_switch", true)) {
+            return;
+        }
+        long max = Math.max(5, this.f.f343a.getInt("health_interval", 15)) * 1000;
+        m mVar = new m(max);
+        this.b = mVar;
+        this.handler.postDelayed(mVar, max);
+    }
+
+    /* renamed from: k */
+    public final void stopHealthTicker() {
+        m mVar = this.b;
+        if (mVar != null) {
+            this.handler.removeCallbacks(mVar);
+        }
+        this.b = null;
+    }
+
+    /* renamed from: l */
+    public final void stopStatsTicker() {
+        i iVar = this.h;
+        if (iVar != null) {
+            this.handler.removeCallbacks(iVar);
+        }
+        this.h = null;
+        Prefs prefs = this.f;
+        if (prefs != null) {
+            long j2 = this.pendingDayUp;
+            if (j2 > 0 || this.pendingDayDown > 0) {
+                prefs.addDailyUsage(j2, this.pendingDayDown);
+            }
+        }
+        this.pendingDayUp = 0L;
+        this.pendingDayDown = 0L;
+        this.dayFlushTick = 0;
+    }
+
+    /* renamed from: m */
+    public final void updateNotification(String str, String str2) {
+        NotificationManager notificationManager = (NotificationManager) getSystemService("notification");
+        if (notificationManager != null) {
+            notificationManager.notify(8811, buildNotification(str, str2));
+        }
+    }
+
+    @Override // android.app.Service
+    public final void onCreate() {
+        super.onCreate();
+        StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder().permitAll().build());
+        if (Build.VERSION.SDK_INT >= 26) {
+            NotificationChannel b2 = new NotificationChannel(
+                    CHANNEL_ID, getString(R.string.app_name),
+                    NotificationManager.IMPORTANCE_LOW);
+            b2.setShowBadge(false);
+            b2.setLockscreenVisibility(1);
+            NotificationManager notificationManager = (NotificationManager) getSystemService(NotificationManager.class);
+            if (notificationManager != null) {
+                notificationManager.createNotificationChannel(b2);
+            }
+        }
+        ContextCompat.registerReceiver(this, this.s,
+                new IntentFilter("com.parvaz.tunnel.STOP"), ContextCompat.RECEIVER_NOT_EXPORTED);
+        if (this.c == null) {
+            try {
+                NetworkMonitor networkMonitor = new NetworkMonitor(this, new e());
+                this.c = networkMonitor;
+                networkMonitor.start();
+            } catch (Throwable th) {
+                Log.w("ParvazVpn", "network monitor unavailable", th);
+            }
+        }
+    }
+
+    @Override // android.app.Service
+    public final void onDestroy() {
+        ConnectivityManager connectivityManager;
+        NetworkMonitor.a aVar;
+        try {
+            NetworkMonitor networkMonitor = this.c;
+            if (networkMonitor != null) {
+                networkMonitor.f6248c.removeCallbacks(networkMonitor.j);
+                if (networkMonitor.f6251f && (connectivityManager = networkMonitor.f6249d) != null && (aVar = networkMonitor.d) != null) {
+                    try {
+                        connectivityManager.unregisterNetworkCallback(aVar);
+                    } catch (Throwable unused) {
+                    }
+                }
+                networkMonitor.f6251f = false;
+                networkMonitor.g = -1L;
+                networkMonitor.f6252h = -1;
+                networkMonitor.f6253i = false;
+                this.c = null;
+            }
+        } catch (Throwable unused2) {
+        }
+        try {
+            unregisterReceiver(this.s);
+        } catch (Exception unused3) {
+        }
+        shutdown(false, false);
+        super.onDestroy();
+    }
+
+    @Override // android.net.VpnService
+    public final void onRevoke() {
+        shutdown(true, false);
+        super.onRevoke();
+    }
+
+    /* JADX WARN: Removed duplicated region for block: B:28:0x0023  */
+    /* JADX WARN: Removed duplicated region for block: B:30:0x0025  */
+    @Override // android.app.Service
+    /*
+        Code decompiled incorrectly, please refer to instructions dump.
+        To view partially-correct add '--show-bad-code' argument
+    */
+    public final int onStartCommand(android.content.Intent r4, int r5, int r6) {
+        /*
+            r3 = this;
+            if (r4 != 0) goto L5
+            java.lang.String r5 = "com.parvaz.tunnel.START"
+            goto L9
+        L5:
+            java.lang.String r5 = r4.getAction()
+        L9:
+            java.lang.String r6 = ""
+            r0 = 0
+            if (r4 == 0) goto L15
+            java.lang.String r4 = r4.getAction()
+            if (r4 == 0) goto L15
+            goto L30
+        L15:
+            int r4 = android.os.Build.VERSION.SDK_INT     // Catch: java.lang.Throwable -> L20
+            r1 = 29
+            if (r4 < r1) goto L20
+            boolean r4 = androidx.core.view.WindowInsetsCompat$BuilderImpl29$$ExternalSyntheticApiModelOutline0.s(r3)     // Catch: java.lang.Throwable -> L20
+            goto L21
+        L20:
+            r4 = r0
+        L21:
+            if (r4 != 0) goto L25
+            r4 = r6
+            goto L27
+        L25:
+            java.lang.String r4 = " (lockdown)"
+        L27:
+            java.lang.String r1 = "started by always-on VPN"
+            java.lang.String r4 = r1.concat(r4)
+            com.parvaz.tunnel.core.LogBuffer.listener(r4)
+        L30:
+            java.lang.String r4 = "com.parvaz.tunnel.STOP"
+            boolean r4 = r4.equals(r5)
+            r1 = 1
+            if (r4 == 0) goto L3e
+            r3.shutdown(r1, r0)
+            r4 = 2
+            return r4
+        L3e:
+            r4 = 2131886412(0x7f12014c, float:1.9407402E38)
+            java.lang.String r4 = r3.getString(r4)
+            android.app.Notification r4 = r3.buildNotification(r4, r6)
+            int r6 = android.os.Build.VERSION.SDK_INT
+            r2 = 34
+            if (r6 < r2) goto L53
+            androidx.core.view.WindowInsetsCompat$BuilderImpl29$$ExternalSyntheticApiModelOutline0.q(r3, r4)
+            goto L58
+        L53:
+            r6 = 8811(0x226b, float:1.2347E-41)
+            r3.startForeground(r6, r4)
+        L58:
+            boolean r4 = com.parvaz.tunnel.core.TunnelVpnService.serviceRunning
+            if (r4 == 0) goto L67
+            java.lang.String r4 = "com.parvaz.tunnel.RESTART"
+            boolean r4 = r4.equals(r5)
+            if (r4 == 0) goto L67
+            r3.shutdown(r0, r0)
+        L67:
+            java.lang.Thread r4 = new java.lang.Thread
+            com.parvaz.tunnel.core.TunnelVpnService$g r5 = new com.parvaz.tunnel.core.TunnelVpnService$g
+            r5.<init>()
+            r4.<init>(r5)
+            r4.start()
+            return r1
+        */
+        throw new UnsupportedOperationException("Method not decompiled: com.parvaz.tunnel.core.TunnelVpnService.onStartCommand(android.content.Intent, int, int):int");
+    }
+}

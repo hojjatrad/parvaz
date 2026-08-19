@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="parvaz_store.xml" />
+        <exclude domain="sharedpref" path="parvaz_prefs.xml" />
+        <exclude domain="sharedpref" path="parvaz_safemode.xml" />
+        <exclude domain="file" path="crashes/" />
+        <exclude domain="database" />
+        <exclude domain="external" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="parvaz_store.xml" />
+        <exclude domain="sharedpref" path="parvaz_safemode.xml" />
+        <exclude domain="file" path="crashes/" />
+    </device-transfer>
+</data-extraction-rules>

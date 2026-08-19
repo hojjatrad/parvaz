@@ -1,0 +1,35 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string-array name="language_labels">
+        <item>فارسی</item>
+        <item>English</item>
+    </string-array>
+    <string-array name="log_labels">
+        <item>none</item>
+        <item>error</item>
+        <item>warning</item>
+        <item>info</item>
+        <item>debug</item>
+    </string-array>
+    <string-array name="routing_labels">
+        <item>Global (everything through the proxy)</item>
+        <item>Block ads</item>
+        <item>Iranian sites direct</item>
+    </string-array>
+    <string-array name="split_mode_labels">
+        <item>Off — all apps</item>
+        <item>Selected apps bypass VPN</item>
+        <item>Only selected apps use VPN</item>
+    </string-array>
+    <string-array name="strategy_labels">
+        <item>AsIs</item>
+        <item>IPIfNonMatch</item>
+        <item>IPOnDemand</item>
+    </string-array>
+    <string-array name="sub_auto_labels">
+        <item>Off</item>
+        <item>Every 6 hours</item>
+        <item>Every 12 hours</item>
+        <item>Every 24 hours</item>
+    </string-array>
+</resources>
