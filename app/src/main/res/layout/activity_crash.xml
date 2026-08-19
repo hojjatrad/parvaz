@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout android:orientation="vertical" android:padding="20.0dip" android:layout_width="fill_parent" android:layout_height="fill_parent"
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <TextView android:textSize="20.0sp" android:textStyle="bold" android:paddingBottom="6.0dip" android:layout_width="fill_parent" android:layout_height="wrap_content" android:text="@string/crash_title" />
+    <TextView android:textSize="14.0sp" android:paddingBottom="14.0dip" android:layout_width="fill_parent" android:layout_height="wrap_content" android:text="@string/crash_desc" android:alpha="0.75" />
+    <ScrollView android:background="#22808080" android:padding="10.0dip" android:layout_width="fill_parent" android:layout_height="0.0dip" android:layout_weight="1.0">
+        <TextView android:textSize="11.0sp" android:id="@id/crash_report" android:layout_width="fill_parent" android:layout_height="wrap_content" android:textIsSelectable="true" android:fontFamily="monospace" />
+    </ScrollView>
+    <LinearLayout android:orientation="horizontal" android:paddingTop="14.0dip" android:layout_width="fill_parent" android:layout_height="wrap_content">
+        <Button android:id="@id/crash_copy" android:layout_width="0.0dip" android:layout_height="wrap_content" android:text="@string/copy" android:layout_weight="1.0" android:layout_marginEnd="6.0dip" />
+        <Button android:id="@id/crash_share" android:layout_width="0.0dip" android:layout_height="wrap_content" android:text="@string/share" android:layout_weight="1.0" />
+    </LinearLayout>
+    <LinearLayout android:orientation="horizontal" android:paddingTop="8.0dip" android:layout_width="fill_parent" android:layout_height="wrap_content">
+        <Button android:id="@id/crash_restart" android:layout_width="0.0dip" android:layout_height="wrap_content" android:text="@string/crash_restart" android:layout_weight="1.0" android:layout_marginEnd="6.0dip" />
+        <Button android:id="@id/crash_close" android:layout_width="0.0dip" android:layout_height="wrap_content" android:text="@string/close" android:layout_weight="1.0" />
+    </LinearLayout>
+</LinearLayout>

@@ -1,0 +1,66 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <style name="AppButton" parent="@android:style/Widget.Material.Button">
+        <item name="android:fontFamily">@font/vazirmatn</item>
+    </style>
+    <style name="AppEditText" parent="@android:style/Widget.Material.EditText">
+        <item name="android:fontFamily">@font/vazirmatn</item>
+    </style>
+    <style name="AppSpinnerItem" parent="@android:style/Widget.Material.TextView.SpinnerItem">
+        <item name="android:textColor">?android:textColorPrimary</item>
+        <item name="android:fontFamily">@font/vazirmatn</item>
+    </style>
+    <style name="AppTextView" parent="@android:style/Widget.Material.TextView">
+        <item name="android:lineSpacingMultiplier">1.15</item>
+        <item name="android:fontFamily">@font/vazirmatn</item>
+    </style>
+    <style name="AppTheme" parent="@style/Theme.Material3.DayNight.NoActionBar">
+        <item name="android:colorBackground">@color/bg</item>
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="android:buttonStyle">@style/AppButton</item>
+        <item name="android:editTextStyle">@style/AppEditText</item>
+        <item name="android:textViewStyle">@style/AppTextView</item>
+        <item name="android:spinnerDropDownItemStyle">@style/AppSpinnerItem</item>
+        <item name="android:spinnerItemStyle">@style/AppSpinnerItem</item>
+        <item name="android:fontFamily">@font/vazirmatn</item>
+        <item name="android:statusBarColor">@color/bg</item>
+        <item name="android:navigationBarColor">@color/bg</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="colorOnPrimary">#ffffffff</item>
+        <item name="colorPrimary">@color/brand</item>
+        <item name="colorSecondary">@color/accent</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="fontFamily">@font/vazirmatn</item>
+    </style>
+    <style name="Field">
+        <item name="android:textSize">14.0sp</item>
+        <item name="android:textColor">?android:textColorPrimary</item>
+        <item name="android:background">@drawable/bg_input</item>
+        <item name="android:layout_width">fill_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">48.0dip</item>
+        <item name="android:lineSpacingMultiplier">1.15</item>
+        <item name="android:fontFamily">@font/vazirmatn</item>
+        <item name="android:paddingStart">12.0dip</item>
+        <item name="android:paddingEnd">12.0dip</item>
+    </style>
+    <style name="Label">
+        <item name="android:textSize">13.0sp</item>
+        <item name="android:textColor">?android:textColorSecondary</item>
+        <item name="android:layout_width">fill_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">14.0dip</item>
+        <item name="android:layout_marginBottom">4.0dip</item>
+        <item name="android:fontFamily">@font/vazirmatn</item>
+    </style>
+    <style name="Switch">
+        <item name="android:textSize">14.0sp</item>
+        <item name="android:textColor">?android:textColorPrimary</item>
+        <item name="android:layout_width">fill_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">16.0dip</item>
+        <item name="android:minHeight">40.0dip</item>
+        <item name="android:fontFamily">@font/vazirmatn</item>
+    </style>
+    </resources>
