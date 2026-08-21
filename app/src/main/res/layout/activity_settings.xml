@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout android:orientation="vertical" android:background="?android:colorBackground" android:fitsSystemWindows="true" android:layout_width="fill_parent" android:layout_height="fill_parent"
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <LinearLayout android:gravity="center_vertical" android:orientation="horizontal" android:paddingTop="10.0dip" android:paddingBottom="6.0dip" android:layout_width="fill_parent" android:layout_height="wrap_content" android:paddingStart="10.0dip" android:paddingEnd="16.0dip">
+        <ImageButton android:id="@id/back" android:background="?selectableItemBackgroundBorderless" android:padding="9.0dip" android:layout_width="42.0dip" android:layout_height="42.0dip" android:src="@drawable/ic_back" android:contentDescription="@string/back" />
+        <TextView android:textSize="20.0sp" android:textStyle="bold" android:textColor="?android:textColorPrimary" android:layout_width="0.0dip" android:layout_height="wrap_content" android:text="@string/settings" android:layout_weight="1.0" android:layout_marginStart="6.0dip" />
+    </LinearLayout>
+    <ScrollView android:paddingBottom="24.0dip" android:clipToPadding="false" android:layout_width="fill_parent" android:layout_height="0.0dip" android:layout_weight="1.0" android:paddingStart="18.0dip" android:paddingEnd="18.0dip">
+        <LinearLayout android:orientation="vertical" android:layout_width="fill_parent" android:layout_height="wrap_content">
+            <TextView android:text="@string/language" style="@style/Label" />
+            <Spinner android:id="@id/language" style="@style/Field" />
+            <TextView android:text="@string/routing" style="@style/Label" />
+            <Spinner android:id="@id/routing" style="@style/Field" />
+            <TextView android:text="@string/domain_strategy" style="@style/Label" />
+            <Spinner android:id="@id/domain_strategy" style="@style/Field" />
+            <TextView android:text="@string/remote_dns" style="@style/Label" />
+            <EditText android:id="@id/remote_dns" android:inputType="text" android:textDirection="ltr" style="@style/Field" />
+            <TextView android:text="@string/direct_dns" style="@style/Label" />
+            <EditText android:id="@id/direct_dns" android:inputType="text" android:textDirection="ltr" style="@style/Field" />
+            <TextView android:text="@string/ping_url" style="@style/Label" />
+            <EditText android:id="@id/ping_url" android:inputType="textUri" android:textDirection="ltr" style="@style/Field" />
+            <TextView android:text="@string/mtu" style="@style/Label" />
+            <EditText android:id="@id/mtu" android:inputType="number" android:textDirection="ltr" style="@style/Field" />
+            <TextView android:text="@string/mux_concurrency" style="@style/Label" />
+            <EditText android:id="@id/mux_concurrency" android:inputType="number" android:textDirection="ltr" style="@style/Field" />
+            <TextView android:text="@string/log_level" style="@style/Label" />
+            <Spinner android:id="@id/log_level" style="@style/Field" />
+            <androidx.appcompat.widget.SwitchCompat android:id="@id/mux" android:text="@string/mux" style="@style/Switch" />
+            <androidx.appcompat.widget.SwitchCompat android:id="@id/ipv6" android:text="@string/ipv6" style="@style/Switch" />
+            <androidx.appcompat.widget.SwitchCompat android:id="@id/bypass_lan" android:text="@string/bypass_lan" style="@style/Switch" />
+            <androidx.appcompat.widget.SwitchCompat android:id="@id/auto_switch" android:text="@string/auto_switch" style="@style/Switch" />
+            <TextView android:textSize="12.0sp" android:textColor="?android:textColorSecondary" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginTop="2.0dip" android:text="@string/auto_switch_desc" />
+            <TextView android:text="@string/ping_threshold" style="@style/Label" />
+            <EditText android:id="@id/ping_threshold" android:inputType="number" style="@style/Field" />
+            <TextView android:text="@string/health_interval" style="@style/Label" />
+            <EditText android:id="@id/health_interval" android:inputType="number" style="@style/Field" />
+            <TextView android:text="@string/data_limit" style="@style/Label" />
+            <EditText android:id="@id/data_limit" android:inputType="numberDecimal" style="@style/Field" />
+            <com.google.android.material.button.MaterialButton android:textSize="14.0sp" android:id="@id/reset_data" android:layout_width="fill_parent" android:layout_height="48.0dip" android:layout_marginTop="14.0dip" android:text="@string/data_reset" style="@style/Widget.Material3.Button.TonalButton" />
+            <TextView android:textSize="15.0sp" android:textStyle="bold" android:textColor="@color/brand" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginTop="26.0dip" android:text="@string/advanced" />
+            <androidx.appcompat.widget.SwitchCompat android:id="@id/connect_on_boot" android:text="@string/connect_on_boot" style="@style/Switch" />
+            <androidx.appcompat.widget.SwitchCompat android:id="@id/tls_fragment" android:text="@string/tls_fragment" style="@style/Switch" />
+            <TextView android:textSize="12.0sp" android:textColor="?android:textColorSecondary" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginTop="2.0dip" android:text="@string/tls_fragment_desc" />
+            <LinearLayout android:orientation="vertical" android:id="@id/fragment_box" android:visibility="gone" android:layout_width="fill_parent" android:layout_height="wrap_content">
+                <TextView android:text="@string/fragment_packets" style="@style/Label" />
+                <EditText android:id="@id/fragment_packets" android:inputType="text" style="@style/Field" />
+                <TextView android:text="@string/fragment_length" style="@style/Label" />
+                <EditText android:id="@id/fragment_length" android:inputType="text" style="@style/Field" />
+                <TextView android:text="@string/fragment_interval" style="@style/Label" />
+                <EditText android:id="@id/fragment_interval" android:inputType="text" style="@style/Field" />
+            </LinearLayout>
+            <TextView android:text="@string/sub_auto_update" style="@style/Label" />
+            <Spinner android:id="@id/sub_auto" style="@style/Field" />
+            <TextView android:text="@string/split_tunneling" style="@style/Label" />
+            <Spinner android:id="@id/split_mode" style="@style/Field" />
+            <com.google.android.material.button.MaterialButton android:textSize="14.0sp" android:id="@id/choose_apps" android:layout_width="fill_parent" android:layout_height="48.0dip" android:layout_marginTop="10.0dip" android:text="@string/choose_apps" style="@style/Widget.Material3.Button.TonalButton" />
+            <com.google.android.material.button.MaterialButton android:textSize="14.0sp" android:id="@id/custom_rules" android:layout_width="fill_parent" android:layout_height="48.0dip" android:layout_marginTop="10.0dip" android:text="@string/custom_rules" style="@style/Widget.Material3.Button.TonalButton" />
+            <TextView android:textSize="15.0sp" android:textStyle="bold" android:textColor="@color/brand" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginTop="26.0dip" android:text="@string/chain_section" />
+            <TextView android:textSize="12.0sp" android:textColor="?android:textColorSecondary" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginTop="6.0dip" android:text="@string/chain_desc" />
+            <TextView android:text="@string/chain_entry" style="@style/Label" />
+            <Spinner android:id="@id/chain_entry" style="@style/Field" />
+            <com.google.android.material.button.MaterialButton android:textSize="14.0sp" android:id="@id/view_log" android:layout_width="fill_parent" android:layout_height="48.0dip" android:layout_marginTop="10.0dip" android:text="@string/log_viewer" style="@style/Widget.Material3.Button.TonalButton" />
+            <com.google.android.material.button.MaterialButton android:textSize="14.0sp" android:id="@id/usage_chart" android:layout_width="fill_parent" android:layout_height="48.0dip" android:layout_marginTop="10.0dip" android:text="@string/usage_chart" style="@style/Widget.Material3.Button.TonalButton" />
+            <TextView android:textSize="15.0sp" android:textStyle="bold" android:textColor="@color/brand" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginTop="26.0dip" android:text="@string/security_section" />
+            <androidx.appcompat.widget.SwitchCompat android:id="@id/app_lock" android:text="@string/app_lock" style="@style/Switch" />
+            <androidx.appcompat.widget.SwitchCompat android:id="@id/haptics" android:text="@string/haptics" style="@style/Switch" />
+            <androidx.appcompat.widget.SwitchCompat android:id="@id/shake_switch" android:text="@string/settings_shake" style="@style/Switch" />
+            <androidx.appcompat.widget.SwitchCompat android:id="@id/kill_switch" android:text="@string/kill_switch" style="@style/Switch" />
+            <TextView android:textSize="12.0sp" android:textColor="?android:textColorSecondary" android:layout_width="fill_parent" android:layout_height="wrap_content" android:text="@string/kill_switch_desc" />
+            <com.google.android.material.button.MaterialButton android:textSize="14.0sp" android:id="@id/open_vpn_settings" android:layout_width="fill_parent" android:layout_height="48.0dip" android:layout_marginTop="8.0dip" android:text="@string/open_vpn_settings" style="@style/Widget.Material3.Button.TonalButton" />
+            <TextView android:textSize="15.0sp" android:textStyle="bold" android:textColor="@color/brand" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginTop="26.0dip" android:text="@string/backup_restore" />
+            <com.google.android.material.button.MaterialButton android:textSize="14.0sp" android:id="@id/backup_export" android:layout_width="fill_parent" android:layout_height="48.0dip" android:layout_marginTop="10.0dip" android:text="@string/backup_export" style="@style/Widget.Material3.Button.TonalButton" />
+            <com.google.android.material.button.MaterialButton android:textSize="14.0sp" android:id="@id/backup_import" android:layout_width="fill_parent" android:layout_height="48.0dip" android:layout_marginTop="10.0dip" android:text="@string/backup_import" style="@style/Widget.Material3.Button.TonalButton" />
+            <com.google.android.material.button.MaterialButton style="?attr/materialButtonOutlinedStyle" android:textSize="14.0sp" android:id="@+id/btn_diagnose" android:layout_width="fill_parent" android:layout_height="48.0dip" android:layout_marginTop="18.0dip" android:text="@string/diag_run" />
+            <com.google.android.material.button.MaterialButton style="?attr/materialButtonOutlinedStyle" android:textSize="14.0sp" android:id="@+id/btn_tune_fragment" android:layout_width="fill_parent" android:layout_height="48.0dip" android:layout_marginTop="8.0dip" android:text="@string/frag_tune" />
+            <com.google.android.material.button.MaterialButton style="?attr/materialButtonOutlinedStyle" android:textSize="14.0sp" android:id="@+id/btn_clear_memory" android:layout_width="fill_parent" android:layout_height="48.0dip" android:layout_marginTop="8.0dip" android:text="@string/memory_clear" />
+            <com.google.android.material.button.MaterialButton style="?attr/materialButtonOutlinedStyle" android:textSize="14.0sp" android:id="@+id/btn_check_update" android:layout_width="fill_parent" android:layout_height="48.0dip" android:layout_marginTop="8.0dip" android:text="@string/update_check" />
+            <com.google.android.material.button.MaterialButton android:textSize="15.0sp" android:id="@id/save" android:layout_width="fill_parent" android:layout_height="52.0dip" android:layout_marginTop="22.0dip" android:text="@string/save" />
+            <TextView android:textSize="12.0sp" android:textColor="?android:textColorSecondary" android:gravity="center" android:id="@id/version" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginTop="18.0dip" />
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

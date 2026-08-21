@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <exclude domain="sharedpref" path="parvaz_store.xml" />
+    <exclude domain="sharedpref" path="parvaz_prefs.xml" />
+    <exclude domain="sharedpref" path="parvaz_safemode.xml" />
+    <exclude domain="file" path="crashes/" />
+    <exclude domain="database" />
+    <exclude domain="external" />
+</full-backup-content>
