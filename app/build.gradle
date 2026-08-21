@@ -1,0 +1,121 @@
+apply plugin: 'com.android.application'
+
+android {
+    namespace 'com.parvaz.tunnel'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.parvaz.tunnel"
+        minSdk 24
+        targetSdk 34
+        versionCode 13
+        versionName "1.13"
+        vectorDrawables.useSupportLibrary = true
+
+        // libv2ray.aar also ships x86/x86_64 builds of libgojni. No Iranian Android
+        // phone needs them and they add ~70 MB to the universal APK.
+        ndk {
+            abiFilters 'arm64-v8a', 'armeabi-v7a'
+        }
+    }
+
+    sourceSets {
+        main {
+            jniLibs.srcDirs = ['libs/jni']
+        }
+    }
+
+    signingConfigs {
+        release {
+            storeFile file('/home/user/.keys/parvaz.keystore')
+            storePassword 'parvaz2026'
+            keyAlias 'parvaz'
+            keyPassword 'parvaz2026'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+        }
+    }
+
+    splits {
+        abi {
+            enable true
+            reset()
+            include 'arm64-v8a', 'armeabi-v7a'
+            universalApk true
+        }
+    }
+
+    packagingOptions {
+        jniLibs {
+            // false stores libgojni uncompressed and adds ~45 MB. Always true.
+            useLegacyPackaging true
+        }
+        resources {
+            excludes += ['META-INF/*.kotlin_module', 'DebugProbesKt.bin',
+                         'META-INF/versions/9/previous-compilation-data.bin']
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+            returnDefaultValues = true
+        }
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.compilerArgs << '-Xmaxerrs' << '2000'
+    options.compilerArgs << '-nowarn'
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'androidx.recyclerview:recyclerview:1.3.2'
+    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
+    implementation 'androidx.work:work-runtime:2.9.0'
+    implementation 'androidx.biometric:biometric:1.1.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'androidx.cardview:cardview:1.0.0'
+    implementation 'androidx.preference:preference:1.2.1'
+    implementation 'com.google.zxing:core:3.5.3'
+    implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
+    implementation files('libs/libv2ray.aar')
+
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.robolectric:robolectric:4.12.2'
+    testImplementation 'androidx.test:core:1.5.0'
+    testImplementation 'org.json:json:20240303'
+}
+
+// Dump the compile classpath so `jc.sh` can run a 3-second javac probe
+// instead of a 60-second Gradle round trip.
+tasks.register('dumpCp') {
+    doLast {
+        def cp = android.applicationVariants.find { it.name == 'release' }
+                .javaCompileProvider.get().classpath.files.collect { it.absolutePath }
+        new File('/opt/pb/cp.txt').text = cp.join(':')
+        new File('/opt/pb/boot.txt').text =
+                android.bootClasspath.collect { it.absolutePath }.join(':')
+        println "cp entries: ${cp.size()}"
+    }
+}

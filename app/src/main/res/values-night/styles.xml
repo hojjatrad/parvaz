@@ -1,0 +1,22 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <style name="AppTheme" parent="@style/Theme.Material3.DayNight.NoActionBar">
+        <item name="android:colorBackground">@color/bg</item>
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="android:buttonStyle">@style/AppButton</item>
+        <item name="android:editTextStyle">@style/AppEditText</item>
+        <item name="android:textViewStyle">@style/AppTextView</item>
+        <item name="android:spinnerDropDownItemStyle">@style/AppSpinnerItem</item>
+        <item name="android:spinnerItemStyle">@style/AppSpinnerItem</item>
+        <item name="android:fontFamily">@font/vazirmatn</item>
+        <item name="android:statusBarColor">@color/bg</item>
+        <item name="android:navigationBarColor">@color/bg</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="colorOnPrimary">#ffffffff</item>
+        <item name="colorPrimary">@color/brand</item>
+        <item name="colorSecondary">@color/accent</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="fontFamily">@font/vazirmatn</item>
+    </style>
+    </resources>

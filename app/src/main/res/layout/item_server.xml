@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout android:gravity="center_vertical" android:orientation="horizontal" android:id="@id/card" android:background="@drawable/bg_card" android:paddingTop="12.0dip" android:paddingBottom="12.0dip" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginTop="4.0dip" android:layout_marginBottom="4.0dip" android:paddingStart="14.0dip" android:paddingEnd="10.0dip"
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <TextView android:textSize="20.0sp" android:gravity="center" android:id="@id/flag" android:layout_width="34.0dip" android:layout_height="wrap_content" android:text="🌐" />
+    <LinearLayout android:orientation="vertical" android:layout_width="0.0dip" android:layout_height="wrap_content" android:layout_weight="1.0" android:layout_marginStart="10.0dip">
+        <TextView android:textSize="15.0sp" android:textStyle="bold" android:textColor="?android:textColorPrimary" android:ellipsize="end" android:id="@id/name" android:layout_width="fill_parent" android:layout_height="wrap_content" android:maxLines="1" />
+        <TextView android:textSize="12.0sp" android:textColor="?android:textColorSecondary" android:ellipsize="middle" android:id="@id/address" android:layout_width="fill_parent" android:layout_height="wrap_content" android:maxLines="1" />
+        <TextView android:textSize="11.0sp" android:textColor="#ff3d5afe" android:id="@id/badge" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="3.0dip" />
+    </LinearLayout>
+    <TextView android:textSize="13.0sp" android:textStyle="bold" android:gravity="end" android:id="@id/ping" android:padding="6.0dip" android:layout_width="wrap_content" android:layout_height="wrap_content" android:minWidth="62.0dip" android:text="—" />
+    <TextView android:textSize="17.0sp" android:gravity="center" android:id="@id/fav" android:layout_width="32.0dip" android:layout_height="32.0dip" android:text="☆" />
+    <ImageView android:id="@id/check" android:visibility="invisible" android:layout_width="24.0dip" android:layout_height="24.0dip" android:src="@drawable/ic_check" android:contentDescription="@string/state_connected" android:layout_marginStart="4.0dip" />
+</LinearLayout>
