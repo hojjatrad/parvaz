@@ -1,0 +1,18 @@
+# build output
+build/
+.gradle/
+*.apk
+*.aab
+*.idsig
+
+# native blobs and the core AAR are fetched by tools/setup_android.sh
+app/libs/
+*.aar
+*.so
+
+# secrets — never commit
+.keys/
+*.keystore
+*.jks
+ghtoken
+mapping*.txt
