@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout android:orientation="vertical" android:layout_width="fill_parent" android:layout_height="fill_parent"
+  xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <LinearLayout android:gravity="center_vertical" android:orientation="horizontal" android:paddingTop="10.0dip" android:paddingBottom="10.0dip" android:layout_width="fill_parent" android:layout_height="wrap_content" android:paddingStart="8.0dip" android:paddingEnd="12.0dip">
+        <ImageButton android:id="@id/back" android:background="?selectableItemBackgroundBorderless" android:padding="9.0dip" android:layout_width="42.0dip" android:layout_height="42.0dip" android:src="@drawable/ic_back" android:contentDescription="@string/back" />
+        <TextView android:textSize="17.0sp" android:textStyle="bold" android:textColor="?android:textColorPrimary" android:layout_width="0.0dip" android:layout_height="wrap_content" android:text="@string/leak_test_title" android:layout_weight="1.0" android:layout_marginStart="6.0dip" />
+    </LinearLayout>
+
+    <ScrollView android:layout_width="fill_parent" android:layout_height="0.0dip" android:layout_weight="1.0" android:fillViewport="true">
+        <LinearLayout android:orientation="vertical" android:layout_width="fill_parent" android:layout_height="wrap_content" android:paddingStart="16.0dip" android:paddingEnd="16.0dip" android:paddingBottom="16.0dip">
+
+            <androidx.cardview.widget.CardView android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginBottom="12.0dip" app:cardCornerRadius="16.0dip" app:cardElevation="0.0dip" xmlns:app="http://schemas.android.com/apk/res-auto">
+                <LinearLayout android:orientation="vertical" android:layout_width="fill_parent" android:layout_height="wrap_content" android:padding="16.0dip">
+                    <TextView android:textSize="15.0sp" android:textStyle="bold" android:textColor="?android:textColorPrimary" android:layout_width="fill_parent" android:layout_height="wrap_content" android:text="@string/leak_test_ip" />
+                    <LinearLayout android:gravity="center_vertical" android:orientation="horizontal" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginTop="12.0dip">
+                        <LinearLayout android:orientation="vertical" android:layout_width="0.0dip" android:layout_height="wrap_content" android:layout_weight="1.0">
+                            <TextView android:textSize="12.0sp" android:textColor="?android:textColorSecondary" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/ip_before" />
+                            <TextView android:textSize="15.0sp" android:textColor="?android:textColorPrimary" android:id="@id/ip_before_value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="—" android:textDirection="ltr" android:layoutDirection="ltr" />
+                        </LinearLayout>
+                        <TextView android:textSize="20.0sp" android:textColor="?android:textColorSecondary" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="→" android:paddingStart="8.0dip" android:paddingEnd="8.0dip" />
+                        <LinearLayout android:orientation="vertical" android:layout_width="0.0dip" android:layout_height="wrap_content" android:layout_weight="1.0">
+                            <TextView android:textSize="12.0sp" android:textColor="?android:textColorSecondary" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/ip_after" />
+                            <TextView android:textSize="15.0sp" android:textStyle="bold" android:textColor="?android:textColorPrimary" android:id="@id/ip_after_value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="—" android:textDirection="ltr" android:layoutDirection="ltr" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <LinearLayout android:orientation="vertical" android:id="@id/checks_container" android:layout_width="fill_parent" android:layout_height="wrap_content" />
+
+            <TextView android:textSize="15.0sp" android:textStyle="bold" android:textColor="?android:textColorPrimary" android:gravity="center" android:id="@id/leak_summary" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginTop="16.0dip" />
+
+        </LinearLayout>
+    </ScrollView>
+
+    <com.google.android.material.button.MaterialButton android:textSize="16.0sp" android:id="@id/btn_run" android:layout_width="fill_parent" android:layout_height="wrap_content" android:text="@string/leak_test_run" android:layout_margin="16.0dip" android:paddingTop="14.0dip" android:paddingBottom="14.0dip" />
+
+</LinearLayout>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Where UpdateChecker drops the downloaded APK so the package installer,
+         a different process, can read it. -->
+    <external-cache-path name="update_cache" path="." />
+    <cache-path name="internal_cache" path="." />
+</paths>
