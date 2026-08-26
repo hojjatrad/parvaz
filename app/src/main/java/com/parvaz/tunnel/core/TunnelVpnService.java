@@ -817,11 +817,32 @@ public class TunnelVpnService extends VpnService {
                 builder.addAddress("da26:2626::1", 126);
                 builder.addRoute("::", 0);
             }
-            for (String str : sharedPreferences.getString("remote_dns", "1.1.1.1,8.8.8.8").split(",")) {
+            int addedDns = 0;
+            String rawDns = sharedPreferences.getString("remote_dns",
+                    "https://1.1.1.1/dns-query,https://dns.google/dns-query");
+            for (String str : rawDns.split(",")) {
                 String trim = str.trim();
-                if (trim != null && !trim.isEmpty() && (trim.matches("^\\d{1,3}(\\.\\d{1,3}){3}$") || (trim.contains(":") && !trim.contains("/")))) {
-                    builder.addDnsServer(trim);
+                if (trim.isEmpty()) {
+                    continue;
                 }
+                if (trim.matches("^\\d{1,3}(\\.\\d{1,3}){3}$") || (trim.contains(":") && !trim.contains("/"))) {
+                    builder.addDnsServer(trim);
+                    addedDns++;
+                } else if (trim.startsWith("https://") || trim.startsWith("http://") || trim.startsWith("tls://") || trim.startsWith("quic://")) {
+                    try {
+                        java.net.URI uri = java.net.URI.create(trim);
+                        String host = uri.getHost();
+                        if (host != null && (host.matches("^\\d{1,3}(\\.\\d{1,3}){3}$") || (host.contains(":") && !host.contains("/")))) {
+                            builder.addDnsServer(host);
+                            addedDns++;
+                        }
+                    } catch (Throwable ignored) {
+                    }
+                }
+            }
+            if (addedDns == 0) {
+                builder.addDnsServer("1.1.1.1");
+                builder.addDnsServer("8.8.8.8");
             }
             a(builder, prefs);
             if (Build.VERSION.SDK_INT >= 29) {
@@ -960,19 +981,29 @@ public class TunnelVpnService extends VpnService {
         this.chainedSwitches++;
         h(getString(R.string.state_switching), 5);
 
-        HappyEyeballs.Result race = HappyEyeballs.race(this, candidates);
-        Profile winner = race.winner;
+        final ArrayList<Profile> raceCandidates = candidates;
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                final HappyEyeballs.Result race = HappyEyeballs.race(TunnelVpnService.this, raceCandidates);
+                TunnelVpnService.this.handler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        Profile winner = race.winner;
+                        if (winner == null) {
+                            TunnelVpnService.this.switching = false;
+                            TunnelVpnService.this.fail(TunnelVpnService.this.getString(R.string.no_alternative));
+                            return;
+                        }
 
-        if (winner == null) {
-            this.switching = false;
-            fail(getString(R.string.no_alternative));
-            return;
-        }
-
-        this.p.put(winner.id, Long.valueOf(System.currentTimeMillis()));
-        ProfileStore.f(this).i(winner.id, race.delayMs);
-        LogBuffer.listener("switching to " + winner.remark);
-        this.handler.post(new l(winner, getString(R.string.state_switching)));
+                        TunnelVpnService.this.p.put(winner.id, Long.valueOf(System.currentTimeMillis()));
+                        ProfileStore.f(TunnelVpnService.this).i(winner.id, race.delayMs);
+                        LogBuffer.listener("switching to " + winner.remark);
+                        TunnelVpnService.this.handler.post(new l(winner, TunnelVpnService.this.getString(R.string.state_switching)));
+                    }
+                });
+            }
+        }, "parvaz-autoswitch").start();
     }
 
     public final void h(String str, int i2) {

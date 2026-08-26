@@ -117,7 +117,12 @@ public final class BackupCrypto {
 
     private static SecretKey deriveKey(char[] password, byte[] salt) throws Exception {
         KeySpec spec = new PBEKeySpec(password, salt, ITERATIONS, KEY_BITS);
-        SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+        SecretKeyFactory factory;
+        try {
+            factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+        } catch (java.security.NoSuchAlgorithmException e) {
+            factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
+        }
         byte[] keyBytes = factory.generateSecret(spec).getEncoded();
         return new SecretKeySpec(keyBytes, "AES");
     }

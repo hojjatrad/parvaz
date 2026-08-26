@@ -101,6 +101,12 @@ public class DomainRulesActivity extends AppCompatActivity {
                         .putString("domains_proxy", clean(proxyInput))
                         .putString("domains_block", clean(blockInput))
                         .apply();
+                if (com.parvaz.tunnel.core.TunnelVpnService.serviceRunning) {
+                    android.content.Intent restart = new android.content.Intent(
+                            DomainRulesActivity.this, com.parvaz.tunnel.core.TunnelVpnService.class);
+                    restart.setAction("com.parvaz.tunnel.RESTART");
+                    DomainRulesActivity.this.startService(restart);
+                }
                 Snackbar.make(v, R.string.saved, -1).show();
                 v.postDelayed(new Runnable() {
                     @Override

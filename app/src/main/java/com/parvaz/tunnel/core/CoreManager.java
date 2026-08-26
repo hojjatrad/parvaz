@@ -142,21 +142,25 @@ public final class CoreManager {
                 String string = prefs.f343a.getString("chain_profile", "");
                 if (string != null && !string.isEmpty() && !string.equals(profile.id)) {
                     String b2 = XrayConfigBuilder.b(profile, prefs, ProfileStore.f(context).getById(string), true, true);
-                    Log.i("ParvazCore", "starting core for " + profile.remark);
+                    Log.i("ParvazCore", "starting core for " + profile.remark + " (chained)");
                     CoreController newCoreController = Libv2ray.newCoreController(new a(runnable));
                     this.controller = newCoreController;
                     newCoreController.startLoop(b2, i);
                     this.running = this.controller.getIsRunning();
-                    if (this.running) {
+                    if (!this.running) {
+                        throw new IllegalStateException("core failed to start");
+                    }
+                } else {
+                    String b3 = XrayConfigBuilder.b(profile, prefs, null, true, true);
+                    Log.i("ParvazCore", "starting core for " + profile.remark);
+                    CoreController newCoreController2 = Libv2ray.newCoreController(new b(runnable));
+                    this.controller = newCoreController2;
+                    newCoreController2.startLoop(b3, i);
+                    this.running = this.controller.getIsRunning();
+                    if (!this.running) {
                         throw new IllegalStateException("core failed to start");
                     }
                 }
-                String b3 = XrayConfigBuilder.b(profile, prefs, null, true, true);
-                Log.i("ParvazCore", "starting core for " + profile.remark);
-                CoreController newCoreController2 = Libv2ray.newCoreController(new b(runnable));
-                this.controller = newCoreController2;
-                newCoreController2.startLoop(b3, i);
-                this.running = this.controller.getIsRunning();
             } catch (Exception e) {
                 this.running = false;
                 throw new IllegalStateException("core start failed: " + e.getMessage(), e);

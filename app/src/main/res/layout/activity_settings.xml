@@ -13,10 +13,6 @@
             <Spinner android:id="@id/routing" style="@style/Field" />
             <TextView android:text="@string/domain_strategy" style="@style/Label" />
             <Spinner android:id="@id/domain_strategy" style="@style/Field" />
-            <TextView android:text="@string/remote_dns" style="@style/Label" />
-            <EditText android:id="@id/remote_dns" android:inputType="text" android:textDirection="ltr" style="@style/Field" />
-            <TextView android:text="@string/direct_dns" style="@style/Label" />
-            <EditText android:id="@id/direct_dns" android:inputType="text" android:textDirection="ltr" style="@style/Field" />
             <TextView android:text="@string/ping_url" style="@style/Label" />
             <EditText android:id="@id/ping_url" android:inputType="textUri" android:textDirection="ltr" style="@style/Field" />
             <TextView android:text="@string/mtu" style="@style/Label" />

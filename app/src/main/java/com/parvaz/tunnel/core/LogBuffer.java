@@ -41,7 +41,11 @@ public final class LogBuffer {
         if (str == null) {
             return;
         }
-        String str2 = f6245c.format(new Date()) + "  " + str;
+        String time;
+        synchronized (f6245c) {
+            time = f6245c.format(new Date());
+        }
+        String str2 = time + "  " + str;
         ArrayDeque<String> arrayDeque = f6244b;
         synchronized (arrayDeque) {
             arrayDeque.addLast(str2);

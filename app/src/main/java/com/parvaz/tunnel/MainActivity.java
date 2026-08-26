@@ -2149,7 +2149,12 @@ public class MainActivity extends AppCompatActivity {
                         new com.parvaz.tunnel.core.ShakeDetector.Listener() {
                             @Override
                             public void onShake() {
-                                MainActivity.this.shakeToNextServer();
+                                MainActivity.this.runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        MainActivity.this.shakeToNextServer();
+                                    }
+                                });
                             }
                         });
             }

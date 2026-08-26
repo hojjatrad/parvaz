@@ -258,4 +258,60 @@ public class V115RegressionTest {
         JSONObject level8 = policy.optJSONObject("levels").optJSONObject("8");
         assertEquals(128, level8.optInt("bufferSize"));
     }
+
+    // ---- 6. Shadowsocks legacy parsing & Backup restore ------------------
+
+    @Test
+    public void legacyShadowsocksLinkIsParsed() throws Exception {
+        // ss://BASE64(aes-256-gcm:pass123@1.2.3.4:8388)#TestServer
+        // "aes-256-gcm:pass123@1.2.3.4:8388" -> YWVzLTI1Ni1nY206cGFzczEyM0AxLjIuMy40OjgzODg=
+        String legacyLink = "ss://YWVzLTI1Ni1nY206cGFzczEyM0AxLjIuMy40OjgzODg=#TestServer";
+        Profile p = LinkParser.parseOne(legacyLink);
+        assertNotNull("legacy shadowsocks link should parse", p);
+        assertEquals("shadowsocks", p.protocol);
+        assertEquals("aes-256-gcm", p.encryption);
+        assertEquals("pass123", p.uuid);
+        assertEquals("1.2.3.4", p.address);
+        assertEquals(8388, p.port);
+        assertEquals("TestServer", p.remark);
+    }
+
+    @Test
+    public void backupExportAndRestoreRoundtrip() throws Exception {
+        prefs.f343a.edit()
+                .putString("domains_direct", "bank.ir")
+                .putString("domains_block", "ads.com")
+                .putInt("buffer_size_kb", 256)
+                .putInt("health_strikes", 5)
+                .putString("auto_wifi", "disconnect")
+                .apply();
+        java.util.HashSet<String> favs = new java.util.HashSet<>();
+        favs.add("fav-server-1");
+        prefs.saveFavorites(favs);
+
+        String exportJson = com.parvaz.tunnel.store.BackupManager.export(context);
+        assertTrue("export should contain domains_direct", exportJson.contains("bank.ir"));
+        assertTrue("export should contain favorites", exportJson.contains("fav-server-1"));
+
+        // Clear and restore
+        prefs.f343a.edit().clear().apply();
+        com.parvaz.tunnel.store.BackupManager.a(context, exportJson);
+
+        assertEquals("bank.ir", prefs.f343a.getString("domains_direct", ""));
+        assertEquals("ads.com", prefs.f343a.getString("domains_block", ""));
+        assertEquals(256, prefs.f343a.getInt("buffer_size_kb", 0));
+        assertEquals(5, prefs.f343a.getInt("health_strikes", 0));
+        assertEquals("disconnect", prefs.f343a.getString("auto_wifi", ""));
+        assertTrue("favorites must be restored", prefs.getFavorites().contains("fav-server-1"));
+    }
+
+    @Test
+    public void backupCryptoEncryptDecrypt() throws Exception {
+        String data = "{\"test\":\"parvaz\"}";
+        char[] pass = "SecretPass123".toCharArray();
+        String encrypted = com.parvaz.tunnel.store.BackupCrypto.encrypt(data, pass);
+        assertTrue(com.parvaz.tunnel.store.BackupCrypto.isEncrypted(encrypted));
+        String decrypted = com.parvaz.tunnel.store.BackupCrypto.decrypt(encrypted, pass);
+        assertEquals(data, decrypted);
+    }
 }

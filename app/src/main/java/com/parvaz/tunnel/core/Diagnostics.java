@@ -145,12 +145,17 @@ public final class Diagnostics {
 
     /** Setting keys worth reporting. Credentials and URLs are deliberately absent. */
     private static final String[] REPORTED_BOOLEANS = {
-            "auto_switch", "ipv6", "bypass_lan", "battery_saver", "block_ads", "mux_enabled"
+            "auto_switch", "ipv6_enabled", "bypass_lan", "battery_saver", "mux_enabled",
+            "fragment_enabled", "kill_switch", "connect_on_boot", "haptics", "shake_to_switch"
     };
 
     private static final String[] REPORTED_INTS = {
             "health_interval", "health_strikes", "ping_threshold", "buffer_size_kb",
-            "vpn_mtu", "battery_idle_multiplier", "sort_mode", "sub_auto_hours"
+            "vpn_mtu", "battery_idle_multiplier", "sort_mode", "sub_auto_hours", "mux_concurrency"
+    };
+
+    private static final String[] REPORTED_STRINGS = {
+            "routing_mode", "domain_strategy", "log_level", "per_app_mode", "auto_wifi", "auto_cell"
     };
 
     private static void appendSettings(Context context, StringBuilder sb) {
@@ -167,8 +172,11 @@ public final class Diagnostics {
                     sb.append(key).append(": ").append(prefs.f343a.getInt(key, 0)).append('\n');
                 }
             }
-            sb.append("per_app_mode: ")
-              .append(prefs.f343a.getString("per_app_mode", "off")).append('\n');
+            for (String key : REPORTED_STRINGS) {
+                if (prefs.f343a.contains(key)) {
+                    sb.append(key).append(": ").append(prefs.f343a.getString(key, "")).append('\n');
+                }
+            }
             sb.append("per_app_count: ").append(prefs.c().size()).append('\n');
         } catch (Throwable t) {
             sb.append("settings read failed: ").append(t).append('\n');

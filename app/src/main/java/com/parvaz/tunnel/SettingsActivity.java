@@ -454,20 +454,27 @@ public class SettingsActivity extends AppCompatActivity {
         public final void onClick(View view) {
             EditText editText = this.f6192h;
             SettingsActivity settingsActivity = SettingsActivity.this;
-            RulesActivity__ExternalSyntheticOutline0.j(settingsActivity.C.f343a, "remote_dns", SettingsActivity.textOr(this.f6186a, "1.1.1.1,8.8.8.8"));
-            RulesActivity__ExternalSyntheticOutline0.j(settingsActivity.C.f343a, "direct_dns", SettingsActivity.textOr(this.f6187b, "8.8.8.8"));
+            if (this.f6186a != null) {
+                RulesActivity__ExternalSyntheticOutline0.j(settingsActivity.C.f343a, "remote_dns", SettingsActivity.textOr(this.f6186a, "https://1.1.1.1/dns-query,https://dns.google/dns-query"));
+            }
+            if (this.f6187b != null) {
+                RulesActivity__ExternalSyntheticOutline0.j(settingsActivity.C.f343a, "direct_dns", SettingsActivity.textOr(this.f6187b, "78.157.42.100"));
+            }
             RulesActivity__ExternalSyntheticOutline0.j(settingsActivity.C.f343a, "ping_url", SettingsActivity.textOr(this.f6188c, "https://www.gstatic.com/generate_204"));
             settingsActivity.C.f343a.edit().putInt("vpn_mtu", SettingsActivity.intOr(this.f6189d, 1500, 576, 9000)).apply();
             settingsActivity.C.f343a.edit().putInt("mux_concurrency", SettingsActivity.intOr(this.f6190e, 8, 1, 128)).apply();
             settingsActivity.C.f343a.edit().putInt("ping_threshold", Math.max(200, SettingsActivity.intOr(this.f6191f, 1200, 200, 10000))).apply();
             settingsActivity.C.f343a.edit().putInt("health_interval", Math.max(5, SettingsActivity.intOr(this.g, 15, 5, 600))).apply();
             Prefs prefs = settingsActivity.C;
-            try {
-                Float.parseFloat(editText.getText().toString().trim());
-            } catch (Exception unused) {
-                android.util.Log.w("Parvaz/SettingsActivity", "Exception ignored", unused);
+            float limit = 0.0f;
+            if (editText != null) {
+                try {
+                    limit = Float.parseFloat(editText.getText().toString().trim());
+                } catch (Exception unused) {
+                    android.util.Log.w("Parvaz/SettingsActivity", "Exception ignored", unused);
+                }
             }
-            prefs.f343a.edit().putFloat("data_limit_gb", Math.max(0.0f, 0.0f)).apply();
+            prefs.f343a.edit().putFloat("data_limit_gb", Math.max(0.0f, limit)).apply();
             RulesActivity__ExternalSyntheticOutline0.j(settingsActivity.C.f343a, "fragment_packets", SettingsActivity.textOr(this.f6193i, "tlshello"));
             RulesActivity__ExternalSyntheticOutline0.j(settingsActivity.C.f343a, "fragment_length", SettingsActivity.textOr(this.f6194j, "100-200"));
             RulesActivity__ExternalSyntheticOutline0.j(settingsActivity.C.f343a, "fragment_interval", SettingsActivity.textOr(this.f6195k, "10-20"));
@@ -771,9 +778,13 @@ public class SettingsActivity extends AppCompatActivity {
         Objects.requireNonNull(prefs3);
         A(spinner3, R.array.strategy_labels, strArr3, string3, new A(prefs3));
         EditText editText = (EditText) findViewById(R.id.remote_dns);
-        editText.setText(this.C.f343a.getString("remote_dns", "1.1.1.1,8.8.8.8"));
+        if (editText != null) {
+            editText.setText(this.C.f343a.getString("remote_dns", "https://1.1.1.1/dns-query,https://dns.google/dns-query"));
+        }
         EditText editText2 = (EditText) findViewById(R.id.direct_dns);
-        editText2.setText(this.C.f343a.getString("direct_dns", "8.8.8.8"));
+        if (editText2 != null) {
+            editText2.setText(this.C.f343a.getString("direct_dns", "78.157.42.100"));
+        }
         EditText editText3 = (EditText) findViewById(R.id.mtu);
         editText3.setText(String.valueOf(this.C.f343a.getInt("vpn_mtu", 1500)));
         EditText editText4 = (EditText) findViewById(R.id.ping_url);

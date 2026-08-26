@@ -21,7 +21,7 @@ public class App extends Application {
     /* renamed from: a */
     public static Context wrapLocale(Context context) {
         try {
-            Locale locale = new Locale(context.getApplicationContext().getSharedPreferences("parvaz_prefs", 0).getString("lang", "fa"));
+            Locale locale = new Locale(context.getSharedPreferences("parvaz_prefs", 0).getString("lang", "fa"));
             Locale.setDefault(locale);
             Configuration configuration = new Configuration(context.getResources().getConfiguration());
             configuration.setLocale(locale);

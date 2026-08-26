@@ -162,6 +162,44 @@ public final class BackupManager {
                 }
                 sharedPreferences.edit().putString("per_app_list", sb.toString()).apply();
             }
+            JSONArray optJSONArrayFavs = optJSONObject.optJSONArray("favorites");
+            if (optJSONArrayFavs != null) {
+                java.util.HashSet<String> favSet = new java.util.HashSet<>();
+                for (int i4 = 0; i4 < optJSONArrayFavs.length(); i4++) {
+                    favSet.add(optJSONArrayFavs.getString(i4));
+                }
+                new Prefs(context).saveFavorites(favSet);
+            }
+            if (optJSONObject.has("domains_direct")) {
+                RulesActivity__ExternalSyntheticOutline0.j(sharedPreferences, "domains_direct", optJSONObject.optString("domains_direct", ""));
+            }
+            if (optJSONObject.has("domains_proxy")) {
+                RulesActivity__ExternalSyntheticOutline0.j(sharedPreferences, "domains_proxy", optJSONObject.optString("domains_proxy", ""));
+            }
+            if (optJSONObject.has("domains_block")) {
+                RulesActivity__ExternalSyntheticOutline0.j(sharedPreferences, "domains_block", optJSONObject.optString("domains_block", ""));
+            }
+            if (optJSONObject.has("buffer_size_kb")) {
+                sharedPreferences.edit().putInt("buffer_size_kb", Math.max(8, optJSONObject.optInt("buffer_size_kb", 512))).apply();
+            }
+            if (optJSONObject.has("health_strikes")) {
+                sharedPreferences.edit().putInt("health_strikes", Math.max(1, optJSONObject.optInt("health_strikes", 3))).apply();
+            }
+            if (optJSONObject.has("auto_wifi")) {
+                RulesActivity__ExternalSyntheticOutline0.j(sharedPreferences, "auto_wifi", optJSONObject.optString("auto_wifi", "none"));
+            }
+            if (optJSONObject.has("auto_cell")) {
+                RulesActivity__ExternalSyntheticOutline0.j(sharedPreferences, "auto_cell", optJSONObject.optString("auto_cell", "none"));
+            }
+            if (optJSONObject.has("trusted_wifi")) {
+                RulesActivity__ExternalSyntheticOutline0.j(sharedPreferences, "trusted_wifi", optJSONObject.optString("trusted_wifi", ""));
+            }
+            if (optJSONObject.has("shake_to_switch")) {
+                RulesActivity__ExternalSyntheticOutline0.k(sharedPreferences, "shake_to_switch", optJSONObject.optBoolean("shake_to_switch", false));
+            }
+            if (optJSONObject.has("chain_profile")) {
+                RulesActivity__ExternalSyntheticOutline0.j(sharedPreferences, "chain_profile", optJSONObject.optString("chain_profile", ""));
+            }
         }
         return obj;
     }
@@ -189,8 +227,8 @@ public final class BackupManager {
         JSONObject jSONObject2 = new JSONObject();
         SharedPreferences sharedPreferences = prefs.f343a;
         jSONObject2.put("routing_mode", sharedPreferences.getString("routing_mode", "iran_direct"));
-        jSONObject2.put("remote_dns", sharedPreferences.getString("remote_dns", "1.1.1.1,8.8.8.8"));
-        jSONObject2.put("direct_dns", sharedPreferences.getString("direct_dns", "8.8.8.8"));
+        jSONObject2.put("remote_dns", sharedPreferences.getString("remote_dns", "https://1.1.1.1/dns-query,https://dns.google/dns-query"));
+        jSONObject2.put("direct_dns", sharedPreferences.getString("direct_dns", "78.157.42.100"));
         jSONObject2.put("mux_enabled", sharedPreferences.getBoolean("mux_enabled", false));
         jSONObject2.put("mux_concurrency", sharedPreferences.getInt("mux_concurrency", 8));
         jSONObject2.put("vpn_mtu", sharedPreferences.getInt("vpn_mtu", 1500));
@@ -214,6 +252,16 @@ public final class BackupManager {
         jSONObject2.put("kill_switch", sharedPreferences.getBoolean("kill_switch", false));
         jSONObject2.put("haptics", sharedPreferences.getBoolean("haptics", true));
         jSONObject2.put("custom_rules", sharedPreferences.getString("custom_rules", "[]"));
+        jSONObject2.put("domains_direct", sharedPreferences.getString("domains_direct", ""));
+        jSONObject2.put("domains_proxy", sharedPreferences.getString("domains_proxy", ""));
+        jSONObject2.put("domains_block", sharedPreferences.getString("domains_block", ""));
+        jSONObject2.put("buffer_size_kb", sharedPreferences.getInt("buffer_size_kb", 512));
+        jSONObject2.put("health_strikes", sharedPreferences.getInt("health_strikes", 3));
+        jSONObject2.put("auto_wifi", sharedPreferences.getString("auto_wifi", "none"));
+        jSONObject2.put("auto_cell", sharedPreferences.getString("auto_cell", "none"));
+        jSONObject2.put("trusted_wifi", sharedPreferences.getString("trusted_wifi", ""));
+        jSONObject2.put("shake_to_switch", sharedPreferences.getBoolean("shake_to_switch", false));
+        jSONObject2.put("chain_profile", sharedPreferences.getString("chain_profile", ""));
         JSONArray jSONArray3 = new JSONArray();
         Iterator it3 = prefs.getFavorites().iterator();
         while (it3.hasNext()) {

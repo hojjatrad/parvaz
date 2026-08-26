@@ -405,8 +405,31 @@ public final class LinkParser {
         }
         String Y2 = tryBase64(substring2);
         if (Y2 != null && (lastIndexOf = Y2.lastIndexOf(64)) >= 0) {
-            Y2.substring(0, lastIndexOf);
-            Y2.substring(lastIndexOf + 1);
+            String methodAndPass = Y2.substring(0, lastIndexOf);
+            String hostAndPort = Y2.substring(lastIndexOf + 1);
+            int colonMethod = methodAndPass.indexOf(58);
+            int colonHost = hostAndPort.lastIndexOf(58);
+            if (colonMethod > 0 && colonHost > 0) {
+                Profile F2 = newProfile();
+                F2.protocol = "shadowsocks";
+                F2.encryption = methodAndPass.substring(0, colonMethod);
+                F2.uuid = methodAndPass.substring(colonMethod + 1);
+                F2.address = hostAndPort.substring(0, colonHost).replace("[", "").replace("]", "");
+                try {
+                    F2.port = Integer.parseInt(hostAndPort.substring(colonHost + 1).trim());
+                } catch (Exception unused) {
+                    F2.port = 8388;
+                }
+                F2.remark = Z.isEmpty() ? F2.address : Z;
+                if (!substring.isEmpty()) {
+                    applyQuery(F2, Uri.parse("ss://x?".concat(substring)));
+                    F2.encryption = methodAndPass.substring(0, colonMethod);
+                    F2.uuid = methodAndPass.substring(colonMethod + 1);
+                }
+                if (valid(F2)) {
+                    return F2;
+                }
+            }
         }
         return null;
     }
