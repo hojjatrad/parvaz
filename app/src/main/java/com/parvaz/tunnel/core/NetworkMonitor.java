@@ -186,4 +186,19 @@ public final class NetworkMonitor {
             this.f6251f = false;
         }
     }
+
+    /* renamed from: b */
+    public final void stop() {
+        this.f6248c.removeCallbacks(this.j);
+        if (this.f6251f && this.f6249d != null && this.d != null) {
+            try {
+                this.f6249d.unregisterNetworkCallback(this.d);
+            } catch (Throwable ignored) {
+            }
+        }
+        this.f6251f = false;
+        this.g = -1L;
+        this.f6252h = -1;
+        this.f6253i = false;
+    }
 }

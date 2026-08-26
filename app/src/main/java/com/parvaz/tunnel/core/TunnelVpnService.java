@@ -1166,23 +1166,9 @@ public class TunnelVpnService extends VpnService {
 
     @Override // android.app.Service
     public final void onDestroy() {
-        ConnectivityManager connectivityManager;
-        NetworkMonitor.a aVar;
         try {
-            NetworkMonitor networkMonitor = this.c;
-            if (networkMonitor != null) {
-                networkMonitor.f6248c.removeCallbacks(networkMonitor.j);
-                if (networkMonitor.f6251f && (connectivityManager = networkMonitor.f6249d) != null && (aVar = networkMonitor.d) != null) {
-                    try {
-                        connectivityManager.unregisterNetworkCallback(aVar);
-                    } catch (Throwable unused) {
-                        android.util.Log.w("Parvaz/TunnelVpnService", "Throwable ignored", unused);
-                    }
-                }
-                networkMonitor.f6251f = false;
-                networkMonitor.g = -1L;
-                networkMonitor.f6252h = -1;
-                networkMonitor.f6253i = false;
+            if (this.c != null) {
+                this.c.stop();
                 this.c = null;
             }
         } catch (Throwable unused2) {

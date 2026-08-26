@@ -150,7 +150,8 @@ public final class GeoAssets {
                 out.close();
                 out = null;
 
-                if (total < MIN_FULL_SIZE) {
+                long minSize = "geoip.dat".equals(name) ? (20 * 1024) : (500 * 1024);
+                if (total < minSize) {
                     temp.delete();     // almost certainly an HTML error page
                     continue;
                 }
