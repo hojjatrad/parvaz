@@ -1020,6 +1020,68 @@ public class SettingsActivity extends AppCompatActivity {
             });
         }
 
+        View cleanIp = findViewById(R.id.btn_clean_ip);
+        if (cleanIp != null) {
+            cleanIp.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v2) {
+                    startActivity(new Intent(SettingsActivity.this, CleanIpActivity.class));
+                }
+            });
+        }
+
+        androidx.appcompat.widget.SwitchCompat lanSwitch = findViewById(R.id.lan_proxy);
+        if (lanSwitch != null) {
+            lanSwitch.setChecked(this.C.f343a.getBoolean("lan_proxy", false));
+            lanSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                @Override
+                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                    SettingsActivity.this.C.f343a.edit().putBoolean("lan_proxy", isChecked).apply();
+                    if (isChecked) {
+                        String ip = com.parvaz.tunnel.core.HotspotProxyManager.getLocalIpAddress();
+                        int port = com.parvaz.tunnel.core.HotspotProxyManager.LAN_HTTP_PORT;
+                        new com.google.android.material.dialog.MaterialAlertDialogBuilder(SettingsActivity.this)
+                                .setTitle(R.string.lan_proxy)
+                                .setMessage(getString(R.string.lan_proxy_guide, ip, Integer.valueOf(port)))
+                                .setPositiveButton(android.R.string.ok, null)
+                                .show();
+                        if (com.parvaz.tunnel.core.TunnelVpnService.serviceRunning) {
+                            com.parvaz.tunnel.core.HotspotProxyManager.start(SettingsActivity.this);
+                        }
+                    } else {
+                        com.parvaz.tunnel.core.HotspotProxyManager.stop();
+                    }
+                }
+            });
+        }
+
+        androidx.appcompat.widget.SwitchCompat floatSwitch = findViewById(R.id.floating_monitor);
+        if (floatSwitch != null) {
+            floatSwitch.setChecked(this.C.f343a.getBoolean("floating_monitor", false));
+            floatSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                @Override
+                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                    SettingsActivity.this.C.f343a.edit().putBoolean("floating_monitor", isChecked).apply();
+                    if (isChecked) {
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M && !android.provider.Settings.canDrawOverlays(SettingsActivity.this)) {
+                            Intent intent = new Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                    android.net.Uri.parse("package:" + getPackageName()));
+                            startActivity(intent);
+                        } else {
+                            Intent service = new Intent(SettingsActivity.this, com.parvaz.tunnel.core.FloatingMonitorService.class);
+                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                                startForegroundService(service);
+                            } else {
+                                startService(service);
+                            }
+                        }
+                    } else {
+                        stopService(new Intent(SettingsActivity.this, com.parvaz.tunnel.core.FloatingMonitorService.class));
+                    }
+                }
+            });
+        }
+
         // One save button for the whole screen: write the advanced prefs first,
         // then hand off to the listener that already handled everything else.
         View save = findViewById(R.id.save);

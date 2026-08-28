@@ -308,4 +308,11 @@
     <item type="id" name="btn_auto_profile" />
     <item type="id" name="preset_ir" />
     <item type="id" name="preset_ads" />
+    <item type="id" name="quota_warning" />
+    <item type="id" name="btn_clean_ip" />
+    <item type="id" name="lan_proxy" />
+    <item type="id" name="floating_monitor" />
+    <item type="id" name="service_title" />
+    <item type="id" name="quota_consumed" />
+    <item type="id" name="quota_expire_date" />
 </resources>

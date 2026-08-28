@@ -46,6 +46,22 @@ public final class LinkParser {
             return out;
         }
 
+        // Clash YAML support
+        if (ClashParser.isClash(text)) {
+            ArrayList<Profile> clashList = ClashParser.parse(text);
+            if (!clashList.isEmpty()) {
+                return clashList;
+            }
+        }
+
+        // Sing-box JSON support
+        if (SingBoxParser.isSingBox(text)) {
+            ArrayList<Profile> singBoxList = SingBoxParser.parse(text);
+            if (!singBoxList.isEmpty()) {
+                return singBoxList;
+            }
+        }
+
         // A raw JSON config carries its outbounds inline.
         if (text.startsWith("{")) {
             try {

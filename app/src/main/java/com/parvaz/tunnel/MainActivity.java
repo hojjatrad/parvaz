@@ -63,6 +63,8 @@ import com.parvaz.tunnel.core.SpeedTester_6;
 import com.parvaz.tunnel.core.SubscriptionUpdater;
 import com.parvaz.tunnel.core.SubscriptionUpdater_4;
 import com.parvaz.tunnel.core.TunnelVpnService;
+import com.parvaz.tunnel.core.QuotaNotifier;
+import com.parvaz.tunnel.core.RealBypassTester;
 import com.parvaz.tunnel.core.ServerMemory;
 import com.parvaz.tunnel.model.Profile;
 import com.parvaz.tunnel.model.Subscription;
@@ -145,6 +147,10 @@ public class MainActivity extends AppCompatActivity {
 
     /* renamed from: T */
     public TextView quotaUsedText;
+    public TextView serviceTitleText;
+    public TextView quotaConsumedText;
+    public TextView quotaExpireDateText;
+    public TextView quotaWarningText;
 
     /* renamed from: U */
     public SwipeRefreshLayout refresh;
@@ -1389,53 +1395,234 @@ public class MainActivity extends AppCompatActivity {
 
     /* renamed from: J */
     public final void renderQuota() {
-        long j;
-        long j2;
-        boolean z2;
         if (this.quotaUsedText == null) {
             return;
         }
-        Iterator it = ProfileStore.f(this).f().iterator();
+        Profile currentProfile = ProfileStore.f(this).getById(this.L.f343a.getString("selected_profile", ""));
         Subscription subscription = null;
-        while (it.hasNext()) {
-            Subscription subscription2 = (Subscription) it.next();
-            if (subscription2.hasQuota() && (subscription == null || subscription2.quotaTotal > subscription.quotaTotal)) {
-                subscription = subscription2;
+        if (currentProfile != null && currentProfile.subscriptionId != null && !currentProfile.subscriptionId.isEmpty()) {
+            for (Object obj : ProfileStore.f(this).f()) {
+                Subscription sub = (Subscription) obj;
+                if (sub.id.equals(currentProfile.subscriptionId)) {
+                    subscription = sub;
+                    break;
+                }
             }
         }
-        if (subscription != null) {
-            j = subscription.quotaUsed();
-            j2 = subscription.quotaTotal;
-            z2 = true;
-        } else {
-            j = this.L.f343a.getLong("data_up", 0L) + this.L.f343a.getLong("data_down", 0L);
-            float limitGb = this.L.f343a.getFloat("data_limit_gb", 0.0f);
-            j2 = limitGb > 0.0f ? (long) (limitGb * 1024.0f * 1024.0f * 1024.0f) : -1L;
-            z2 = false;
+        if (subscription == null) {
+            for (Object obj : ProfileStore.f(this).f()) {
+                Subscription sub = (Subscription) obj;
+                if (sub.hasQuota() && (subscription == null || sub.quotaTotal > subscription.quotaTotal)) {
+                    subscription = sub;
+                }
+            }
         }
-        this.quotaUsedText.setText(getString(R.string.data_used) + ": " + fmtBytes(j));
-        String str = "";
-        if (j2 <= 0) {
-            this.quotaLeftText.setText(getString(R.string.data_left) + ": " + getString(R.string.data_unlimited));
+
+        long totalBytes = -1L;
+        long usedBytes = 0L;
+        long expireSec = -1L;
+        boolean fromServer = false;
+
+        long liveSessionBytes = this.L.f343a.getLong("data_up", 0L) + this.L.f343a.getLong("data_down", 0L);
+
+        if (subscription != null && subscription.hasQuota()) {
+            totalBytes = subscription.quotaTotal;
+            usedBytes = subscription.quotaUsed() + (TunnelVpnService.serviceRunning ? liveSessionBytes : 0L);
+            expireSec = subscription.quotaExpire;
+            fromServer = true;
+        } else {
+            float manualGb = this.L.f343a.getFloat("manual_service_total_gb", this.L.f343a.getFloat("data_limit_gb", 0.0f));
+            if (manualGb > 0.0f) {
+                totalBytes = (long) (manualGb * 1024L * 1024L * 1024L);
+                usedBytes = liveSessionBytes;
+                int manualDays = this.L.f343a.getInt("manual_service_duration_days", 30);
+                long since = this.L.f343a.getLong("manual_service_start_time", System.currentTimeMillis());
+                expireSec = (since / 1000L) + (manualDays * 86400L);
+            } else {
+                usedBytes = liveSessionBytes;
+            }
+        }
+
+        boolean fa = "fa".equals(this.L.f343a.getString("lang", "fa")) || "fa".equals(Locale.getDefault().getLanguage());
+
+        if (totalBytes <= 0) {
+            if (this.serviceTitleText != null) {
+                this.serviceTitleText.setText(R.string.service_status_title);
+            }
+            this.quotaUsedText.setText((fa ? "حجم کل: " : "Total: ") + (fa ? "تعیین‌نشده" : "Not set"));
+            this.quotaLeftText.setText(R.string.service_not_set);
+            if (this.quotaConsumedText != null) {
+                this.quotaConsumedText.setText((fa ? "مصرف‌شده: " : "Used: ") + fmtBytes(usedBytes));
+            }
+            if (this.quotaExpireDateText != null) {
+                this.quotaExpireDateText.setText(R.string.service_unlimited_duration);
+            }
             this.quotaPercentText.setText("");
             this.quotaBar.setProgress(0);
-            this.quotaBar.setVisibility(8);
+            this.quotaBar.setVisibility(View.GONE);
+            if (this.quotaWarningText != null) {
+                this.quotaWarningText.setVisibility(View.GONE);
+            }
             return;
         }
-        long max = Math.max(0L, j2 - j);
-        int min = (int) Math.min(100L, (j * 100) / j2);
-        this.quotaLeftText.setText(getString(R.string.data_left) + ": " + fmtBytes(max));
-        TextView textView = this.quotaPercentText;
-        StringBuilder sb = new StringBuilder();
-        sb.append(min);
-        sb.append("%");
-        if (z2) {
-            str = " · " + getString(R.string.data_from_sub);
+
+        long remaining = Math.max(0L, totalBytes - usedBytes);
+        int percent = (int) Math.min(100L, (usedBytes * 100) / totalBytes);
+
+        if (this.serviceTitleText != null) {
+            this.serviceTitleText.setText(fromServer
+                    ? (getString(R.string.service_status_title) + (fa ? " (سرور)" : " (Server)"))
+                    : getString(R.string.service_status_title));
         }
-        sb.append(str);
-        textView.setText(sb.toString());
-        this.quotaBar.setProgress(min);
-        this.quotaBar.setVisibility(0);
+
+        this.quotaUsedText.setText((fa ? "حجم کل: " : "Total: ") + fmtBytes(totalBytes));
+        this.quotaLeftText.setText((fa ? "باقی‌مانده: " : "Left: ") + fmtBytes(remaining));
+
+        if (this.quotaConsumedText != null) {
+            this.quotaConsumedText.setText((fa ? "مصرف‌شده: " : "Used: ") + fmtBytes(usedBytes));
+        }
+
+        long diffDays = -1L;
+        if (expireSec > 0) {
+            if (expireSec > 10000000000L) expireSec /= 1000L;
+            long nowSec = System.currentTimeMillis() / 1000L;
+            diffDays = (expireSec - nowSec) / 86400L;
+            if (this.quotaExpireDateText != null) {
+                if (diffDays >= 0) {
+                    this.quotaExpireDateText.setText(diffDays + " " + (fa ? "روز تا تاریخ انقضا" : "days left"));
+                } else {
+                    this.quotaExpireDateText.setText(R.string.service_expired);
+                }
+            }
+        } else if (this.quotaExpireDateText != null) {
+            this.quotaExpireDateText.setText(R.string.service_unlimited_duration);
+        }
+
+        this.quotaPercentText.setText(percent + "%");
+        this.quotaBar.setProgress(percent);
+        this.quotaBar.setVisibility(View.VISIBLE);
+
+        if (this.quotaWarningText != null) {
+            if (percent >= 100) {
+                this.quotaWarningText.setText(R.string.quota_warn_100);
+                this.quotaWarningText.setTextColor(0xFFC62828);
+                this.quotaWarningText.setVisibility(View.VISIBLE);
+            } else if (percent >= 90) {
+                this.quotaWarningText.setText(R.string.quota_warn_90);
+                this.quotaWarningText.setTextColor(0xFFE65100);
+                this.quotaWarningText.setVisibility(View.VISIBLE);
+            } else if (diffDays >= 0 && diffDays <= 2) {
+                this.quotaWarningText.setText(getString(R.string.quota_warn_expire, Integer.valueOf((int) Math.max(0, diffDays))));
+                this.quotaWarningText.setTextColor(0xFFE65100);
+                this.quotaWarningText.setVisibility(View.VISIBLE);
+            } else {
+                this.quotaWarningText.setVisibility(View.GONE);
+            }
+        }
+
+        QuotaNotifier.checkAndNotify(this, usedBytes, totalBytes, expireSec);
+    }
+
+    public final void showQuotaDetailsDialog() {
+        Profile currentProfile = ProfileStore.f(this).getById(this.L.f343a.getString("selected_profile", ""));
+        Subscription subscription = null;
+        if (currentProfile != null && currentProfile.subscriptionId != null && !currentProfile.subscriptionId.isEmpty()) {
+            for (Object obj : ProfileStore.f(this).f()) {
+                Subscription sub = (Subscription) obj;
+                if (sub.id.equals(currentProfile.subscriptionId)) {
+                    subscription = sub;
+                    break;
+                }
+            }
+        }
+        if (subscription == null) {
+            Iterator it = ProfileStore.f(this).f().iterator();
+            while (it.hasNext()) {
+                Subscription s = (Subscription) it.next();
+                if (s.hasQuota() && (subscription == null || s.quotaTotal > subscription.quotaTotal)) {
+                    subscription = s;
+                }
+            }
+        }
+
+        boolean fa = "fa".equals(this.L.f343a.getString("lang", "fa")) || "fa".equals(Locale.getDefault().getLanguage());
+
+        if (subscription != null && subscription.hasQuota()) {
+            StringBuilder sb = new StringBuilder();
+            sb.append(getString(R.string.add_subscription)).append(": ").append(subscription.name).append("\n\n");
+            long total = subscription.quotaTotal;
+            long upload = Math.max(0L, subscription.quotaUpload);
+            long download = Math.max(0L, subscription.quotaDownload);
+            long used = upload + download;
+            long left = Math.max(0L, total - used);
+            int pct = (int) Math.min(100L, (used * 100) / total);
+
+            sb.append(getString(R.string.quota_total)).append(": ").append(fmtBytes(total)).append("\n");
+            sb.append(getString(R.string.quota_upload)).append(": ").append(fmtBytes(upload)).append("\n");
+            sb.append(getString(R.string.quota_download)).append(": ").append(fmtBytes(download)).append("\n");
+            sb.append(getString(R.string.data_used)).append(": ").append(fmtBytes(used)).append(" (").append(pct).append("%)\n");
+            sb.append(getString(R.string.data_left)).append(": ").append(fmtBytes(left)).append("\n");
+
+            if (subscription.quotaExpire > 0) {
+                long expSec = subscription.quotaExpire;
+                if (expSec > 10000000000L) {
+                    expSec /= 1000L;
+                }
+                long diffDays = (expSec - (System.currentTimeMillis() / 1000L)) / 86400L;
+                String expDate = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US).format(new java.util.Date(expSec * 1000L));
+                sb.append("\n").append(getString(R.string.quota_expires)).append(": ").append(expDate);
+                if (diffDays >= 0) {
+                    sb.append(" (").append(diffDays).append(" ").append(fa ? "روز مانده" : "days left").append(")");
+                }
+            }
+
+            new MaterialAlertDialogBuilder(this)
+                    .setTitle(R.string.quota_details_title)
+                    .setMessage(sb.toString().trim())
+                    .setPositiveButton(R.string.quota_refresh, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            MainActivity.this.updateSubscriptions();
+                        }
+                    })
+                    .setNegativeButton(R.string.dismiss, null)
+                    .show();
+        } else {
+            showSetManualServiceDialog();
+        }
+    }
+
+    public final void showSetManualServiceDialog() {
+        View inflate = getLayoutInflater().inflate(R.layout.dialog_input, (ViewGroup) null);
+        final TextInputEditText input = (TextInputEditText) inflate.findViewById(R.id.input);
+        float currentGb = this.L.f343a.getFloat("manual_service_total_gb", this.L.f343a.getFloat("data_limit_gb", 10.0f));
+        input.setHint(R.string.service_gb_hint);
+        input.setText(String.valueOf((int) currentGb));
+        input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.service_set_manual)
+                .setMessage(R.string.service_gb_hint)
+                .setView(inflate)
+                .setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        try {
+                            float gb = Float.parseFloat(input.getText().toString().trim());
+                            if (gb > 0) {
+                                MainActivity.this.L.f343a.edit()
+                                        .putFloat("manual_service_total_gb", gb)
+                                        .putInt("manual_service_duration_days", 30)
+                                        .putLong("manual_service_start_time", System.currentTimeMillis())
+                                        .apply();
+                                MainActivity.this.renderQuota();
+                            }
+                        } catch (Exception ignored) {
+                        }
+                    }
+                })
+                .setNegativeButton(R.string.cancel, null)
+                .show();
     }
 
     /**
@@ -1818,10 +2005,13 @@ public class MainActivity extends AppCompatActivity {
                 getString(R.string.sort_quality),
                 getString(R.string.sort_name),
                 getString(R.string.sort_recent),
-                getString(R.string.sort_country)
+                getString(R.string.sort_country),
+                getString(R.string.bypass_test),
+                getString(R.string.clean_dead_nodes),
+                getString(R.string.clean_ip_title)
         };
         int current = this.L.f343a.getInt("sort_mode", 0);
-        if (current < 0 || current >= labels.length) {
+        if (current < 0 || current >= 5) {
             current = 0;
         }
         new MaterialAlertDialogBuilder(this)
@@ -1830,14 +2020,76 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onClick(android.content.DialogInterface d, int which) {
                         d.dismiss();
-                        MainActivity.this.L.f343a.edit().putInt("sort_mode", which).apply();
-                        MainActivity.this.applySort(which);
-                        MainActivity.this.reload();
-                        Snackbar.make(view, labels[which], -1).show();
+                        if (which < 5) {
+                            MainActivity.this.L.f343a.edit().putInt("sort_mode", which).apply();
+                            MainActivity.this.applySort(which);
+                            MainActivity.this.reload();
+                            Snackbar.make(view, labels[which], -1).show();
+                        } else if (which == 5) {
+                            MainActivity.this.runRealBypassTest();
+                        } else if (which == 6) {
+                            MainActivity.this.cleanDeadNodes();
+                        } else if (which == 7) {
+                            MainActivity.this.startActivity(new Intent(MainActivity.this, CleanIpActivity.class));
+                        }
                     }
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
+    }
+
+    public void cleanDeadNodes() {
+        ProfileStore store = this.b0;
+        int removed = 0;
+        synchronized (store) {
+            for (int i = store.f346b.size() - 1; i >= 0; i--) {
+                Profile p = (Profile) store.f346b.get(i);
+                if (p != null && p.ping == -1) {
+                    store.f346b.remove(i);
+                    removed++;
+                }
+            }
+            store.h();
+        }
+        reload();
+        Snackbar.make(this.connectButton, getString(R.string.clean_dead_nodes_done, Integer.valueOf(removed)), -1).show();
+    }
+
+    public void runRealBypassTest() {
+        final ArrayList<Profile> all = this.b0.e();
+        if (all.isEmpty()) {
+            Snackbar.make(this.connectButton, R.string.no_servers_yet, -1).show();
+            return;
+        }
+        Snackbar.make(this.connectButton, R.string.bypass_test_running, -1).show();
+        setPingAllBusy(true);
+        RealBypassTester.testAll(this, all, new RealBypassTester.Callback() {
+            @Override
+            public void onServerTested(final Profile profile, boolean passed, int latencyMs) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (MainActivity.this.z != null) {
+                            MainActivity.this.z.notifyDataSetChanged();
+                        }
+                    }
+                });
+            }
+
+            @Override
+            public void onAllComplete(final int passedCount, final int failedCount) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        setPingAllBusy(false);
+                        MainActivity.this.reload();
+                        Snackbar.make(MainActivity.this.connectButton,
+                                getString(R.string.bypass_test_done, Integer.valueOf(passedCount), Integer.valueOf(failedCount)),
+                                0).show();
+                    }
+                });
+            }
+        });
     }
 
     /**
@@ -2018,11 +2270,31 @@ public class MainActivity extends AppCompatActivity {
         this.speedText = (TextView) findViewById(R.id.speed_text);
         this.timerText = (TextView) findViewById(R.id.timer_text);
         this.emptyText = (TextView) findViewById(R.id.empty_text);
+        this.serviceTitleText = (TextView) findViewById(R.id.service_title);
         this.quotaUsedText = (TextView) findViewById(R.id.quota_used);
         this.quotaLeftText = (TextView) findViewById(R.id.quota_left);
         this.quotaPercentText = (TextView) findViewById(R.id.quota_percent);
         this.quotaBar = (ProgressBar) findViewById(R.id.quota_bar);
-        findViewById(R.id.quota_card).setOnLongClickListener(new H());
+        this.quotaConsumedText = (TextView) findViewById(R.id.quota_consumed);
+        this.quotaExpireDateText = (TextView) findViewById(R.id.quota_expire_date);
+        this.quotaWarningText = (TextView) findViewById(R.id.quota_warning);
+
+        View quotaCard = findViewById(R.id.quota_card);
+        if (quotaCard != null) {
+            quotaCard.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    MainActivity.this.showQuotaDetailsDialog();
+                }
+            });
+            quotaCard.setOnLongClickListener(new View.OnLongClickListener() {
+                @Override
+                public boolean onLongClick(View v) {
+                    MainActivity.this.showQuotaDetailsDialog();
+                    return true;
+                }
+            });
+        }
         this.pulseRing = findViewById(R.id.pulse_ring);
         this.list = (RecyclerView) findViewById(R.id.server_list);
         this.refresh = (SwipeRefreshLayout) findViewById(R.id.refresh);
