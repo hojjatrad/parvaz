@@ -24,6 +24,7 @@ sudo mkdir -p /opt/pb
 sudo chown -R $(id -u):$(id -g) /opt/pb
 
 # --- android toolchain ---
-bash /home/user/setup_android.sh
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+bash "$SCRIPT_DIR/setup_android.sh"
 echo "BOOTSTRAP_RC=$?"
 echo "BOOTSTRAP_DONE"

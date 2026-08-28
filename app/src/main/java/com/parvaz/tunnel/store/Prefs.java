@@ -97,4 +97,20 @@ public final class Prefs {
         }
         return linkedHashSet;
     }
+
+    public final void saveFavorites(java.util.Set<String> set) {
+        StringBuilder sb = new StringBuilder();
+        if (set != null) {
+            for (String str : set) {
+                String trim = str == null ? "" : str.trim();
+                if (!trim.isEmpty()) {
+                    if (sb.length() > 0) {
+                        sb.append('\n');
+                    }
+                    sb.append(trim);
+                }
+            }
+        }
+        this.f343a.edit().putString("favorites", sb.toString()).apply();
+    }
 }

@@ -45,6 +45,9 @@ mkdir -p /opt/pb/aar
 if [ ! -f /opt/pb/aar/libv2ray.aar ]; then
   wget -q https://github.com/2dust/AndroidLibXrayLite/releases/download/v26.7.31/libv2ray.aar -O /opt/pb/aar/libv2ray.aar
 fi
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+mkdir -p "$SCRIPT_DIR/../app/libs"
+cp /opt/pb/aar/libv2ray.aar "$SCRIPT_DIR/../app/libs/libv2ray.aar"
 
 echo "SETUP_RC=$?"
 ls -la /opt/pb/tools /opt/pb/sdk /opt/pb/aar

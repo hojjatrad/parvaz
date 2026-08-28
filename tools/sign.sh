@@ -1,7 +1,8 @@
 #!/bin/bash
 # zipalign + apksigner (v1/v2/v3) using the permanent Parvaz key.
 set -e
-source /home/user/tools/env.sh
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/env.sh"
 IN="$1"
 OUT="$2"
 zipalign -f -p 4 "$IN" /tmp/s2.apk
