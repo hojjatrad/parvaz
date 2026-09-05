@@ -3,6 +3,13 @@ package com.parvaz.tunnel.model;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 /* loaded from: classes.dex */
 public class Subscription {
     public String id = "";
@@ -32,60 +39,136 @@ public class Subscription {
     }
 
     public void applyUserinfo(String str) {
-        char c;
         if (str == null || str.trim().isEmpty()) {
             return;
         }
-        for (String str2 : str.split(";")) {
-            int indexOf = str2.indexOf(61);
+        String text = str.trim();
+
+        // Check if JSON response (e.g. Marzban API info: {"used_traffic":..., "data_limit":..., "expire":...})
+        if (text.startsWith("{") && text.endsWith("}")) {
+            try {
+                JSONObject json = new JSONObject(text);
+                long tot = json.optLong("data_limit", json.optLong("total", -1L));
+                long used = json.optLong("used_traffic", json.optLong("used", -1L));
+                long exp = json.optLong("expire", -1L);
+                if (tot > 0) this.quotaTotal = tot;
+                if (used >= 0) {
+                    this.quotaDownload = used;
+                    this.quotaUpload = 0;
+                }
+                if (exp > 0) this.quotaExpire = exp;
+                return;
+            } catch (Throwable ignored) {
+            }
+        }
+
+        // Standard subscription-userinfo header format: upload=...; download=...; total=...; expire=...
+        for (String part : text.split(";")) {
+            int indexOf = part.indexOf('=');
             if (indexOf > 0) {
-                String lowerCase = str2.substring(0, indexOf).trim().toLowerCase();
-                String trim = str2.substring(indexOf + 1).trim();
-                if (!trim.isEmpty()) {
+                String key = part.substring(0, indexOf).trim().toLowerCase(Locale.US);
+                String val = part.substring(indexOf + 1).trim();
+                if (!val.isEmpty()) {
                     try {
-                        long parseDouble = (long) Double.parseDouble(trim);
-                        lowerCase.getClass();
-                        switch (lowerCase.hashCode()) {
-                            case -1289159393:
-                                if (lowerCase.equals("expire")) {
-                                    c = 0;
-                                    break;
-                                }
-                                break;
-                            case -838595071:
-                                if (lowerCase.equals("upload")) {
-                                    c = 1;
-                                    break;
-                                }
-                                break;
-                            case 110549828:
-                                if (lowerCase.equals("total")) {
-                                    c = 2;
-                                    break;
-                                }
-                                break;
-                            case 1427818632:
-                                if (lowerCase.equals("download")) {
-                                    c = 3;
-                                    break;
-                                }
-                                break;
-                        }
-                        c = 65535;
-                        if (c == 0) {
-                            this.quotaExpire = parseDouble;
-                        } else if (c == 1) {
-                            this.quotaUpload = parseDouble;
-                        } else if (c == 2) {
-                            this.quotaTotal = parseDouble;
-                        } else if (c == 3) {
-                            this.quotaDownload = parseDouble;
+                        long num = (long) Double.parseDouble(val);
+                        if ("expire".equals(key)) {
+                            this.quotaExpire = num;
+                        } else if ("upload".equals(key)) {
+                            this.quotaUpload = num;
+                        } else if ("total".equals(key)) {
+                            this.quotaTotal = num;
+                        } else if ("download".equals(key)) {
+                            this.quotaDownload = num;
                         }
                     } catch (NumberFormatException unused) {
                         android.util.Log.w("Parvaz/Subscription", "NumberFormatException ignored", unused);
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Inspects imported profile remarks for panel traffic/expiry banners.
+     * Panels often embed 'حجم: 2.1 GB / 10 GB' or 'انقضا: 2026-09-25' into remark names.
+     */
+    public void extractInfoFromRemarks(List<Profile> profiles) {
+        if (profiles == null || profiles.isEmpty()) {
+            return;
+        }
+        for (Profile p : profiles) {
+            if (p == null || p.remark == null || p.remark.isEmpty()) {
+                continue;
+            }
+            String rem = p.remark;
+
+            // Pattern: X GB / Y GB
+            if (this.quotaTotal <= 0) {
+                Pattern tp = Pattern.compile(
+                        "([\\d\\.]+)\\s*(GB|MB|KB|G|M|K|گیگابایت|مگابایت)\\s*[\\/|\\-]\\s*([\\d\\.]+)\\s*(GB|MB|KB|G|M|K|گیگابایت|مگابایت)",
+                        Pattern.CASE_INSENSITIVE);
+                Matcher tm = tp.matcher(rem);
+                if (tm.find()) {
+                    long u = parseBytesWithUnit(tm.group(1), tm.group(2));
+                    long tot = parseBytesWithUnit(tm.group(3), tm.group(4));
+                    if (tot > 0) {
+                        this.quotaTotal = tot;
+                        this.quotaDownload = u;
+                        this.quotaUpload = 0;
+                    }
+                }
+            }
+
+            // Expiry date YYYY-MM-DD or YYYY/MM/DD
+            if (this.quotaExpire <= 0) {
+                Pattern dp = Pattern.compile("(\\d{4})[-\\/](\\d{1,2})[-\\/](\\d{1,2})");
+                Matcher dm = dp.matcher(rem);
+                if (dm.find()) {
+                    try {
+                        String ds = dm.group(1) + "-" + String.format(Locale.US, "%02d", Integer.parseInt(dm.group(2)))
+                                + "-" + String.format(Locale.US, "%02d", Integer.parseInt(dm.group(3)));
+                        Date d = new SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(ds);
+                        if (d != null) {
+                            this.quotaExpire = d.getTime() / 1000L;
+                        }
+                    } catch (Throwable ignored) {
+                    }
+                }
+            }
+
+            // Days left: X روز or X days
+            if (this.quotaExpire <= 0) {
+                Pattern dlp = Pattern.compile("(\\d+)\\s*(روز|day|days)", Pattern.CASE_INSENSITIVE);
+                Matcher dlm = dlp.matcher(rem);
+                if (dlm.find()) {
+                    try {
+                        int days = Integer.parseInt(dlm.group(1));
+                        if (days > 0 && days < 1000) {
+                            this.quotaExpire = (System.currentTimeMillis() / 1000L) + (days * 86400L);
+                        }
+                    } catch (Throwable ignored) {
+                    }
+                }
+            }
+        }
+    }
+
+    private static long parseBytesWithUnit(String valStr, String unitStr) {
+        try {
+            double v = Double.parseDouble(valStr.trim());
+            String u = unitStr.trim().toUpperCase(Locale.US);
+            if (u.contains("G") || u.contains("گیگ")) {
+                return (long) (v * 1024L * 1024L * 1024L);
+            }
+            if (u.contains("M") || u.contains("مگ")) {
+                return (long) (v * 1024L * 1024L);
+            }
+            if (u.contains("K")) {
+                return (long) (v * 1024L);
+            }
+            return (long) v;
+        } catch (Throwable t) {
+            return 0L;
         }
     }
 
@@ -114,6 +197,18 @@ public class Subscription {
 
     public long quotaUsed() {
         return Math.max(0L, this.quotaUpload) + Math.max(0L, this.quotaDownload);
+    }
+
+    public int getDaysRemaining() {
+        if (this.quotaExpire <= 0) {
+            return -1;
+        }
+        long expSec = this.quotaExpire;
+        if (expSec > 10000000000L) {
+            expSec /= 1000L;
+        }
+        long nowSec = System.currentTimeMillis() / 1000L;
+        return (int) Math.max(0L, (expSec - nowSec) / 86400L);
     }
 
     public JSONObject toJson() throws JSONException {

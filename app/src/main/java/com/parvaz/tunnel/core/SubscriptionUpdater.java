@@ -3,44 +3,47 @@ package com.parvaz.tunnel.core;
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
+
+import org.json.JSONObject;
+
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.Iterator;
+import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
-/* renamed from: com.parvaz.tunnel.core.b */
-/* loaded from: classes.dex */
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+
+/**
+ * Universal subscription updater supporting Marzban, X-UI, 3x-ui, Hiddify, V2board, and custom panels.
+ */
 public final class SubscriptionUpdater {
 
-    /* renamed from: a */
-    public final Context f6298a;
+    private static final String TAG = "ParvazSub";
 
-    /* renamed from: b */
+    public final Context f6298a;
     public final Handler f6299b = new Handler(Looper.getMainLooper());
 
-    /* JADX WARN: Can't change package for inner class: com.parvaz.tunnel.core.b.a to com.parvaz.tunnel.core.SubscriptionUpdater$Listener */
-    /* renamed from: com.parvaz.tunnel.core.b$a */
-    /* loaded from: classes.dex */
     public interface a {
         void a(String str, int i);
     }
 
-    /* JADX WARN: Can't change package for inner class: com.parvaz.tunnel.core.b.b to com.parvaz.tunnel.core.SubscriptionUpdater$b */
-    /* renamed from: com.parvaz.tunnel.core.b$b */
-    /* loaded from: classes.dex */
     public static class b {
-
-        /* renamed from: a */
         public final String f6300a;
-
-        /* renamed from: b */
         public final String f6301b;
 
         public b(String str, String str2) {
-            this.f6300a = str;
+            this.f6300a = str == null ? "" : str;
             this.f6301b = str2;
         }
     }
@@ -49,46 +52,126 @@ public final class SubscriptionUpdater {
         this.f6298a = context.getApplicationContext();
     }
 
-    public static b a(String str) throws java.io.IOException {
-        String str2;
-        HttpURLConnection httpURLConnection = (HttpURLConnection) new URL(str).openConnection();
-        httpURLConnection.setConnectTimeout(15000);
-        httpURLConnection.setReadTimeout(20000);
-        httpURLConnection.setInstanceFollowRedirects(true);
-        httpURLConnection.setRequestProperty("User-Agent", "v2rayNG/2.2.6");
-        httpURLConnection.setRequestProperty("Accept", "*/*");
-        try {
-            int responseCode = httpURLConnection.getResponseCode();
-            if (responseCode < 200 || responseCode >= 400) {
-                throw new IllegalStateException("HTTP " + responseCode);
+    private static void setupPermissiveSSL(HttpURLConnection conn) {
+        if (conn instanceof HttpsURLConnection) {
+            HttpsURLConnection https = (HttpsURLConnection) conn;
+            try {
+                TrustManager[] trustAll = new TrustManager[]{
+                        new X509TrustManager() {
+                            @Override
+                            public void checkClientTrusted(X509Certificate[] chain, String authType) {}
+                            @Override
+                            public void checkServerTrusted(X509Certificate[] chain, String authType) {}
+                            @Override
+                            public X509Certificate[] getAcceptedIssuers() {
+                                return new X509Certificate[0];
+                            }
+                        }
+                };
+                SSLContext sc = SSLContext.getInstance("TLS");
+                sc.init(null, trustAll, new SecureRandom());
+                https.setSSLSocketFactory(sc.getSocketFactory());
+                https.setHostnameVerifier(new HostnameVerifier() {
+                    @Override
+                    public boolean verify(String hostname, SSLSession session) {
+                        return true;
+                    }
+                });
+            } catch (Throwable t) {
+                Log.w(TAG, "Permissive SSL setup failed", t);
             }
-            Iterator<Map.Entry<String, List<String>>> it = httpURLConnection.getHeaderFields().entrySet().iterator();
-            while (true) {
-                if (!it.hasNext()) {
-                    str2 = null;
-                    break;
-                }
-                Map.Entry<String, List<String>> next = it.next();
-                String key = next.getKey();
-                if (key != null && key.equalsIgnoreCase("subscription-userinfo") && next.getValue() != null && !next.getValue().isEmpty()) {
-                    str2 = next.getValue().get(0);
-                    break;
-                }
-            }
-            InputStream inputStream = httpURLConnection.getInputStream();
-            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-            byte[] bArr = new byte[8192];
-            while (true) {
-                int read = inputStream.read(bArr);
-                if (read <= 0) {
-                    b bVar = new b(byteArrayOutputStream.toString("UTF-8"), str2);
-                    inputStream.close();
-                    return bVar;
-                }
-                byteArrayOutputStream.write(bArr, 0, read);
-            }
-        } finally {
-            httpURLConnection.disconnect();
         }
+    }
+
+    /**
+     * Fetches subscription and extracts server userinfo (total quota, usage, expire date).
+     */
+    public static b a(String str) throws java.io.IOException {
+        if (str == null || str.trim().isEmpty()) {
+            throw new IllegalArgumentException("empty subscription url");
+        }
+
+        String currentUrl = str.trim();
+        String userinfo = null;
+        String responseBody = "";
+
+        // Follow redirects manually up to 5 hops
+        for (int hop = 0; hop < 5; hop++) {
+            HttpURLConnection conn = (HttpURLConnection) new URL(currentUrl).openConnection();
+            setupPermissiveSSL(conn);
+            conn.setConnectTimeout(15000);
+            conn.setReadTimeout(20000);
+            conn.setInstanceFollowRedirects(false);
+            conn.setRequestProperty("User-Agent", "v2rayNG/1.8.5");
+            conn.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,application/json,*/*;q=0.8");
+
+            int code;
+            try {
+                code = conn.getResponseCode();
+            } catch (Exception e) {
+                conn.disconnect();
+                throw e;
+            }
+
+            // Check headers for userinfo on each hop
+            for (Map.Entry<String, List<String>> entry : conn.getHeaderFields().entrySet()) {
+                String key = entry.getKey();
+                if (key != null && (key.equalsIgnoreCase("subscription-userinfo")
+                        || key.equalsIgnoreCase("x-userinfo")
+                        || key.equalsIgnoreCase("user-info")
+                        || key.equalsIgnoreCase("subscription-info"))) {
+                    if (entry.getValue() != null && !entry.getValue().isEmpty()) {
+                        userinfo = entry.getValue().get(0);
+                    }
+                }
+            }
+
+            if (code == 301 || code == 302 || code == 303 || code == 307 || code == 308) {
+                String location = conn.getHeaderField("Location");
+                conn.disconnect();
+                if (location != null && !location.isEmpty()) {
+                    if (!location.startsWith("http://") && !location.startsWith("https://")) {
+                        URL base = new URL(currentUrl);
+                        currentUrl = new URL(base, location).toString();
+                    } else {
+                        currentUrl = location;
+                    }
+                    continue;
+                }
+            }
+
+            if (code < 200 || code >= 400) {
+                conn.disconnect();
+                throw new IllegalStateException("HTTP " + code);
+            }
+
+            InputStream in = conn.getInputStream();
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            byte[] buf = new byte[16384];
+            int read;
+            while ((read = in.read(buf)) > 0) {
+                bos.write(buf, 0, read);
+            }
+            in.close();
+            conn.disconnect();
+            responseBody = bos.toString("UTF-8");
+            break;
+        }
+
+        // If userinfo header was not found, check if response is JSON with Marzban / panel info
+        if (userinfo == null && responseBody.trim().startsWith("{") && responseBody.trim().endsWith("}")) {
+            try {
+                JSONObject j = new JSONObject(responseBody.trim());
+                long total = j.optLong("data_limit", j.optLong("total", -1L));
+                long used = j.optLong("used_traffic", j.optLong("used", -1L));
+                long exp = j.optLong("expire", -1L);
+                if (total > 0 || exp > 0) {
+                    userinfo = "upload=0; download=" + Math.max(0L, used) + "; total=" + total + "; expire=" + exp;
+                }
+            } catch (Throwable ignored) {
+            }
+        }
+
+        return new b(responseBody, userinfo);
     }
 }

@@ -56,6 +56,13 @@ public class ParvazWidget extends AppWidgetProvider {
             Profile byId = ProfileStore.f(context).getById(context.getApplicationContext().getSharedPreferences("parvaz_prefs", 0).getString("selected_profile", ""));
             if (byId != null && (str = byId.remark) != null && !str.isEmpty()) {
                 string2 = byId.remark;
+                for (Object subObj : ProfileStore.f(context).f()) {
+                    com.parvaz.tunnel.model.Subscription sub = (com.parvaz.tunnel.model.Subscription) subObj;
+                    if (sub.hasQuota() && (sub.id.equals(byId.subscriptionId) || byId.subscriptionId.isEmpty())) {
+                        string2 += " (" + MainActivity.fmtBytes(sub.quotaRemaining()) + ")";
+                        break;
+                    }
+                }
             }
         } catch (Throwable unused) {
             android.util.Log.w("Parvaz/ParvazWidget", "Throwable ignored", unused);

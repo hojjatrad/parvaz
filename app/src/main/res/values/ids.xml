@@ -276,11 +276,11 @@
     <item type="id" name="zxing_barcode_surface" />
     <item type="id" name="zxing_status_view" />
     <item type="id" name="zxing_viewfinder_view" />
-    <item name="btn_presets" type="id"/>
-    <item name="sparkline" type="id"/>
-    <item name="weekly_card" type="id"/>
-    <item name="log_share" type="id"/>
-    <item name="shake_switch" type="id"/>
+    <item name="btn_presets" type="id" />
+    <item name="sparkline" type="id" />
+    <item name="weekly_card" type="id" />
+    <item name="log_share" type="id" />
+    <item name="shake_switch" type="id" />
     <item type="id" name="ip_before_value" />
     <item type="id" name="ip_after_value" />
     <item type="id" name="checks_container" />
@@ -308,4 +308,12 @@
     <item type="id" name="btn_auto_profile" />
     <item type="id" name="preset_ir" />
     <item type="id" name="preset_ads" />
-</resources>
+    <item type="id" name="quota_warning" />
+    <item type="id" name="btn_clean_ip" />
+    <item type="id" name="lan_proxy" />
+    <item type="id" name="floating_monitor" />
+
+    <item type="id" name="service_title" />
+    <item type="id" name="quota_consumed" />
+    <item type="id" name="quota_expire_date" />
+    </resources>

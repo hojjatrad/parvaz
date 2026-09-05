@@ -296,6 +296,9 @@ public class TunnelVpnService extends VpnService {
                     } else {
                         CoreManager.b().start(tunnelVpnService, tunnelVpnService.profile, tunnelVpnService.tunInterface.getFd(), new h());
                         TunnelVpnService.serviceRunning = true;
+                        if (tunnelVpnService.f != null && tunnelVpnService.f.f343a.getBoolean("lan_proxy", false)) {
+                            HotspotProxyManager.start(tunnelVpnService);
+                        }
                         if (tunnelVpnService.startedAt == 0) {
                             tunnelVpnService.startedAt = System.currentTimeMillis();
                         }
@@ -776,6 +779,10 @@ public class TunnelVpnService extends VpnService {
                 this, 1,
                 new Intent("com.parvaz.tunnel.STOP").setPackage(getPackageName()),
                 201326592);
+        PendingIntent nextServer = PendingIntent.getService(
+                this, 2,
+                new Intent(this, TunnelVpnService.class).setAction("com.parvaz.tunnel.SWITCH_NEXT"),
+                201326592);
 
         NotificationCompat.Builder builder =
                 new NotificationCompat.Builder(this, CHANNEL_ID);
@@ -793,6 +800,7 @@ public class TunnelVpnService extends VpnService {
         builder.setPriority(NotificationCompat.PRIORITY_LOW);
         builder.setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
         builder.setCategory(NotificationCompat.CATEGORY_SERVICE);
+        builder.addAction(R.drawable.ic_sort, getString(R.string.shortcut_switch_short), nextServer);
         builder.addAction(R.drawable.ic_tile, getString(R.string.disconnect), broadcast);
         return builder.build();
     }
@@ -1026,6 +1034,7 @@ public class TunnelVpnService extends VpnService {
 
     /* renamed from: i */
     public final void shutdown(boolean z, boolean z2) {
+        HotspotProxyManager.stop();
         stopStatsTicker();
         stopHealthTicker();
         serviceRunning = false;
@@ -1189,6 +1198,27 @@ public class TunnelVpnService extends VpnService {
         super.onRevoke();
     }
 
+    public final void switchNextServer() {
+        if (this.switching) return;
+        ArrayList<Profile> all = ProfileStore.f(this).e();
+        if (all.size() < 2) return;
+        String curId = this.profile != null ? this.profile.id : "";
+        int idx = 0;
+        for (int i = 0; i < all.size(); i++) {
+            if (all.get(i).id.equals(curId)) {
+                idx = (i + 1) % all.size();
+                break;
+            }
+        }
+        Profile next = all.get(idx);
+        this.switching = true;
+        if (this.f != null) {
+            this.f.f343a.edit().putString("selected_profile", next.id).apply();
+        }
+        LogBuffer.listener("switching to " + next.remark);
+        this.handler.post(new l(next, getString(R.string.state_switching)));
+    }
+
     @Override // android.app.Service
     public final int onStartCommand(Intent intent, int flags, int startId) {
         // Null intent => the system restarted us (START_STICKY) or an always-on
@@ -1210,6 +1240,11 @@ public class TunnelVpnService extends VpnService {
         if ("com.parvaz.tunnel.STOP".equals(action)) {
             shutdown(true, false);
             return START_NOT_STICKY;
+        }
+
+        if ("com.parvaz.tunnel.SWITCH_NEXT".equals(action)) {
+            switchNextServer();
+            return START_STICKY;
         }
 
         // Android requires startForeground() within ~5 s of the service starting,
