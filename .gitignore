@@ -29,3 +29,6 @@ signing.properties
 
 # Short-lived CI test artifacts
 test-results/
+
+# Generated release outputs (publish as Releases assets, never Git blobs)
+release-artifacts/

@@ -1,0 +1,56 @@
+name: Android compilation and unit tests
+on:
+  push:
+    branches: ['**']
+    paths: ['app/**', 'tools/**', '*.gradle', 'gradle.properties', '.github/workflows/android-build.yml']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  android-debug:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+          cache-disabled: true
+      - name: Prepare Android SDK and pinned native core
+        run: |
+          sdkmanager 'platforms;android-34' 'build-tools;34.0.0'
+          bash tools/release/fetch_core.sh
+      - name: Compile Android app and run existing Android unit tests (no release secrets)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .cache
+          if ! gradle --no-daemon --max-workers=2 :app:testDebugUnitTest :app:assembleDebug >.cache/android-build.log 2>&1; then
+            tail -100 .cache/android-build.log
+            python3 - <<'PY'
+          from pathlib import Path
+          text = Path('.cache/android-build.log').read_text(errors='replace')[-5000:]
+          text = text.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+          print('::error title=Android build diagnostics::' + text)
+          PY
+            exit 1
+          fi
+          tail -40 .cache/android-build.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-test-reports
+          path: |
+            app/build/reports/tests/
+            app/build/test-results/
+            .cache/android-build.log
+          include-hidden-files: true
+          retention-days: 3
