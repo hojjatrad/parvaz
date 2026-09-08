@@ -1,0 +1,31 @@
+name: Subscription regression tests
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  jvm-regressions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Run JVM parser, storage and loopback HTTP tests (not an APK build)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p test-results
+          bash tools/audit/run.sh | tee test-results/subscription-tests.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: subscription-test-results
+          path: test-results/*.txt
+          retention-days: 3

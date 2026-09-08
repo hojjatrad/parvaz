@@ -1,107 +1,127 @@
 package com.parvaz.tunnel.config;
 
 import com.parvaz.tunnel.model.Profile;
-import org.json.JSONArray;
-import org.json.JSONObject;
+import org.json.*;
+import java.util.*;
+import static com.parvaz.tunnel.config.ConfigFields.*;
 
-import java.util.ArrayList;
-
-/**
- * Parses Sing-box JSON configuration format into Parvaz Profile models.
- */
+/** Bounded, explicitly limited Sing-box server extraction; not a full Sing-box runtime. */
 public final class SingBoxParser {
-
-    private SingBoxParser() {
-    }
-
-    /** True if JSON looks like a Sing-box config with outbounds. */
+    private SingBoxParser() {}
     public static boolean isSingBox(String text) {
-        if (text == null) {
-            return false;
-        }
-        if (!text.trim().startsWith("{")) return false;
+        if(text==null||!text.trim().startsWith("{")) return false;
+        if(text.length()>LinkParser.MAX_INPUT_CHARS) throw new IllegalArgumentException("JSON input too large");
+        LinkParser.checkJsonDepth(text);
         try {
-            JSONObject root = new JSONObject(text);
-            JSONArray outbounds = root.optJSONArray("outbounds");
-            if (outbounds == null) return false;
-            for (int i = 0; i < outbounds.length(); i++) {
-                JSONObject outbound = outbounds.optJSONObject(i);
-                if (outbound != null && outbound.has("type") && !outbound.has("protocol")) return true;
+            JSONObject root=JsonInput.object(text);
+            for(String section:new String[]{"outbounds","endpoints"}) {
+                JSONArray a=root.optJSONArray(section);
+                if(a!=null) for(int i=0;i<a.length();i++) {
+                    JSONObject o=a.optJSONObject(i);
+                    if(o!=null&&o.has("type")&&!o.has("protocol")) return true;
+                }
             }
-        } catch (Exception ignored) { }
+        } catch(JSONException ignored) { }
         return false;
     }
-
-    public static ArrayList<Profile> parse(String json) {
-        ArrayList<Profile> list = new ArrayList<>();
-        if (json == null || json.trim().isEmpty()) {
-            return list;
-        }
+    public static ArrayList<Profile> parse(String json){return parseDetailed(json).profiles;}
+    public static ImportResult parseDetailed(String json) {
+        ImportResult result=new ImportResult();
+        if(json==null||json.trim().isEmpty())return result;
+        if(json.length()>LinkParser.MAX_INPUT_CHARS)throw new IllegalArgumentException("JSON input too large");
+        LinkParser.checkJsonDepth(json);
         try {
-            JSONObject root = new JSONObject(json);
-            JSONArray outbounds = root.optJSONArray("outbounds");
-            if (outbounds == null) {
-                return list;
-            }
-
-            for (int i = 0; i < outbounds.length(); i++) {
-                JSONObject o = outbounds.optJSONObject(i);
-                if (o == null) continue;
-                String type = o.optString("type", "").toLowerCase(java.util.Locale.US);
-                if (type.equals("direct") || type.equals("block") || type.equals("dns") || type.equals("selector") || type.equals("urltest")) {
-                    continue;
-                }
-
-                Profile p = LinkParser.newProfile();
-                p.protocol = type;
-                p.remark = o.optString("tag", o.optString("server", "SingBox Node"));
-                p.address = o.optString("server", "");
-                p.port = o.optInt("server_port", o.optInt("port", 443));
-                p.uuid = o.optString("uuid", o.optString("password", ""));
-                if ("tuic".equals(type)) p.quicKey = o.optString("password", "");
-                if ("socks".equals(type) || "http".equals(type)) {
-                    p.uuid = o.optString("username", "");
-                    p.quicKey = o.optString("password", "");
-                }
-                p.encryption = o.optString("method", o.optString("security", "none"));
-
-                JSONObject tls = o.optJSONObject("tls");
-                if (tls != null && tls.optBoolean("enabled", false)) {
-                    p.security = "tls";
-                    p.sni = tls.optString("server_name", p.address);
-                    p.allowInsecure = tls.optBoolean("insecure", false);
-                    JSONObject reality = tls.optJSONObject("reality");
-                    if (reality != null && reality.optBoolean("enabled", false)) {
-                        p.security = "reality";
-                        p.publicKey = reality.optString("public_key", "");
-                        p.shortId = reality.optString("short_id", "");
-                    }
-                    JSONObject utls = tls.optJSONObject("utls");
-                    if (utls != null) {
-                        p.fingerprint = utls.optString("fingerprint", "chrome");
-                    }
-                }
-
-                JSONObject transport = o.optJSONObject("transport");
-                if (transport != null) {
-                    String net = transport.optString("type", "tcp");
-                    p.network = net;
-                    p.path = transport.optString("path", "/");
-                    p.serviceName = transport.optString("service_name", "");
-                    JSONObject headers = transport.optJSONObject("headers");
-                    if (headers != null) {
-                        p.host = headers.optString("Host", headers.optString("host", p.sni));
-                    }
-                }
-
-                p.flow = o.optString("flow", "");
-                p.normalize();
-                if (LinkParser.valid(p)) {
-                    list.add(p);
+            JSONObject root=JsonInput.object(json);
+            if(root.has("route")||root.has("dns")||root.has("inbounds"))result.warn("SERVER_EXTRACTION_ONLY",0);
+            int position=0;
+            for(String section:new String[]{"outbounds","endpoints"}) {
+                if(!root.has(section))continue;
+                JSONArray nodes=root.optJSONArray(section);
+                if(nodes==null){result.fail("INVALID_OUTBOUND_LIST");continue;}
+                if(nodes.length()>LinkParser.MAX_PROFILES)throw new IllegalArgumentException("Too many subscription profiles");
+                for(int i=0;i<nodes.length();i++) {
+                    position++;
+                    try {
+                        JSONObject o=nodes.optJSONObject(i);
+                        if(o==null)throw new Invalid("INVALID_PROXY_NODE");
+                        String type=text(o,"type","");
+                        if(Arrays.asList("direct","block","dns","selector","urltest").contains(type)){result.warn("HELPER_NOT_IMPORTED",position);continue;}
+                        Profile p=map(o,"endpoints".equals(section));result.add(p);
+                        if(p.allowInsecure)result.warn("TLS_VERIFICATION_DISABLED",position);
+                        if(!ProtocolNames.hasBuilder(p.protocol))result.warn("CORE_UNSUPPORTED",position);
+                    }catch(Invalid e){result.reject(e.code,position);}
                 }
             }
-        } catch (Exception ignored) {
+        }catch(JSONException e){result.fail("INVALID_JSON");}
+        return result;
+    }
+
+    private static Profile map(JSONObject o,boolean endpoint) {
+        String type=ProtocolNames.canonical(required(o,"type"));
+        String allowed="type tag server server_port port";
+        if("wireguard".equals(type)) allowed=endpoint?"type tag private_key address peers mtu system":"type tag server server_port port private_key local_address peer_public_key pre_shared_key reserved mtu";
+        else {
+            allowed+=" tls transport";
+            switch(type) {
+                case "vless":allowed+=" uuid flow encryption";break;
+                case "vmess":allowed+=" uuid security alter_id";break;
+                case "trojan":allowed+=" password";break;
+                case "shadowsocks":allowed+=" password method";break;
+                case "socks":allowed+=" username password version";break;
+                case "http":allowed+=" username password";break;
+                case "hysteria2":allowed+=" password obfs";break;
+                case "tuic":allowed+=" uuid password congestion_control udp_relay_mode";break;
+                default:throw new Invalid("UNSUPPORTED_PROTOCOL");
+            }
         }
-        return list;
+        keys(o,allowed);
+        if(endpoint&&!"wireguard".equals(type))throw new Invalid("UNSUPPORTED_ENDPOINT");
+        Profile p=LinkParser.newProfile();p.protocol=type;
+        if("wireguard".equals(type)) {
+            p.uuid=required(o,"private_key");p.wgMtu=integer(o,"mtu",1420,576,9000);p.network="";
+            JSONObject peer=o;
+            if(endpoint) {
+                if(bool(o,"system",false))throw new Invalid("SYSTEM_ENDPOINT_NOT_MAPPED");
+                JSONArray peers=o.optJSONArray("peers");
+                if(peers==null||peers.length()!=1||peers.optJSONObject(0)==null)throw new Invalid("WIREGUARD_REQUIRES_ONE_PEER");
+                peer=peers.optJSONObject(0);keys(peer,"address port public_key pre_shared_key reserved");
+                p.address=required(peer,"address");p.port=integer(peer,"port",51820,1,65535);
+                p.publicKey=required(peer,"public_key");p.localAddress=list(o,"address","");
+            }else {
+                p.address=required(o,"server");p.port=integer(o,o.has("server_port")?"server_port":"port",51820,1,65535);
+                p.publicKey=required(o,"peer_public_key");p.localAddress=list(o,"local_address","");
+            }
+            p.presharedKey=text(peer,"pre_shared_key","");p.reserved=list(peer,"reserved","");
+        }else {
+            p.address=required(o,"server").trim();p.port=integer(o,o.has("server_port")?"server_port":"port",443,1,65535);
+            p.uuid=text(o,"uuid",text(o,"password",""));
+            p.encryption=text(o,"method",text(o,"security",text(o,"encryption","vmess".equals(type)?"auto":"none")));
+            p.alterId=integer(o,"alter_id",0,0,65535);p.flow=text(o,"flow","");
+            if("http".equals(type)||"socks".equals(type)) {
+                p.uuid=text(o,"username","");p.quicKey=text(o,"password","");
+                if(o.has("version")&&!text(o,"version","5").equals("5"))throw new Invalid("SOCKS_VERSION_UNSUPPORTED");
+            }
+            JSONObject tls=object(o,"tls");keys(tls,"enabled server_name insecure alpn utls reality");
+            if(bool(tls,"enabled",false)) {
+                p.security="tls";p.sni=text(tls,"server_name",p.address);p.allowInsecure=bool(tls,"insecure",false);p.alpn=list(tls,"alpn","");
+                JSONObject utls=object(tls,"utls");keys(utls,"enabled fingerprint");
+                if(bool(utls,"enabled",false))p.fingerprint=text(utls,"fingerprint","chrome");
+                JSONObject reality=object(tls,"reality");keys(reality,"enabled public_key short_id");
+                if(bool(reality,"enabled",false)){p.security="reality";p.publicKey=required(reality,"public_key");p.shortId=text(reality,"short_id","");}
+            }
+            if(("hysteria2".equals(type)||"tuic".equals(type))&&o.has("transport"))throw new Invalid("UNSUPPORTED_TRANSPORT");
+            JSONObject t=object(o,"transport");
+            if(t.length()>0) {
+                p.network=text(t,"type","tcp");
+                if("grpc".equals(p.network)){keys(t,"type service_name");p.serviceName=text(t,"service_name","");}
+                else if("http".equals(p.network)){keys(t,"type path host");p.network="h2";p.path=text(t,"path","/");p.host=list(t,"host","");}
+                else if("ws".equals(p.network)){keys(t,"type path headers");p.path=text(t,"path","/");p.host=hostHeader(object(t,"headers"));}
+                else if("httpupgrade".equals(p.network)){keys(t,"type path host headers");p.path=text(t,"path","/");p.host=text(t,"host",hostHeader(object(t,"headers")));}
+                else throw new Invalid("UNSUPPORTED_TRANSPORT");
+            }
+            if("tuic".equals(type)){p.network="udp";p.quicKey=required(o,"password");p.mode=text(o,"congestion_control","bbr");p.headerType=text(o,"udp_relay_mode","native");}
+            if("hysteria2".equals(type)){p.network="udp";JSONObject obfs=object(o,"obfs");keys(obfs,"type password");p.mode=text(obfs,"type","");p.host=text(obfs,"password","");}
+        }
+        p.remark=text(o,"tag",p.address);transport(p);credentials(p);return p.normalize();
     }
 }

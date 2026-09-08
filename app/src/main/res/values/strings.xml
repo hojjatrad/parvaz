@@ -402,4 +402,7 @@ Tap + to paste a config link or add a subscription."</string>
     <string name="service_unlimited_duration">Duration: Unlimited</string>
     <string name="service_not_set">Tap to set volume &amp; days</string>
 
+    <string name="import_result_title">Configuration import report</string>
+    <string name="import_result_summary">Recognized: %1$d; rejected: %2$d; warnings: %3$d. Only recognized profiles are imported. Unsupported options are not silently removed.</string>
+    <string name="subscription_refresh_summary">Subscriptions updated: %1$d; failed: %2$d; profiles: %3$d; warnings: %4$d</string>
 </resources>

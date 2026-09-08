@@ -31,11 +31,13 @@ public final class LinkParser {
     public static final int MAX_INPUT_CHARS = 5 * 1024 * 1024;
     public static final int MAX_PROFILES = 5000;
 
-    /** Bounded dispatch for link lists, JSON objects/arrays and Base64-wrapped formats. */
-    public static ArrayList<Profile> parseMany(String input) {
-        ArrayList<Profile> out = new ArrayList<>();
-        parseInto(input, out, 0);
-        return out;
+    /** Compatibility entry point for callers which only need accepted profiles. */
+    public static ArrayList<Profile> parseMany(String input) { return parseDetailed(input).profiles; }
+
+    public static ImportResult parseDetailed(String input) {
+        ImportResult result = new ImportResult();
+        parseInto(input, result, 0);
+        return result;
     }
 
     private static String clean(String input) {
@@ -43,7 +45,7 @@ public final class LinkParser {
         return text.startsWith("\uFEFF") ? text.substring(1).trim() : text;
     }
 
-    private static void parseInto(String input, ArrayList<Profile> out, int depth) {
+    private static void parseInto(String input, ImportResult result, int depth) {
         if (input == null) return;
         if (input.length() > MAX_INPUT_CHARS || depth > 4) {
             throw new IllegalArgumentException("Subscription input exceeds safe limits");
@@ -54,58 +56,67 @@ public final class LinkParser {
             checkJsonDepth(text);
             if (text.startsWith("[")) {
                 JSONArray entries;
-                try { entries = new JSONArray(text); }
-                catch (JSONException ignored) { return; }
+                try { entries = JsonInput.array(text); }
+                catch (JSONException ignored) { result.fail("INVALID_JSON"); return; }
+                if (entries.length() > MAX_PROFILES) throw new IllegalArgumentException("Too many subscription profiles");
                 for (int i = 0; i < entries.length(); i++) {
                     Object entry = entries.opt(i);
                     if (entry instanceof JSONObject || entry instanceof String || entry instanceof JSONArray) {
-                        parseInto(entry.toString(), out, depth + 1);
-                    }
+                        parseInto(entry.toString(), result, depth + 1);
+                    } else result.reject("INVALID_ARRAY_ENTRY", i + 1);
                 }
-            } else if (SingBoxParser.isSingBox(text)) {
-                addBounded(out, SingBoxParser.parse(text));
             } else {
-                try {
-                    Profile profile = parseRawJson(text);
-                    if (profile != null && valid(profile)) addBounded(out, profile);
-                } catch (JSONException ignored) {
-                    // Never log remote JSON: it can contain credentials.
+                JSONObject root;
+                try { root = JsonInput.object(text); }
+                catch (JSONException ignored) {
+                    if (ClashParser.isClash(text)) result.merge(ClashParser.parseDetailed(text));
+                    else result.fail("INVALID_JSON");
+                    return;
+                }
+                if (root.has("proxies")) result.merge(ClashParser.parseDetailed(text));
+                else if (SingBoxParser.isSingBox(text)) result.merge(SingBoxParser.parseDetailed(text));
+                else if (root.has("links") && !root.has("outbounds")) {
+                    // Explicit panel API envelope, e.g. Marzban. No arbitrary JSON-to-server fallback.
+                    JSONArray links = root.optJSONArray("links");
+                    if (links == null) { result.fail("INVALID_PANEL_LINKS"); return; }
+                    parseInto(links.toString(), result, depth + 1);
+                } else {
+                    try {
+                        Profile profile = parseRawJson(text);
+                        if (profile != null && valid(profile)) {
+                            result.add(profile);
+                            if (root.has("outbounds")) result.warn("RAW_OUTBOUND_EXTRACTION_ONLY", 0);
+                        } else result.reject("NOT_A_SUPPORTED_CONFIG", 0);
+                    } catch (JSONException ignored) { result.reject("INVALID_JSON_CONFIG", 0); }
                 }
             }
             return;
         }
-        if (ClashParser.isClash(text)) {
-            addBounded(out, ClashParser.parse(text));
-            return;
-        }
+        if (ClashParser.isClash(text)) { result.merge(ClashParser.parseDetailed(text)); return; }
         if (!text.contains("://")) {
             String decoded = tryBase64(text);
             if (decoded != null && !clean(decoded).isEmpty()) {
-                parseInto(decoded, out, depth + 1);
+                parseInto(decoded, result, depth + 1);
                 return;
             }
         }
+        int lineNumber = 0;
         for (String rawLine : text.split("[\\r\\n]+")) {
+            lineNumber++;
             String line = clean(rawLine);
             if (line.isEmpty() || line.startsWith("#") || line.startsWith("//")) continue;
             Profile profile;
             try { profile = parseOne(line); }
-            catch (Exception ignored) { continue; }
-            if (profile != null && valid(profile)) addBounded(out, profile);
+            catch (Exception ignored) { result.reject("INVALID_SHARE_LINK", lineNumber); continue; }
+            if (profile != null && valid(profile)) {
+                result.add(profile);
+                if (!com.parvaz.tunnel.core.ProtocolSupport.isSupported(profile)) result.warn("CORE_UNSUPPORTED", lineNumber);
+            } else result.reject("UNRECOGNIZED_SHARE_LINK", lineNumber);
         }
     }
 
-    private static void addBounded(ArrayList<Profile> out, Profile profile) {
-        if (out.size() >= MAX_PROFILES) throw new IllegalArgumentException("Too many subscription profiles");
-        out.add(profile);
-    }
-
-    private static void addBounded(ArrayList<Profile> out, ArrayList<Profile> profiles) {
-        for (Profile profile : profiles) addBounded(out, profile);
-    }
-
     /** Reject extreme nesting before handing untrusted input to a recursive JSON parser. */
-    static void checkJsonDepth(String text) {
+    public static void checkJsonDepth(String text) {
         int depth = 0;
         boolean quoted = false, escaped = false;
         for (int i = 0; i < text.length(); i++) {
@@ -177,7 +188,7 @@ public final class LinkParser {
         }
         if (json.length() > MAX_INPUT_CHARS) throw new IllegalArgumentException("JSON input too large");
         checkJsonDepth(json);
-        JSONObject root = new JSONObject(json);
+        JSONObject root = JsonInput.object(json);
         JSONObject outbound = CustomOutbound.extract(root);
         if (outbound == null) return null;
         Profile profile = newProfile();
@@ -214,7 +225,7 @@ public final class LinkParser {
         String substring = str.substring(8);
         String Y = tryBase64(substring);
         if (Y != null && Y.trim().startsWith("{")) {
-            JSONObject jSONObject = new JSONObject(Y);
+            JSONObject jSONObject = JsonInput.object(Y);
             Profile F = newProfile();
             F.protocol = "vmess";
             F.remark = firstNonEmpty(jSONObject.optString("ps"), jSONObject.optString("remarks"), jSONObject.optString("add"));

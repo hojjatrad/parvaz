@@ -15,6 +15,7 @@ public final class SubscriptionUpdater {
 
     public interface a {
         void a(String str, int i);
+        default void onComplete(SubscriptionRefresh.Result result) { a(result.errorSummary(), result.serverCount); }
     }
 
     public static class b {
@@ -40,7 +41,8 @@ public final class SubscriptionUpdater {
         // If userinfo header was not found, check if response is JSON with Marzban / panel info
         if (userinfo == null && responseBody.trim().startsWith("{") && responseBody.trim().endsWith("}")) {
             try {
-                JSONObject j = new JSONObject(responseBody.trim());
+                com.parvaz.tunnel.config.LinkParser.checkJsonDepth(responseBody);
+                JSONObject j = com.parvaz.tunnel.config.JsonInput.object(responseBody.trim());
                 long total = j.optLong("data_limit", j.optLong("total", -1L));
                 long used = j.optLong("used_traffic", j.optLong("used", -1L));
                 long exp = j.optLong("expire", -1L);

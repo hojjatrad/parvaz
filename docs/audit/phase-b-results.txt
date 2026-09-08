@@ -1,0 +1,195 @@
+PASS: Clash SS canonicalized
+PASS: Actual builder accepts Clash SS
+PASS: Actual builder also accepts an unnormalized SS alias
+PASS: Clash Trojan has implicit TLS
+PASS: Trojan builder emits TLS
+PASS: Sing-box TUIC preserves second credential
+PASS: TUIC still correctly marked non-connectable
+PASS: Single Xray JSON accepted
+PASS: JSON config array accepted
+PASS: Mixed JSON array excludes panel metadata
+PASS: Base64 Clash redispatched
+PASS: Base64 Xray JSON redispatched
+PASS: Base64 array redispatched
+PASS: UTF-8 BOM accepted
+PASS: Panel metadata is not a fake server
+PASS: Empty JSON rejected
+PASS: Direct-only raw JSON rejected
+PASS: Missing settings rejected
+PASS: Out-of-range raw port rejected
+PASS: Validated custom is offered by capability filter
+PASS: Custom builder extracts supported outbound
+PASS: Legacy invalid custom is not offered
+PASS: Legacy invalid custom builder fails closed
+PASS: HTTP protocol has a matching builder
+PASS: HTTP username and password preserved
+PASS: Unknown protocol warned
+PASS: Aliases are canonical
+PASS: Xray JSON not misclassified by unrelated server field
+PASS: Excessive JSON nesting rejected
+PASS: Oversized input rejected
+PASS: Too many profiles fail without partial return
+PASS: Standard VMess JSON link imports
+PASS: CRLF link list imports both nodes
+PASS: Base64 share-link list imports both nodes
+PASS: Unknown line does not discard valid VMess
+PARSER/BUILDER TOTAL: 35 regression assertions passed.
+NOT COVERED/FIXED: full Clash YAML, all Sing-box fields, Android URI decoding, full raw-config routing, native VPN connectivity.
+PASS: Plain body/BOM decoded
+PASS: Quota header preserved
+PASS: Resources disconnected and stream closed
+PASS: Redirects disabled in underlying client
+PASS: Connection/read timeout and no URL caching
+PASS: Relative redirect preserves same-origin quota
+PASS: Redirect connection disconnected
+PASS: No quota inheritance across origins
+PASS: HTTPS downgrade
+PASS: HTTPS downgrade redacts secrets
+PASS: Redirect loop
+PASS: Redirect loop redacts secrets
+PASS: Missing redirect location
+PASS: Missing redirect location redacts secrets
+PASS: File URL
+PASS: File URL redacts secrets
+PASS: URL user-info
+PASS: URL user-info redacts secrets
+PASS: Whitespace URL
+PASS: Whitespace URL redacts secrets
+PASS: Redirect hop limit
+PASS: Redirect hop limit redacts secrets
+PASS: Exactly five redirects allowed
+PASS: HTTP 204
+PASS: HTTP 204 redacts secrets
+PASS: HTTP 206
+PASS: HTTP 206 redacts secrets
+PASS: HTTP 304
+PASS: HTTP 304 redacts secrets
+PASS: HTTP 401
+PASS: HTTP 401 redacts secrets
+PASS: HTTP 403
+PASS: HTTP 403 redacts secrets
+PASS: HTTP 429
+PASS: HTTP 429 redacts secrets
+PASS: HTTP 500
+PASS: HTTP 500 redacts secrets
+PASS: HTML login page
+PASS: HTML login page redacts secrets
+PASS: Wrong MIME with actual plain links remains compatible
+PASS: Empty body
+PASS: Empty body redacts secrets
+PASS: Advertised oversized body
+PASS: Advertised oversized body redacts secrets
+PASS: Unadvertised oversized body
+PASS: Unadvertised oversized body redacts secrets
+PASS: Gzip decoded
+PASS: Gzip expanded-size limit
+PASS: Gzip expanded-size limit redacts secrets
+PASS: Gzip failure cleans resources
+PASS: Unknown content encoding
+PASS: Unknown content encoding redacts secrets
+PASS: Timeout sanitized
+PASS: Timeout sanitized redacts secrets
+PASS: Timeout disconnects
+PASS: Network exception sanitized
+PASS: Network exception sanitized redacts secrets
+PASS: Explicit legacy HTTP still allowed (not encrypted)
+PASS: Real untrusted HTTPS certificate
+PASS: Real untrusted HTTPS certificate redacts secrets
+PASS: Real trusted localhost TLS succeeds
+PASS: Real hostname mismatch with trusted cert
+PASS: Real hostname mismatch with trusted cert redacts secrets
+HTTP/TLS TOTAL: 63 assertions passed. TLS tests are desktop JVM, not Android trust-store tests.
+PASS B: Clash mixed inline/nested YAML imports four nodes
+PASS B: Clash groups/rules explicitly warned
+PASS B: YAML password yes is a string, not boolean
+PASS B: Leading-zero Reality short-id preserved
+PASS B: Clash gRPC service/SNI/ALPN mapped
+PASS B: Clash Reality key and TLS mode mapped
+PASS B: Clash WS nested headers/path preserved
+PASS B: Clash TLS verification flag preserved
+PASS B: Clash WG addresses, preshared key, reserved and MTU mapped
+PASS B: WG builder brackets IPv6
+PASS B: Whole inline proxies array supported
+PASS B: Flow-style YAML document supported
+PASS B: JSON Clash document supported
+PASS B: Duplicate YAML keys rejected
+PASS B: YAML aliases rejected including scalars
+PASS B: Arbitrary Java YAML tags rejected
+PASS B: Multiple YAML documents rejected
+PASS B: Malformed YAML rejected
+PASS B: Bad port not silently repaired
+PASS B: Missing VMess UUID rejected
+PASS B: Unsupported SS plugin rejected instead of stripped
+PASS B: Diagnostics contain no credential/input text
+PASS B: Unsupported WS early-data option rejected
+PASS B: Base64 wrapping retains diagnostics
+PASS B: Sing-box mixed outbounds mapped
+PASS B: Sing-box selectors/routing reported
+PASS B: Sing-box ALPN/uTLS mapped
+PASS B: Sing-box WS settings preserved
+PASS B: Sing-box Reality/gRPC mapped
+PASS B: Sing-box SOCKS credentials preserved
+PASS B: Sing-box legacy WireGuard mapped
+PASS B: Sing-box new WireGuard endpoint mapped
+PASS B: Sing-box detour not silently dropped
+PASS B: Sing-box TLS certificate pin not silently dropped
+PASS B: Sing-box malformed node preserves other results with error
+PASS B: Explicit panel links envelope supported
+PASS B: Mixed link text marked partial
+PASS B: Metadata-only JSON not refreshable
+PASS B: Empty subscription never authorizes deletion
+PASS B: Identity excludes display name/raw link/internal ID
+PASS B: Identity includes sni
+PASS B: Identity includes publicKey
+PASS B: Identity includes shortId
+PASS B: Identity includes flow
+PASS B: Identity includes quicKey
+PASS B: Identity includes encryption
+PASS B: Identity includes allowInsecure
+PASS B: Custom JSON identity independent of key order and remarks
+PASS B: Reconcile retains ID/ping and updates remote name
+PASS B: Reconcile deduplicates within owner only
+PASS B: Other subscription/manual profiles untouched
+PASS B: Credential rotation creates new identity, not stale stats
+PASS B: Empty plan rejected
+PASS B: Store refresh performs exactly ONE edit
+PASS B: Store retains selected/favorite IDs without preference rewrite
+PASS B: Quota/time/count updated in same snapshot
+PASS B: Reloading stored snapshot retains ID/ping
+PASS B: Partial parser result cannot replace stored list
+PASS B: Partial result does not write or remove existing profiles
+PASS B: Changed generation rejects stale download
+PASS B: Snapshot metadata detached from store
+PASS B: Injected apply exception propagates
+PASS B: Failed apply leaves old memory and fake storage intact
+PASS B: Manual/store add respects subscription ownership
+PASS B: Store add does not collapse different Reality settings
+PASS B: Partial refresh reports success AND failure
+PASS B: Failed subscription is retained
+PASS B: Engine errors redact secrets
+PASS B: Partial import refuses entire automatic replacement
+PASS B: Cancellation after download prevents persistence
+PASS B: Concurrent test reached download
+PASS B: Concurrent refresh coalesced as retryable busy
+PASS B: Concurrent job terminates cleanly
+PASS B: Legacy callback no longer hides partial errors
+PASS B: Retry classification: TLS permanent
+PASS B: Retry classification: 429 transient
+PASS B: Retry classification: 401 permanent
+PASS B: Worker returns success for real local HTTP good payload
+PASS B: Worker returns retry for HTTP 503
+PASS B: Worker returns failure for permanent invalid URL
+PASS B: Stopped Worker returns retry without new fetch
+PASS B: A word in a URI fragment is not a YAML document
+PASS B: Legacy duplicate matching prefers selected ID
+PASS B: Engine rejects responses invalidated during fetch
+PASS B: Disabled subscription cannot be republished
+PASS B: Disabled subscription is not downloaded
+PASS B: Legacy overly nested custom is safely rejected by capability filter
+PASS B: Legacy invalid custom can still be fingerprinted without recursion
+PASS B: Foreign protocol fields are not silently ignored
+PASS B: Password without username not silently discarded
+PASS B: Explicit insecure TLS generates warning
+PASS B: Concatenated JSON does not silently import only first config
+PASS B: Trailing JSON garbage rejected
+PHASE B TOTAL: 93 assertions passed (test substitutes, not Android device/durability tests).

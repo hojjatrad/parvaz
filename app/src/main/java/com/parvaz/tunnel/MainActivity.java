@@ -484,6 +484,15 @@ public class MainActivity extends AppCompatActivity {
         public J() {
         }
 
+        @Override
+        public void onComplete(com.parvaz.tunnel.core.SubscriptionRefresh.Result result) {
+            MainActivity.this.refresh.setRefreshing(false);
+            MainActivity.this.reload();
+            String summary=getString(R.string.subscription_refresh_summary,result.updated,result.failed,result.serverCount,result.warnings);
+            if(result.failed>0) summary += "\n" + result.errorSummary();
+            Snackbar.make(MainActivity.this.connectButton,summary,0).show();
+        }
+
         @Override // com.parvaz.tunnel.core.SubscriptionUpdater.a
         public final void a(String str, int i) {
             String string;
@@ -1131,14 +1140,17 @@ public class MainActivity extends AppCompatActivity {
     public final int importText(String str) {
         try {
             try {
-                ArrayList H2 = LinkParser.parseMany(str);
+                com.parvaz.tunnel.config.ImportResult parsed=LinkParser.parseDetailed(str);
+                ArrayList H2 = parsed.profiles;
                 if (H2.isEmpty()) {
+                    showImportSummary(parsed);
                     return 0;
                 }
                 int a = this.b0.a(H2, "");
                 // Every import path funnels through here, so warn once, centrally,
                 // when some of what we just saved can never actually connect.
-                warnUnsupported(H2);
+                if(parsed.rejected>0 || parsed.warnings>0) showImportSummary(parsed);
+                else warnUnsupported(H2);
                 if (TextUtils.isEmpty(this.L.f343a.getString("selected_profile", "")) && !this.b0.e().isEmpty()) {
                     Prefs prefs = this.L;
                     RulesActivity__ExternalSyntheticOutline0.j(prefs.f343a, "selected_profile", ((Profile) this.b0.e().get(0)).id);
@@ -1152,6 +1164,14 @@ public class MainActivity extends AppCompatActivity {
         } catch (Throwable unused2) {
             return -1;
         }
+    }
+
+    private void showImportSummary(com.parvaz.tunnel.config.ImportResult result) {
+        if(result.rejected==0 && result.warnings==0)return;
+        StringBuilder summary=new StringBuilder(getString(R.string.import_result_summary,result.profiles.size(),result.rejected,result.warnings));
+        for(int i=0;i<Math.min(8,result.issues.size());i++)summary.append("\n").append(result.issues.get(i));
+        new MaterialAlertDialogBuilder(this).setTitle(R.string.import_result_title).setMessage(summary.toString())
+                .setPositiveButton(R.string.ok,null).show();
     }
 
     /**

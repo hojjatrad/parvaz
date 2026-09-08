@@ -31,7 +31,7 @@ public final class ProtocolSupport {
             return isSupported(profile.protocol);
         }
         try {
-            return com.parvaz.tunnel.config.CustomOutbound.extract(new org.json.JSONObject(profile.rawJson)) != null;
+            return com.parvaz.tunnel.config.CustomOutbound.fromJson(profile.rawJson) != null;
         } catch (Exception ignored) {
             return false;
         }

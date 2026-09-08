@@ -65,3 +65,16 @@ git push -u origin review/subscription-foundation
 If you already applied the audit commit, do NOT apply it twice; use the phase-A-only
 patch `parvaz-phase-a-only.patch` on top of audit commit `b95a437`. Do not force-push
 main. Neither push command nor a Pull Request was executed by the assistant.
+
+## Latest phase-B work
+
+`parvaz-through-phase-b.patch` is the combined mailbox patch containing the initial
+audit, phase-A fixes and phase-B fixes, starting at the public 1.18 commit
+`0c2b08f78bbcd699558894dbeac2c05c53f08614`. Use it instead of the phase-A combined patch
+in the clean-branch instructions above. If phase A was already applied, use only
+`parvaz-phase-b-only.patch` on that branch. Do not apply the earlier commits twice.
+
+Phase-B status: `docs/progress/PHASE-B-fa.md`. The added GitHub workflow runs JVM
+regressions only with read-only permissions and three-day artifact retention.
+It has not run on GitHub yet; full Android compilation, device testing and signed
+release publication are still pending. These patches do not contain release keys.

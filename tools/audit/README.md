@@ -1,49 +1,61 @@
-# Subscription foundation regression tests
+# Subscription regression suite (phases A + B)
 
-Run from the repository:
+Run from the repository root:
 
 ```sh
 bash tools/audit/run.sh
 ```
 
-Requires a JDK 11+ (including keytool), curl and sha256sum on Linux. Downloads the
-project's org.json test dependency (20240303) from Maven Central into ignored
-`.cache/audit/` and verifies its pinned SHA-256. No Android SDK or native core is used.
+Requires JDK 11+ (including keytool), curl and sha256sum on Linux. The runner downloads
+org.json 20240303 and SnakeYAML 2.4 into ignored `.cache/audit/` and checks pinned
+SHA-256 values. It needs neither an Android SDK nor a native VPN core.
 
-## What actually runs
+## Actual code under test
 
-- Actual Profile, LinkParser, ClashParser, SingBoxParser, ProtocolNames,
-  CustomOutbound, ProtocolSupport and XrayConfigBuilder classes.
-- Actual SubscriptionHttpClient, fake HTTP connections for deterministic policy
-  checks, and an actual local HTTPS server for certificate/hostname tests.
-- 35 parser/outbound assertions and 63 HTTP/TLS assertions: 98 in total.
+- Profile, Subscription, the link/Clash/Sing-box parsers and shared schema helpers.
+- Protocol capability checks and the actual Xray outbound builder.
+- ProfileIdentity, SubscriptionReconciler, ProfileStore and SubscriptionRefresh.
+- SubscriptionUpdater adapters and actual SubscriptionWorker.doWork logic.
+- Actual SubscriptionHttpClient with deterministic fake HTTP cases and real loopback
+  HTTP/HTTPS servers for protocol/certificate/hostname and Worker result tests.
 
-Minimal Android Context/SharedPreferences/Prefs stubs return defaults. GeoIndex
-methods throw because geographical routing is outside this suite. Android Uri is a
-compile-only stub that throws; Base64 delegates to the Java standard implementation;
-Log is a no-op. Standard JSON-style VMess share links are tested, but URI-based
-VLESS/Trojan/SS/etc. parsing is NOT validated by these stubs.
+The current suite passes **191 assertions**: 35 phase-A parser/builder assertions,
+63 HTTP/TLS assertions, and 93 phase-B import/storage/refresh/Worker assertions.
+Fixtures in `app/src/test/resources/import/` are synthetic schema examples, NOT real
+panel credentials and NOT certification of any particular panel version.
 
-The script creates a fresh localhost-only test certificate in `.cache/audit`. The
-HTTPS server binds only to loopback and is stopped in finally. A trusted TLS context
-is injected into individual test connections only; no global hostname verifier or
-trust store is changed. No real panel/subscription/user server is contacted.
+## Test substitutes and limits
 
-## Limitations
+Context, SharedPreferences, Handler and WorkManager APIs are limited JVM substitutes.
+SharedPreferences is an in-memory map with injectable apply failures: it is NOT an
+Android disk durability/crash test. Handler runs callbacks immediately: it does NOT
+validate main-thread lifecycle. WorkManager substitutes allow actual doWork result
+logic to run, not Android scheduling, foreground-service or battery behavior.
 
-Passing this suite does NOT validate Android UI/lifecycle, Android Uri, preferences
-persistence, native Xray config acceptance, geographical routing, Gradle packaging,
-real VPN connectivity, Android TLS stores or battery/network-change behavior.
-The existing Android/Robolectric suite still needs to run in a complete toolchain.
-Full Clash YAML and complete Sing-box field mapping remain unfinished.
+Prefs provides builder defaults. GeoIndex methods throw because geographical routing
+is outside this suite. Android Uri is a compile-only throwing stub; Base64 delegates
+to Java, and Log is a no-op. JSON-style VMess share links are tested, but Android URI
+semantics for VLESS/Trojan/SS/etc. still require Android/Robolectric tests.
 
-Current results: `docs/audit/phase-a-results.txt`.
-Current Persian progress report: `docs/progress/PHASE-A-fa.md`.
+The runner creates a fresh localhost-only TEST certificate under `.cache/audit`.
+Loopback servers stop in finally; individual TLS test connections receive test trust
+without changing global verifiers/trust stores. No live user panel is contacted.
 
-## Historical audit
+The suite is not an APK build and does NOT establish native Xray acceptance, actual
+VPN connectivity, Android UI, real disk persistence, Android TLS stores, or complete
+Clash/Sing-box runtime compatibility. Existing Android/Robolectric tests still need a
+complete toolchain. Some legacy raw generics produce javac unchecked warnings.
 
-Audit commit `b95a437` had ten characterization observations, including nine defects
-and one healthy baseline. That code deliberately asserted buggy behavior. The current
-suite replaces it with positive regression assertions for the fixes made in this
-branch. The historical output remains at `docs/audit/parser-results.txt`; do not
-interpret its `REPRODUCED` lines as the current behavior or as release readiness.
+## Records and CI
+
+- Latest output: `docs/audit/phase-b-results.txt`.
+- Latest Persian status/limitations: `docs/progress/PHASE-B-fa.md`.
+- Earlier outputs remain in `parser-results.txt` and `phase-a-results.txt` as historical
+  records, not claims about the current implementation.
+- `.github/workflows/subscription-regressions.yml` runs this suite on push/PR/manual
+  dispatch with read-only repository permissions and three-day result retention.
+  It does not build/sign/publish APKs and has not yet run remotely in this session.
+
+The original audit at `b95a437` deliberately reproduced faulty behavior. Positive
+regression tests replaced those characterization assertions when fixes were made;
+`REPRODUCED` in that historical output does not describe current release readiness.

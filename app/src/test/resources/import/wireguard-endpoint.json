@@ -1,0 +1,7 @@
+{
+  "endpoints":[{
+    "type":"wireguard","tag":"new-wg","private_key":"dummy-private",
+    "address":["10.9.0.2/32","fd00:2::2/128"],"mtu":1280,
+    "peers":[{"address":"2001:db8::3","port":51820,"public_key":"dummy-public","pre_shared_key":"dummy-preshared","reserved":[3,4,5]}]
+  }]
+}

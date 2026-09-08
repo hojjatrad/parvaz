@@ -11,6 +11,12 @@ import org.json.JSONObject;
 public final class CustomOutbound {
     private CustomOutbound() {}
 
+    public static JSONObject fromJson(String json) throws JSONException {
+        if(json==null || json.length()>LinkParser.MAX_INPUT_CHARS) throw new IllegalArgumentException("Invalid custom JSON size");
+        LinkParser.checkJsonDepth(json);
+        return extract(JsonInput.object(json));
+    }
+
     public static JSONObject extract(JSONObject root) throws JSONException {
         JSONArray outbounds = root.optJSONArray("outbounds");
         if (outbounds == null) return validate(root); // also allow one explicit outbound

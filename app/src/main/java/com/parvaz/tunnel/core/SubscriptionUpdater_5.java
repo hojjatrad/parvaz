@@ -23,9 +23,6 @@ public final class SubscriptionUpdater_5 implements Runnable {
     public final void run() {
         int i = this.f6296c[0];
         String str = this.f6297d[0];
-        if (i > 0) {
-            str = null;
-        }
         this.b.a(str, i);
     }
 }

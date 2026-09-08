@@ -11,41 +11,12 @@ import androidx.work.PeriodicWorkRequest;
 import androidx.work.WorkManager;
 import androidx.work.Worker;
 import androidx.work.WorkerParameters;
-import com.parvaz.tunnel.core.SubscriptionUpdater;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 /* loaded from: classes.dex */
 public class SubscriptionWorker extends Worker {
 
     public static final String WORK_NAME = "parvaz_sub_auto_update";
-
-    /* JADX WARN: Can't change package for inner class: com.parvaz.tunnel.core.SubscriptionWorker.a to com.parvaz.tunnel.core.SubscriptionWorker$a */
-    /* loaded from: classes.dex */
-    public class a implements SubscriptionUpdater.a {
-
-        /* renamed from: a */
-        public final CountDownLatch f6221a;
-
-        public a(CountDownLatch countDownLatch) {
-            this.f6221a = countDownLatch;
-        }
-
-        @Override // com.parvaz.tunnel.core.SubscriptionUpdater.a
-        public final void a(String str, int i) {
-            String str2;
-            StringBuilder sb = new StringBuilder("sub auto-update: added=");
-            sb.append(i);
-            if (str != null) {
-                str2 = " err=".concat(str);
-            } else {
-                str2 = "";
-            }
-            sb.append(str2);
-            Log.i("ParvazVpn", sb.toString());
-            this.f6221a.countDown();
-        }
-    }
 
     public SubscriptionWorker(Context context, WorkerParameters workerParameters) {
         super(context, workerParameters);
@@ -93,18 +64,11 @@ public class SubscriptionWorker extends Worker {
         }
     }
 
-    @Override // androidx.work.Worker
+    @Override
     public final ListenableWorker.Result doWork() {
-        try {
-            CountDownLatch countDownLatch = new CountDownLatch(1);
-            new Thread(new SubscriptionUpdater_4(new SubscriptionUpdater(getApplicationContext()), new a(countDownLatch))).start();
-            if (!countDownLatch.await(3L, TimeUnit.MINUTES)) {
-                return ListenableWorker.Result.retry();
-            }
-            return ListenableWorker.Result.success();
-        } catch (Exception e) {
-            Log.e("ParvazVpn", "sub auto-update failed", e);
-            return ListenableWorker.Result.retry();
-        }
+        SubscriptionRefresh.Result result=SubscriptionRefresh.run(getApplicationContext(),this::isStopped);
+        if(result.cancelled || result.retryable) return ListenableWorker.Result.retry();
+        if(result.failed>0) return ListenableWorker.Result.failure();
+        return ListenableWorker.Result.success();
     }
 }

@@ -26,3 +26,6 @@ mapping*.txt
 local.properties
 signing.properties
 *.p12
+
+# Short-lived CI test artifacts
+test-results/

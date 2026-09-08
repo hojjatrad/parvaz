@@ -14,6 +14,17 @@ import org.json.JSONObject;
 /* loaded from: classes.dex */
 public final class ProfileStore {
     public static ProfileStore d;
+    private long revision;
+
+    public static final class Snapshot {
+        public final Subscription subscription;
+        final long revision;
+        Snapshot(Subscription subscription, long revision) { this.subscription=subscription;this.revision=revision; }
+    }
+    public static final class StaleRefresh extends IllegalStateException {
+        public StaleRefresh() { super("Subscription changed while downloading"); }
+    }
+
 
     /* renamed from: a */
     public final SharedPreferences f345a;
@@ -90,46 +101,73 @@ public final class ProfileStore {
         return d;
     }
 
-    public final synchronized int a(ArrayList arrayList, String str) {
-        int i;
-        String str2;
-        try {
-            Iterator it = arrayList.iterator();
-            i = 0;
-            while (it.hasNext()) {
-                Profile profile = (Profile) it.next();
-                if (profile != null) {
-                    profile.normalize();
-                    if (b(profile) == null) {
-                        if (str == null) {
-                            str2 = "";
-                        } else {
-                            str2 = str;
-                        }
-                        profile.subscriptionId = str2;
-                        this.f346b.add(profile);
-                        i++;
-                    }
-                }
-            }
-            h();
-        } finally {
+    public final synchronized int a(ArrayList arrayList, String owner) {
+        java.util.HashSet<String> identities = new java.util.HashSet<>();
+        for (Object o : f346b) {
+            Profile p=(Profile)o;
+            identities.add(p.subscriptionId + ":" + ProfileIdentity.fingerprint(p));
         }
-        return i;
+        int added=0;
+        for (Object o : arrayList) {
+            if (!(o instanceof Profile)) continue;
+            Profile p=ProfileIdentity.copy((Profile)o);
+            if (owner != null) p.subscriptionId=owner;
+            if (identities.add(p.subscriptionId + ":" + ProfileIdentity.fingerprint(p))) {
+                f346b.add(p);added++;
+            }
+        }
+        h();
+        return added;
     }
 
-    public final Profile b(Profile profile) {
-        Iterator it = this.f346b.iterator();
-        while (it.hasNext()) {
-            Profile profile2 = (Profile) it.next();
-            if (profile2 != null) {
-                profile2.normalize();
-                if (profile2.protocol.equals(profile.protocol) && profile2.address.equals(profile.address) && profile2.port == profile.port && profile2.uuid.equals(profile.uuid) && profile2.path.equals(profile.path) && profile2.network.equals(profile.network)) {
-                    return profile2;
-                }
+    public final synchronized Profile b(Profile profile) {
+        String identity=ProfileIdentity.fingerprint(profile);
+        for (Object o : f346b) {
+            Profile existing=(Profile)o;
+            if (java.util.Objects.equals(existing.subscriptionId,profile.subscriptionId) &&
+                    identity.equals(ProfileIdentity.fingerprint(existing))) return existing;
+        }
+        return null;
+    }
+
+    /** Capture detached metadata and a generation BEFORE starting a download. */
+    public synchronized Snapshot beginRefresh(String id) {
+        for(Object o:f347c) {
+            Subscription sub=(Subscription)o;
+            if(sub.id.equals(id) && sub.enabled) {
+                try { return new Snapshot(Subscription.fromJson(sub.toJson()),revision); }
+                catch(org.json.JSONException e) { throw new IllegalStateException("Subscription snapshot failed"); }
             }
         }
         return null;
+    }
+
+    /** One complete SharedPreferences edit, then publish the in-memory plan under the same lock.
+     * apply() is asynchronous: this is not a synchronous durability guarantee or a Room migration.
+     * If serialization/Editor.apply throws, the old in-memory lists have not been touched.
+     */
+    public synchronized SubscriptionReconciler.Plan replaceSubscription(Snapshot snapshot,
+            com.parvaz.tunnel.config.ImportResult parsed, String userinfo, long now, String selectedId) {
+        if(snapshot==null || snapshot.revision!=revision) throw new StaleRefresh();
+        if(!parsed.safeToReplace()) throw new IllegalArgumentException("Partial or empty subscription replacement refused");
+        int index=-1;
+        for(int i=0;i<f347c.size();i++) {
+            Subscription current=(Subscription)f347c.get(i);
+            if(current.id.equals(snapshot.subscription.id) && current.enabled && current.url.equals(snapshot.subscription.url)) { index=i;break; }
+        }
+        if(index<0)throw new StaleRefresh();
+        SubscriptionReconciler.Plan plan=SubscriptionReconciler.plan(new ArrayList<Profile>(f346b),parsed.profiles,snapshot.subscription.id,selectedId);
+        try {
+            Subscription updated=Subscription.fromJson(((Subscription)f347c.get(index)).toJson());
+            updated.applyUserinfo(userinfo);updated.lastUpdate=now;updated.count=plan.count;
+            ArrayList<Subscription> subscriptions=new ArrayList<>(f347c);subscriptions.set(index,updated);
+            JSONArray profilesJson=new JSONArray(),subsJson=new JSONArray();JSONObject pings=new JSONObject();
+            for(Profile p:plan.all){profilesJson.put(p.toJson());if(p.ping>0)pings.put(p.id,p.ping);}
+            for(Subscription sub:subscriptions)subsJson.put(sub.toJson());
+            f345a.edit().putString("profiles",profilesJson.toString()).putString("subs",subsJson.toString()).putString("pings",pings.toString()).apply();
+            f346b.clear();f346b.addAll(plan.all);f347c.clear();f347c.addAll(subscriptions);revision++;
+            return plan;
+        } catch(org.json.JSONException e) { throw new IllegalStateException("Subscription serialization failed"); }
     }
 
     /* renamed from: c */
@@ -139,7 +177,10 @@ public final class ProfileStore {
 
     /* renamed from: d */
     public final synchronized ArrayList f() {
-        return new ArrayList(this.f347c);
+        ArrayList<Subscription> result=new ArrayList<>();
+        try { for(Object o:f347c)result.add(Subscription.fromJson(((Subscription)o).toJson())); }
+        catch(org.json.JSONException e){throw new IllegalStateException("Subscription snapshot failed");}
+        return result;
     }
 
     /* renamed from: e */
@@ -169,6 +210,7 @@ public final class ProfileStore {
     }
 
     public final synchronized void h() {
+        revision++;
         try {
             JSONArray jSONArray = new JSONArray();
             Iterator it = this.f346b.iterator();

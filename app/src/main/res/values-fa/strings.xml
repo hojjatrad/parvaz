@@ -383,4 +383,7 @@
     <string name="service_unlimited_duration">مدت: نامحدود</string>
     <string name="service_not_set">برای تنظیم لمس کنید</string>
 
+    <string name="import_result_title">گزارش ورود کانفیگ</string>
+    <string name="import_result_summary">شناخته‌شده: %1$d؛ ردشده: %2$d؛ هشدار: %3$d. فقط پروفایل‌های شناخته‌شده وارد می‌شوند. گزینه‌های پشتیبانی‌نشده بی‌صدا حذف نمی‌شوند.</string>
+    <string name="subscription_refresh_summary">اشتراک به‌روز: %1$d؛ ناموفق: %2$d؛ پروفایل: %3$d؛ هشدار: %4$d</string>
 </resources>

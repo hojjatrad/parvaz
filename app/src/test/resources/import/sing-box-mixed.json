@@ -1,0 +1,10 @@
+{
+  "outbounds": [
+    {"type":"selector","tag":"choose","outbounds":["ws","grpc"]},
+    {"type":"vmess","tag":"ws","server":"ws.example.invalid","server_port":443,"uuid":"11111111-1111-4111-8111-111111111111","security":"auto","alter_id":0,"tls":{"enabled":true,"server_name":"cover.example.invalid","alpn":["h2","http/1.1"],"utls":{"enabled":true,"fingerprint":"firefox"}},"transport":{"type":"ws","path":"/ws","headers":{"Host":"edge.example.invalid"}}},
+    {"type":"vless","tag":"grpc","server":"grpc.example.invalid","server_port":443,"uuid":"22222222-2222-4222-8222-222222222222","tls":{"enabled":true,"server_name":"cover.example.invalid","reality":{"enabled":true,"public_key":"dummy-key","short_id":"00abcd"}},"transport":{"type":"grpc","service_name":"demo"}},
+    {"type":"socks","tag":"auth","server":"socks.example.invalid","server_port":1080,"version":"5","username":"test-user","password":"dummy-password"},
+    {"type":"wireguard","tag":"legacy-wg","server":"2001:db8::2","server_port":51820,"local_address":["10.8.0.2/32","fd00:1::2/128"],"private_key":"dummy-private","peer_public_key":"dummy-public","pre_shared_key":"dummy-preshared","reserved":[0,1,2],"mtu":1280}
+  ],
+  "route":{"final":"choose"}
+}

@@ -633,7 +633,7 @@ public final class XrayConfigBuilder {
         JSONObject jSONObject2 = new JSONObject();
         String str5 = ProtocolNames.canonical(profile.protocol);
         if ("custom".equals(str5)) {
-            JSONObject outbound = CustomOutbound.extract(new JSONObject(profile.rawJson));
+            JSONObject outbound = CustomOutbound.fromJson(profile.rawJson);
             if (outbound == null) throw new IllegalArgumentException("no supported outbound in JSON config");
             outbound.put("tag", "proxy");
             return outbound;
@@ -689,7 +689,9 @@ public final class XrayConfigBuilder {
             }
             JSONObject jSONObject5 = new JSONObject();
             jSONObject5.put("publicKey", profile.publicKey);
-            jSONObject5.put("endpoint", profile.address + ":" + profile.port);
+            String endpointHost=profile.address;
+            if(endpointHost.contains(":") && !endpointHost.startsWith("[")) endpointHost="["+endpointHost+"]";
+            jSONObject5.put("endpoint", endpointHost + ":" + profile.port);
             jSONObject5.put("keepAlive", 25);
             jSONObject5.put("allowedIPs", new JSONArray().put("0.0.0.0/0").put("::/0"));
             String str10 = profile.presharedKey;
