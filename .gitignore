@@ -16,3 +16,6 @@ app/libs/
 *.jks
 ghtoken
 mapping*.txt
+
+# Local audit/compiler cache
+.cache/

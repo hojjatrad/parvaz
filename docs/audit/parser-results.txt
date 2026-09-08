@@ -1,0 +1,11 @@
+REPRODUCED: Clash SS keeps protocol 'ss', whereas builder dispatch expects 'shadowsocks'
+REPRODUCED: Clash inline mapping imports zero nodes
+REPRODUCED: Clash Trojan without optional tls field loses implicit TLS
+REPRODUCED: Sing-box TUIC password not mapped to quicKey
+REPRODUCED: Valid single Xray JSON baseline accepted
+REPRODUCED: JSON config array not imported
+REPRODUCED: Base64-wrapped Clash not redispatched to YAML parser
+REPRODUCED: Panel metadata JSON accepted as custom server despite no outbound
+REPRODUCED: Custom JSON excluded from ProtocolSupport.isSupported
+REPRODUCED: Clash gRPC service name lost
+TOTAL: 10 observations confirmed. This is NOT an Android integration test.
