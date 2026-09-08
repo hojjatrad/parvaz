@@ -1,6 +1,4 @@
-# Lightweight parser characterization audit
-
-Baseline: `0c2b08f78bbcd699558894dbeac2c05c53f08614` (Parvaz 1.18).
+# Subscription foundation regression tests
 
 Run from the repository:
 
@@ -8,22 +6,44 @@ Run from the repository:
 bash tools/audit/run.sh
 ```
 
-Requires JDK 11+ and curl. Downloads the project's existing org.json test dependency
-(version 20240303) from Maven Central into ignored `.cache/audit/`. No Android SDK,
-actual subscription, VPN server or native core is used.
+Requires a JDK 11+ (including keytool), curl and sha256sum on Linux. Downloads the
+project's org.json test dependency (20240303) from Maven Central into ignored
+`.cache/audit/` and verifies its pinned SHA-256. No Android SDK or native core is used.
 
-The harness compiles the actual Profile, LinkParser, ClashParser, SingBoxParser and
-ProtocolSupport classes. Android Uri is a **compile-only stub that throws**; Android
-Log is a no-op, and Base64 delegates to Java's standard implementation. Therefore
-these results do not validate Android URI decoding, real share links, Android
-activities, storage, native configuration acceptance or actual VPN connectivity.
+## What actually runs
 
-Ten observations (including one healthy single-Xray-JSON baseline) are asserted.
-`REPRODUCED` means the observation matches current behavior; it does NOT mean the
-behavior is correct. These are characterization tests and will deliberately stop
-matching after the corresponding bug is fixed. Convert each to a positive behavior
-regression test when implementing that fix; do not use their present success as a
-release quality gate. All sample domains/credentials are fictional.
+- Actual Profile, LinkParser, ClashParser, SingBoxParser, ProtocolNames,
+  CustomOutbound, ProtocolSupport and XrayConfigBuilder classes.
+- Actual SubscriptionHttpClient, fake HTTP connections for deterministic policy
+  checks, and an actual local HTTPS server for certificate/hostname tests.
+- 35 parser/outbound assertions and 63 HTTP/TLS assertions: 98 in total.
 
-Captured results: `docs/audit/parser-results.txt`.
-Persian findings and implementation plan: `docs/audit/REVIEW-fa.md`.
+Minimal Android Context/SharedPreferences/Prefs stubs return defaults. GeoIndex
+methods throw because geographical routing is outside this suite. Android Uri is a
+compile-only stub that throws; Base64 delegates to the Java standard implementation;
+Log is a no-op. Standard JSON-style VMess share links are tested, but URI-based
+VLESS/Trojan/SS/etc. parsing is NOT validated by these stubs.
+
+The script creates a fresh localhost-only test certificate in `.cache/audit`. The
+HTTPS server binds only to loopback and is stopped in finally. A trusted TLS context
+is injected into individual test connections only; no global hostname verifier or
+trust store is changed. No real panel/subscription/user server is contacted.
+
+## Limitations
+
+Passing this suite does NOT validate Android UI/lifecycle, Android Uri, preferences
+persistence, native Xray config acceptance, geographical routing, Gradle packaging,
+real VPN connectivity, Android TLS stores or battery/network-change behavior.
+The existing Android/Robolectric suite still needs to run in a complete toolchain.
+Full Clash YAML and complete Sing-box field mapping remain unfinished.
+
+Current results: `docs/audit/phase-a-results.txt`.
+Current Persian progress report: `docs/progress/PHASE-A-fa.md`.
+
+## Historical audit
+
+Audit commit `b95a437` had ten characterization observations, including nine defects
+and one healthy baseline. That code deliberately asserted buggy behavior. The current
+suite replaces it with positive regression assertions for the fixes made in this
+branch. The historical output remains at `docs/audit/parser-results.txt`; do not
+interpret its `REPRODUCED` lines as the current behavior or as release readiness.

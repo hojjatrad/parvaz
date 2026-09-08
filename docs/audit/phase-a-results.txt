@@ -1,0 +1,101 @@
+PASS: Clash SS canonicalized
+PASS: Actual builder accepts Clash SS
+PASS: Actual builder also accepts an unnormalized SS alias
+PASS: Clash Trojan has implicit TLS
+PASS: Trojan builder emits TLS
+PASS: Sing-box TUIC preserves second credential
+PASS: TUIC still correctly marked non-connectable
+PASS: Single Xray JSON accepted
+PASS: JSON config array accepted
+PASS: Mixed JSON array excludes panel metadata
+PASS: Base64 Clash redispatched
+PASS: Base64 Xray JSON redispatched
+PASS: Base64 array redispatched
+PASS: UTF-8 BOM accepted
+PASS: Panel metadata is not a fake server
+PASS: Empty JSON rejected
+PASS: Direct-only raw JSON rejected
+PASS: Missing settings rejected
+PASS: Out-of-range raw port rejected
+PASS: Validated custom is offered by capability filter
+PASS: Custom builder extracts supported outbound
+PASS: Legacy invalid custom is not offered
+PASS: Legacy invalid custom builder fails closed
+PASS: HTTP protocol has a matching builder
+PASS: HTTP username and password preserved
+PASS: Unknown protocol warned
+PASS: Aliases are canonical
+PASS: Xray JSON not misclassified by unrelated server field
+PASS: Excessive JSON nesting rejected
+PASS: Oversized input rejected
+PASS: Too many profiles fail without partial return
+PASS: Standard VMess JSON link imports
+PASS: CRLF link list imports both nodes
+PASS: Base64 share-link list imports both nodes
+PASS: Unknown line does not discard valid VMess
+PARSER/BUILDER TOTAL: 35 regression assertions passed.
+NOT COVERED/FIXED: full Clash YAML, all Sing-box fields, Android URI decoding, full raw-config routing, native VPN connectivity.
+PASS: Plain body/BOM decoded
+PASS: Quota header preserved
+PASS: Resources disconnected and stream closed
+PASS: Redirects disabled in underlying client
+PASS: Connection/read timeout and no URL caching
+PASS: Relative redirect preserves same-origin quota
+PASS: Redirect connection disconnected
+PASS: No quota inheritance across origins
+PASS: HTTPS downgrade
+PASS: HTTPS downgrade redacts secrets
+PASS: Redirect loop
+PASS: Redirect loop redacts secrets
+PASS: Missing redirect location
+PASS: Missing redirect location redacts secrets
+PASS: File URL
+PASS: File URL redacts secrets
+PASS: URL user-info
+PASS: URL user-info redacts secrets
+PASS: Whitespace URL
+PASS: Whitespace URL redacts secrets
+PASS: Redirect hop limit
+PASS: Redirect hop limit redacts secrets
+PASS: Exactly five redirects allowed
+PASS: HTTP 204
+PASS: HTTP 204 redacts secrets
+PASS: HTTP 206
+PASS: HTTP 206 redacts secrets
+PASS: HTTP 304
+PASS: HTTP 304 redacts secrets
+PASS: HTTP 401
+PASS: HTTP 401 redacts secrets
+PASS: HTTP 403
+PASS: HTTP 403 redacts secrets
+PASS: HTTP 429
+PASS: HTTP 429 redacts secrets
+PASS: HTTP 500
+PASS: HTTP 500 redacts secrets
+PASS: HTML login page
+PASS: HTML login page redacts secrets
+PASS: Wrong MIME with actual plain links remains compatible
+PASS: Empty body
+PASS: Empty body redacts secrets
+PASS: Advertised oversized body
+PASS: Advertised oversized body redacts secrets
+PASS: Unadvertised oversized body
+PASS: Unadvertised oversized body redacts secrets
+PASS: Gzip decoded
+PASS: Gzip expanded-size limit
+PASS: Gzip expanded-size limit redacts secrets
+PASS: Gzip failure cleans resources
+PASS: Unknown content encoding
+PASS: Unknown content encoding redacts secrets
+PASS: Timeout sanitized
+PASS: Timeout sanitized redacts secrets
+PASS: Timeout disconnects
+PASS: Network exception sanitized
+PASS: Network exception sanitized redacts secrets
+PASS: Explicit legacy HTTP still allowed (not encrypted)
+PASS: Real untrusted HTTPS certificate
+PASS: Real untrusted HTTPS certificate redacts secrets
+PASS: Real trusted localhost TLS succeeds
+PASS: Real hostname mismatch with trusted cert
+PASS: Real hostname mismatch with trusted cert redacts secrets
+HTTP/TLS TOTAL: 63 assertions passed. TLS tests are desktop JVM, not Android trust-store tests.

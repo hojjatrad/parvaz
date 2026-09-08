@@ -19,8 +19,17 @@ public final class SingBoxParser {
         if (text == null) {
             return false;
         }
-        String t = text.trim();
-        return t.startsWith("{") && t.contains("\"outbounds\"") && (t.contains("\"server\"") || t.contains("\"server_port\""));
+        if (!text.trim().startsWith("{")) return false;
+        try {
+            JSONObject root = new JSONObject(text);
+            JSONArray outbounds = root.optJSONArray("outbounds");
+            if (outbounds == null) return false;
+            for (int i = 0; i < outbounds.length(); i++) {
+                JSONObject outbound = outbounds.optJSONObject(i);
+                if (outbound != null && outbound.has("type") && !outbound.has("protocol")) return true;
+            }
+        } catch (Exception ignored) { }
+        return false;
     }
 
     public static ArrayList<Profile> parse(String json) {
@@ -49,6 +58,11 @@ public final class SingBoxParser {
                 p.address = o.optString("server", "");
                 p.port = o.optInt("server_port", o.optInt("port", 443));
                 p.uuid = o.optString("uuid", o.optString("password", ""));
+                if ("tuic".equals(type)) p.quicKey = o.optString("password", "");
+                if ("socks".equals(type) || "http".equals(type)) {
+                    p.uuid = o.optString("username", "");
+                    p.quicKey = o.optString("password", "");
+                }
                 p.encryption = o.optString("method", o.optString("security", "none"));
 
                 JSONObject tls = o.optJSONObject("tls");

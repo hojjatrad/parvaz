@@ -309,7 +309,7 @@ Tap + to paste a config link or add a subscription."</string>
     <string name="leak_test_summary_ok">All checks passed</string>
     <string name="leak_test_summary_fail">%1$d issue(s) found</string>
     <string name="unsupported_badge">Not dialable</string>
-    <string name="unsupported_import_warn">%1$d server(s) use Hysteria2/TUIC, which the built-in core cannot dial. They were saved but cannot connect.</string>
+    <string name="unsupported_import_warn">%1$d server(s) have unsupported protocols or invalid configurations for the built-in core. They were saved but cannot connect with the current core/settings.</string>
     <string name="unsupported_tap">This protocol needs a different core and cannot connect yet.</string>
     <string name="advanced_settings">Advanced</string>
     <string name="buffer_size">Buffer size (KB)</string>

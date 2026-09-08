@@ -16,51 +16,29 @@ public final class ProtocolSupport {
     private ProtocolSupport() {
     }
 
-    /** Protocols the built-in core dials natively. */
-    private static final String[] SUPPORTED = {
-        "vmess", "vless", "trojan", "shadowsocks", "ss", "socks", "http", "wireguard",
-    };
-
-    /**
-     * Protocols we can parse and store but cannot dial without swapping in a
-     * sing-box core.
-     */
-    private static final String[] UNSUPPORTED = {
-        "hysteria2", "hy2", "tuic",
-    };
-
     public static boolean isSupported(String protocol) {
-        if (protocol == null || protocol.isEmpty()) {
-            return false;
-        }
-        String p = protocol.trim().toLowerCase(java.util.Locale.US);
-        for (String s : SUPPORTED) {
-            if (s.equals(p)) {
-                return true;
-            }
-        }
-        return false;
+        return com.parvaz.tunnel.config.ProtocolNames.hasBuilder(protocol);
     }
 
     public static boolean isKnownUnsupported(String protocol) {
-        if (protocol == null || protocol.isEmpty()) {
-            return false;
-        }
-        String p = protocol.trim().toLowerCase(java.util.Locale.US);
-        for (String s : UNSUPPORTED) {
-            if (s.equals(p)) {
-                return true;
-            }
-        }
-        return false;
+        String p = com.parvaz.tunnel.config.ProtocolNames.canonical(protocol);
+        return !p.isEmpty() && !"custom".equals(p) && !isSupported(p);
     }
 
     public static boolean isSupported(Profile profile) {
-        return profile != null && isSupported(profile.protocol);
+        if (profile == null) return false;
+        if (!"custom".equals(com.parvaz.tunnel.config.ProtocolNames.canonical(profile.protocol))) {
+            return isSupported(profile.protocol);
+        }
+        try {
+            return com.parvaz.tunnel.config.CustomOutbound.extract(new org.json.JSONObject(profile.rawJson)) != null;
+        } catch (Exception ignored) {
+            return false;
+        }
     }
 
     public static boolean isKnownUnsupported(Profile profile) {
-        return profile != null && isKnownUnsupported(profile.protocol);
+        return profile != null && !isSupported(profile);
     }
 
     /**

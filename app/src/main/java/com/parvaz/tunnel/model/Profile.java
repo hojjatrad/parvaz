@@ -118,7 +118,7 @@ public class Profile {
             this.id = UUID.randomUUID().toString();
         }
         this.remark = safe(this.remark, "");
-        this.protocol = safe(this.protocol, "");
+        this.protocol = com.parvaz.tunnel.config.ProtocolNames.canonical(this.protocol);
         this.address = safe(this.address, "");
         this.uuid = safe(this.uuid, "");
         this.encryption = safe(this.encryption, "none");

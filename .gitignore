@@ -19,3 +19,10 @@ mapping*.txt
 
 # Local audit/compiler cache
 .cache/
+
+# Local credentials and machine-specific Android configuration
+.env
+.env.*
+local.properties
+signing.properties
+*.p12

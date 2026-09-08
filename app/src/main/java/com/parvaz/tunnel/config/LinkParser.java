@@ -28,76 +28,97 @@ public final class LinkParser {
     private LinkParser() {
     }
 
-    /**
-     * Parses a whole subscription payload into profiles.
-     *
-     * <p>Accepts three shapes: a raw Xray JSON config, a base64-wrapped list, or a
-     * plain newline-separated list of share links. R8 merged this method with
-     * parseRawJson and parseOne onto a single obfuscated name and jadx could not
-     * separate them, so this is reconstructed from intent.
-     */
+    public static final int MAX_INPUT_CHARS = 5 * 1024 * 1024;
+    public static final int MAX_PROFILES = 5000;
+
+    /** Bounded dispatch for link lists, JSON objects/arrays and Base64-wrapped formats. */
     public static ArrayList<Profile> parseMany(String input) {
         ArrayList<Profile> out = new ArrayList<>();
-        if (input == null) {
-            return out;
-        }
-        String text = input.trim();
-        if (text.isEmpty()) {
-            return out;
-        }
+        parseInto(input, out, 0);
+        return out;
+    }
 
-        // Clash YAML support
-        if (ClashParser.isClash(text)) {
-            ArrayList<Profile> clashList = ClashParser.parse(text);
-            if (!clashList.isEmpty()) {
-                return clashList;
-            }
-        }
+    private static String clean(String input) {
+        String text = input == null ? "" : input.trim();
+        return text.startsWith("\uFEFF") ? text.substring(1).trim() : text;
+    }
 
-        // Sing-box JSON support
-        if (SingBoxParser.isSingBox(text)) {
-            ArrayList<Profile> singBoxList = SingBoxParser.parse(text);
-            if (!singBoxList.isEmpty()) {
-                return singBoxList;
-            }
+    private static void parseInto(String input, ArrayList<Profile> out, int depth) {
+        if (input == null) return;
+        if (input.length() > MAX_INPUT_CHARS || depth > 4) {
+            throw new IllegalArgumentException("Subscription input exceeds safe limits");
         }
-
-        // A raw JSON config carries its outbounds inline.
-        if (text.startsWith("{")) {
-            try {
-                Profile profile = parseRawJson(text);
-                if (profile != null && valid(profile)) {
-                    out.add(profile);
+        String text = clean(input);
+        if (text.isEmpty()) return;
+        if (text.startsWith("{") || text.startsWith("[")) {
+            checkJsonDepth(text);
+            if (text.startsWith("[")) {
+                JSONArray entries;
+                try { entries = new JSONArray(text); }
+                catch (JSONException ignored) { return; }
+                for (int i = 0; i < entries.length(); i++) {
+                    Object entry = entries.opt(i);
+                    if (entry instanceof JSONObject || entry instanceof String || entry instanceof JSONArray) {
+                        parseInto(entry.toString(), out, depth + 1);
+                    }
                 }
-            } catch (Exception ignored) {
-                android.util.Log.w("Parvaz/into", "Exception ignored", ignored);
+            } else if (SingBoxParser.isSingBox(text)) {
+                addBounded(out, SingBoxParser.parse(text));
+            } else {
+                try {
+                    Profile profile = parseRawJson(text);
+                    if (profile != null && valid(profile)) addBounded(out, profile);
+                } catch (JSONException ignored) {
+                    // Never log remote JSON: it can contain credentials.
+                }
             }
-            return out;
+            return;
         }
-
-        // Subscriptions are usually the whole link list wrapped in base64.
+        if (ClashParser.isClash(text)) {
+            addBounded(out, ClashParser.parse(text));
+            return;
+        }
         if (!text.contains("://")) {
             String decoded = tryBase64(text);
-            if (decoded != null && !decoded.trim().isEmpty()) {
-                text = decoded.trim();
+            if (decoded != null && !clean(decoded).isEmpty()) {
+                parseInto(decoded, out, depth + 1);
+                return;
             }
         }
-
         for (String rawLine : text.split("[\\r\\n]+")) {
-            String line = rawLine.trim();
-            if (line.isEmpty() || line.startsWith("#") || line.startsWith("//")) {
-                continue;
-            }
-            try {
-                Profile profile = parseOne(line);
-                if (profile != null && valid(profile)) {
-                    out.add(profile);
-                }
-            } catch (Exception ignored) {
-                // A single bad link must never abort the whole import.
-            }
+            String line = clean(rawLine);
+            if (line.isEmpty() || line.startsWith("#") || line.startsWith("//")) continue;
+            Profile profile;
+            try { profile = parseOne(line); }
+            catch (Exception ignored) { continue; }
+            if (profile != null && valid(profile)) addBounded(out, profile);
         }
-        return out;
+    }
+
+    private static void addBounded(ArrayList<Profile> out, Profile profile) {
+        if (out.size() >= MAX_PROFILES) throw new IllegalArgumentException("Too many subscription profiles");
+        out.add(profile);
+    }
+
+    private static void addBounded(ArrayList<Profile> out, ArrayList<Profile> profiles) {
+        for (Profile profile : profiles) addBounded(out, profile);
+    }
+
+    /** Reject extreme nesting before handing untrusted input to a recursive JSON parser. */
+    static void checkJsonDepth(String text) {
+        int depth = 0;
+        boolean quoted = false, escaped = false;
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (quoted) {
+                if (escaped) escaped = false;
+                else if (c == '\\') escaped = true;
+                else if (c == '"') quoted = false;
+            } else if (c == '"') quoted = true;
+            else if (c == '{' || c == '[') {
+                if (++depth > 64) throw new IllegalArgumentException("JSON nesting exceeds safe limits");
+            } else if (c == '}' || c == ']') depth--;
+        }
     }
 
     /**
@@ -154,45 +175,26 @@ public final class LinkParser {
         if (json == null || json.trim().isEmpty()) {
             return null;
         }
+        if (json.length() > MAX_INPUT_CHARS) throw new IllegalArgumentException("JSON input too large");
+        checkJsonDepth(json);
         JSONObject root = new JSONObject(json);
-
+        JSONObject outbound = CustomOutbound.extract(root);
+        if (outbound == null) return null;
         Profile profile = newProfile();
         profile.protocol = "custom";
         profile.rawJson = json;
-
-        JSONArray outbounds = root.optJSONArray("outbounds");
-        if (outbounds != null) {
-            for (int i = 0; i < outbounds.length(); i++) {
-                JSONObject outbound = outbounds.optJSONObject(i);
-                if (outbound == null) {
-                    continue;
-                }
-                String protocol = outbound.optString("protocol", "");
-                String tag = outbound.optString("tag", "");
-                if ("freedom".equals(protocol) || "blackhole".equals(protocol)
-                        || "direct".equals(tag) || "block".equals(tag)) {
-                    continue;
-                }
-                JSONObject settings = outbound.optJSONObject("settings");
-                if (settings != null) {
-                    JSONArray servers = settings.optJSONArray("vnext");
-                    if (servers == null) {
-                        servers = settings.optJSONArray("servers");
-                    }
-                    if (servers != null && servers.length() > 0) {
-                        JSONObject server = servers.optJSONObject(0);
-                        if (server != null) {
-                            profile.address = server.optString("address", "");
-                            profile.port = server.optInt("port", 443);
-                        }
-                    }
-                }
-                break;
+        JSONObject settings = outbound.getJSONObject("settings");
+        JSONArray servers = settings.optJSONArray("vnext");
+        if (servers == null) servers = settings.optJSONArray("servers");
+        if (servers != null && servers.length() > 0) {
+            JSONObject server = servers.optJSONObject(0);
+            if (server != null) {
+                profile.address = server.optString("address", "");
+                profile.port = server.optInt("port", 443);
             }
         }
-
+        // Structurally validated WireGuard has an endpoint, not a servers array.
         if (profile.address.isEmpty()) {
-            // No recognisable server block; keep it importable but clearly labelled.
             profile.address = "custom";
             profile.port = 443;
         }

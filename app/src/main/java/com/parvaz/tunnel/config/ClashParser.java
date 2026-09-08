@@ -122,7 +122,7 @@ public final class ClashParser {
         p.network = net;
 
         boolean tls = "true".equalsIgnoreCase(m.get("tls")) || "1".equals(m.get("tls"));
-        if (tls) {
+        if (tls || "trojan".equals(type)) {
             p.security = "tls";
         }
         if (m.containsKey("reality-opts") || m.containsKey("public-key") || m.containsKey("pbk")) {

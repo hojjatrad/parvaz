@@ -290,7 +290,7 @@
     <string name="leak_test_summary_ok">همه بررسی‌ها قبول شد</string>
     <string name="leak_test_summary_fail">%1$d مورد اشکال پیدا شد</string>
     <string name="unsupported_badge">قابل اتصال نیست</string>
-    <string name="unsupported_import_warn">%1$d سرور از Hysteria2/TUIC استفاده می‌کنند که هسته داخلی نمی‌تواند به آن‌ها وصل شود. ذخیره شدند ولی اتصال ممکن نیست.</string>
+    <string name="unsupported_import_warn">%1$d سرور دارای پروتکل پشتیبانی‌نشده یا کانفیگ نامعتبر برای هسته داخلی هستند. ذخیره شدند ولی با هسته و تنظیمات فعلی قابل اتصال نیستند.</string>
     <string name="unsupported_tap">این پروتکل به هسته دیگری نیاز دارد و فعلاً وصل نمی‌شود.</string>
     <string name="advanced_settings">پیشرفته</string>
     <string name="buffer_size">اندازه بافر (کیلوبایت)</string>

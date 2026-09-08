@@ -1,5 +1,11 @@
 apply plugin: 'com.android.application'
 
+// Inject from a secret manager/CI environment. Never put signing credentials in Git.
+def signingValues = ['PARVAZ_KEYSTORE_PATH', 'PARVAZ_KEYSTORE_PASSWORD',
+                     'PARVAZ_KEY_ALIAS', 'PARVAZ_KEY_PASSWORD'].collect { System.getenv(it) }
+def releaseSigningReady = signingValues.every { it != null && !it.isEmpty() }
+
+
 android {
     namespace 'com.parvaz.tunnel'
     compileSdk 34
@@ -27,10 +33,12 @@ android {
 
     signingConfigs {
         release {
-            storeFile file('/home/user/.keys/parvaz.keystore')
-            storePassword 'parvaz2026'
-            keyAlias 'parvaz'
-            keyPassword 'parvaz2026'
+            if (releaseSigningReady) {
+                storeFile file(signingValues[0])
+                storePassword signingValues[1]
+                keyAlias signingValues[2]
+                keyPassword signingValues[3]
+            }
         }
     }
 
@@ -117,5 +125,21 @@ tasks.register('dumpCp') {
         new File('/opt/pb/boot.txt').text =
                 android.bootClasspath.collect { it.absolutePath }.join(':')
         println "cp entries: ${cp.size()}"
+    }
+}
+
+// Debug/test builds need no release keys. Release packaging must fail closed.
+def requireReleaseSigning = tasks.register('requireReleaseSigning') {
+    doLast {
+        if (!releaseSigningReady) {
+            throw new GradleException('Release signing secrets are missing. See docs/BUILD-SECURITY.md')
+        }
+    }
+}
+tasks.configureEach {
+    if (name.toLowerCase(java.util.Locale.ROOT).contains('release') &&
+            (name.startsWith('package') || name.startsWith('sign') || name.startsWith('assemble') ||
+             name.startsWith('bundle') || name.startsWith('validateSigning'))) {
+        dependsOn(requireReleaseSigning)
     }
 }

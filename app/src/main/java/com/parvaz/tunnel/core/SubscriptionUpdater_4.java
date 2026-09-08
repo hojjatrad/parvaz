@@ -33,6 +33,9 @@ public final class SubscriptionUpdater_4 implements Runnable {
                 try {
                     SubscriptionUpdater.b a = SubscriptionUpdater.a(subscription.url);
                     ArrayList H = LinkParser.parseMany(a.f6300a);
+                    if (H.isEmpty()) {
+                        throw new IllegalArgumentException("Subscription contains no recognized configurations");
+                    }
                     if (!H.isEmpty()) {
                         subscription.applyUserinfo(a.f6301b);
                         ProfileStore f = ProfileStore.f(context);
@@ -43,7 +46,8 @@ public final class SubscriptionUpdater_4 implements Runnable {
                         f.j(subscription);
                     }
                 } catch (Exception e) {
-                    strArr[0] = e.getMessage();
+                    strArr[0] = e instanceof SubscriptionHttpClient.FetchException ? e.getMessage()
+                            : "Subscription import failed; existing profiles were kept if parsing failed";
                 }
             }
         }

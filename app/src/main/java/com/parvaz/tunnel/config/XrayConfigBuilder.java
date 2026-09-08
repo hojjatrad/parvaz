@@ -631,40 +631,12 @@ public final class XrayConfigBuilder {
         JSONObject jSONObject = new JSONObject();
         jSONObject.put("tag", "proxy");
         JSONObject jSONObject2 = new JSONObject();
-        String str5 = profile.protocol;
-        if (str5 == null) {
-            str5 = "";
-        }
+        String str5 = ProtocolNames.canonical(profile.protocol);
         if ("custom".equals(str5)) {
-            JSONObject jSONObject3 = new JSONObject(profile.rawJson);
-            JSONArray optJSONArray = jSONObject3.optJSONArray("outbounds");
-            if (optJSONArray != null) {
-                int i = 0;
-                while (true) {
-                    if (i >= optJSONArray.length()) {
-                        jSONObject3 = null;
-                        break;
-                    }
-                    JSONObject optJSONObject = optJSONArray.optJSONObject(i);
-                    if (optJSONObject != null) {
-                        String optString = optJSONObject.optString("protocol", "");
-                        String optString2 = optJSONObject.optString("tag", "");
-                        if (!"freedom".equals(optString) && !"blackhole".equals(optString) && !"direct".equals(optString2) && !"block".equals(optString2)) {
-                            jSONObject3 = optJSONObject;
-                            break;
-                        }
-                    }
-                    i++;
-                }
-                if (jSONObject3 == null && optJSONArray.length() > 0) {
-                    jSONObject3 = optJSONArray.optJSONObject(0);
-                }
-            }
-            if (jSONObject3 != null) {
-                jSONObject3.put("tag", "proxy");
-                return jSONObject3;
-            }
-            throw new IllegalArgumentException("no outbound in JSON config");
+            JSONObject outbound = CustomOutbound.extract(new JSONObject(profile.rawJson));
+            if (outbound == null) throw new IllegalArgumentException("no supported outbound in JSON config");
+            outbound.put("tag", "proxy");
+            return outbound;
         }
         if ("shadowsocks".equals(str5)) {
             jSONObject.put("protocol", "shadowsocks");
@@ -791,13 +763,13 @@ public final class XrayConfigBuilder {
             a(jSONObject, profile, prefs);
             return jSONObject;
         }
-        if (!"socks".equals(str5) && !"socks5".equals(str5)) {
+        if (!"socks".equals(str5) && !"http".equals(str5)) {
             if (!"hysteria2".equals(str5) && !"hy2".equals(str5) && !"tuic".equals(str5)) {
                 throw new a(profile.protocol);
             }
             throw new a(str5);
         }
-        jSONObject.put("protocol", "socks");
+        jSONObject.put("protocol", str5);
         JSONObject jSONObject11 = new JSONObject();
         jSONObject11.put("address", profile.address);
         jSONObject11.put("port", profile.port);
