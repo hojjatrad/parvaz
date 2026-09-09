@@ -86,6 +86,7 @@ public class SmartImportRegressionTest {
             com.parvaz.tunnel.MainActivity activity=controller.get();assertEquals(2,activity.z.getItemCount());
             activity.new F().onClick(null,7);
             ((androidx.appcompat.app.AlertDialog)org.robolectric.shadows.ShadowDialog.getLatestDialog()).getButton(android.content.DialogInterface.BUTTON_POSITIVE).performClick();
+            org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
             assertEquals(2,store.e().size());assertEquals(2,activity.z.getItemCount());
             String report=prefs.getString("last_duplicate_report","");assertTrue(report.contains("removed_records=1"));assertTrue(report.contains("uuid"));
             assertFalse(report.contains(a.uuid));assertFalse(report.contains(a.address));

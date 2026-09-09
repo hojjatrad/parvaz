@@ -36,7 +36,18 @@ jobs:
           sdkmanager 'platforms;android-34' 'build-tools;34.0.0'
           bash tools/release/fetch_core.sh
       - name: Run Android unit tests
-        run: gradle --no-daemon --max-workers=2 :app:testDebugUnitTest
+        run: |
+          if ! gradle --no-daemon --max-workers=2 :app:testDebugUnitTest > .cache/android-unit.log 2>&1; then
+            tail -120 .cache/android-unit.log
+            python3 - <<'PY'
+          from pathlib import Path
+          lines=Path('.cache/android-unit.log').read_text(errors='replace').splitlines()
+          for line in [x for x in lines if any(k in x for k in ['error:',' FAILED','AssertionError','tests completed'])][-12:]:
+              print('::notice title=ANDROID_TEST_FAILURE::'+line.replace('%','%25').replace('\r','%0D').replace('\n','%0A'))
+          PY
+            exit 1
+          fi
+          cat .cache/android-unit.log
       - name: Build with the verified existing permanent key
         env:
           PARVAZ_KEYSTORE_BASE64: ${{ secrets.PARVAZ_KEYSTORE_BASE64 }}

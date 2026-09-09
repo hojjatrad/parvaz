@@ -42,7 +42,13 @@ public class RefreshDedupAudit {
         try {
             Future<SubscriptionRefresh.Result> background=pool.submit(()->SubscriptionRefresh.run(store.store,store.prefs,()->false,url->{entered.countDown();try{release.await(5,TimeUnit.SECONDS);}catch(InterruptedException e){throw new java.io.IOException();}return new SubscriptionUpdater.b(oldBody,null);}));
             check("Background refresh entered",entered.await(5,TimeUnit.SECONDS));
-            Future<SubscriptionRefresh.Result> manual=pool.submit(()->SubscriptionRefresh.runOne(store.store,store.prefs,()->false,url->new SubscriptionUpdater.b(newBody,null),null,true));
+            java.util.concurrent.atomic.AtomicReference<Thread> manualThread=new java.util.concurrent.atomic.AtomicReference<>();
+            CountDownLatch manualStarted=new CountDownLatch(1);
+            Future<SubscriptionRefresh.Result> manual=pool.submit(()->{manualThread.set(Thread.currentThread());manualStarted.countDown();return SubscriptionRefresh.runOne(store.store,store.prefs,()->false,url->new SubscriptionUpdater.b(newBody,null),null,true);});
+            check("Manual worker started under held lock",manualStarted.await(2,TimeUnit.SECONDS));
+            long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(2);
+            while(!manual.isDone()&&manualThread.get().getState()!=Thread.State.TIMED_WAITING&&System.nanoTime()<deadline)Thread.sleep(5);
+            check("Manual actually waits while background owns the lock",!manual.isDone()&&manualThread.get().getState()==Thread.State.TIMED_WAITING);
             release.countDown();background.get(5,TimeUnit.SECONDS);SubscriptionRefresh.Result done=manual.get(5,TimeUnit.SECONDS);
             check("Manual refresh queues and fetches instead of busy-zero result",done.updated==1&&done.requested==1&&done.failed==0);
             check("Queued refresh replaces old source data",store.store.e().size()==1&&((Profile)store.store.e().get(0)).address.equals("new.invalid"));
