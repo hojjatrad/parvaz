@@ -162,6 +162,125 @@ public class NativeEngineTest {
    android.util.Log.i("ParvazProbe","OWNER_DEATH_LISTENER_CLOSED_OK "+kind+" SDK="+android.os.Build.VERSION.SDK_INT);
   }finally{if(bound)context.unbindService(connection);context.stopService(intent);}
  }
+ // These helpers inspect only Parvaz's own class in the disposable probe APK.
+ // No hidden Android API, production test hook or private user data is involved.
+ private Object coreField(ExternalCore core,String name)throws Exception {
+  java.lang.reflect.Field field=ExternalCore.class.getDeclaredField(name);field.setAccessible(true);return field.get(core);
+ }
+ private java.util.Set<String> sessionDirectories(Context context){
+  java.util.Set<String> names=new java.util.HashSet<>();
+  java.io.File[] files=context.getNoBackupFilesDir().listFiles();
+  assertNotNull("Cannot inspect fixture storage",files);
+  for(java.io.File file:files)if(file.getName().startsWith("engine-session-"))names.add(file.getName());
+  return names;
+ }
+ private void awaitCallerFrame(Thread caller,String className,String method)throws Exception {
+  long deadline=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(10);
+  while(caller.isAlive()&&System.nanoTime()<deadline){
+   for(StackTraceElement frame:caller.getStackTrace())if(frame.getClassName().equals(className)&&frame.getMethodName().equals(method))return;
+   Thread.sleep(20);
+  }
+  fail("Caller did not reach controlled wait: "+className+"."+method);
+ }
+ @Test public void closedSessionRejectsLateLaunch()throws Exception {
+  Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+  ExternalCore core=new ExternalCore();core.close();
+  java.lang.reflect.Method launch=ExternalCore.class.getDeclaredMethod("launch",ProcessBuilder.class);launch.setAccessible(true);
+  java.io.File executable=new java.io.File(context.getApplicationInfo().nativeLibraryDir,"libsingbox.so");assertTrue(executable.canExecute());
+  try{
+   try{
+    launch.invoke(core,new ProcessBuilder(executable.toString(),"version").directory(context.getNoBackupFilesDir()));
+    fail("A closed session accepted a late launch");
+   }catch(java.lang.reflect.InvocationTargetException expected){assertTrue(expected.getCause() instanceof java.io.IOException);}
+   assertNull("Closed session acquired a child",coreField(core,"process"));
+  }finally{
+   // Clean up even if a regression unexpectedly started the harmless version command.
+   Process child=(Process)coreField(core,"process");
+   if(child!=null){child.destroyForcibly();child.waitFor(5,java.util.concurrent.TimeUnit.SECONDS);}
+  }
+  android.util.Log.i("ParvazProbe","CLOSED_SESSION_LATE_LAUNCH_REJECTED SDK="+android.os.Build.VERSION.SDK_INT);
+ }
+ @Test public void interruptedQueuedLaunchRestoresResources()throws Exception {
+  Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+  java.util.Set<String> baseline=sessionDirectories(context);
+  java.util.concurrent.ExecutorService launcher=(java.util.concurrent.ExecutorService)coreField(null,"LAUNCHER");
+  java.util.concurrent.Semaphore capacity=(java.util.concurrent.Semaphore)coreField(null,"CAPACITY");
+  assertEquals(3,capacity.availablePermits());
+  java.util.concurrent.CountDownLatch entered=new java.util.concurrent.CountDownLatch(1),release=new java.util.concurrent.CountDownLatch(1);
+  java.util.concurrent.Future<?> blocker=launcher.submit(()->{entered.countDown();try{release.await();}catch(InterruptedException e){Thread.currentThread().interrupt();}});
+  java.util.concurrent.atomic.AtomicReference<ExternalCore> result=new java.util.concurrent.atomic.AtomicReference<>();
+  java.util.concurrent.atomic.AtomicReference<Throwable> error=new java.util.concurrent.atomic.AtomicReference<>();
+  Thread caller=new Thread(()->{try{result.set(ExternalCore.start(context,directProfile("full-singbox"),null));}catch(Throwable e){error.set(e);}},"fixture-cancel-queued-launch");
+  try{
+   assertTrue("Launcher blocker not entered",entered.await(5,java.util.concurrent.TimeUnit.SECONDS));
+   caller.start();awaitCallerFrame(caller,"java.util.concurrent.FutureTask","get");
+   assertEquals("Queued launch should own one slot",2,capacity.availablePermits());
+   assertEquals("Queued launch should own one private directory",baseline.size()+1,sessionDirectories(context).size());
+   caller.interrupt();caller.join(5000);assertFalse("Cancelled caller is stuck",caller.isAlive());
+   assertTrue("Expected interrupted launch",error.get() instanceof InterruptedException);assertNull(result.get());
+   assertEquals("Queued cancellation leaked a slot",3,capacity.availablePermits());
+   assertEquals("Queued cancellation left private files",baseline,sessionDirectories(context));
+   release.countDown();blocker.get(5,java.util.concurrent.TimeUnit.SECONDS);
+   launcher.submit(()->{}).get(5,java.util.concurrent.TimeUnit.SECONDS); // Drain the cancelled session's pending launch.
+   assertEquals(3,capacity.availablePermits());assertEquals(baseline,sessionDirectories(context));
+   try(ExternalCore next=ExternalCore.start(context,directProfile("full-singbox"),null)){exchangeTcp(next);}
+   assertEquals(3,capacity.availablePermits());assertEquals(baseline,sessionDirectories(context));
+   android.util.Log.i("ParvazProbe","QUEUED_LAUNCH_CANCEL_CLEAN_OK SDK="+android.os.Build.VERSION.SDK_INT);
+  }finally{
+   caller.interrupt();release.countDown();caller.join(35000);
+   ExternalCore unexpected=result.get();if(unexpected!=null)unexpected.close();
+   blocker.get(5,java.util.concurrent.TimeUnit.SECONDS);
+   launcher.submit(()->{}).get(5,java.util.concurrent.TimeUnit.SECONDS);
+  }
+ }
+ @Test public void interruptedCapacityWaitDoesNotOverRelease()throws Exception {
+  Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();java.util.Set<String> baseline=sessionDirectories(context);
+  java.util.concurrent.Semaphore capacity=(java.util.concurrent.Semaphore)coreField(null,"CAPACITY");assertEquals(3,capacity.availablePermits());
+  java.util.List<ExternalCore> active=new java.util.ArrayList<>();
+  java.util.concurrent.atomic.AtomicReference<ExternalCore> result=new java.util.concurrent.atomic.AtomicReference<>();
+  java.util.concurrent.atomic.AtomicReference<Throwable> error=new java.util.concurrent.atomic.AtomicReference<>();
+  Thread waiter=new Thread(()->{try{result.set(ExternalCore.start(context,directProfile("full-clash"),null));}catch(Throwable e){error.set(e);}},"fixture-cancel-capacity-wait");
+  try{
+   for(int i=0;i<3;i++)active.add(ExternalCore.start(context,directProfile(i==1?"full-clash":"full-singbox"),null));
+   assertEquals(0,capacity.availablePermits());
+   waiter.start();awaitCallerFrame(waiter,"java.util.concurrent.Semaphore","tryAcquire");
+   assertEquals(baseline.size()+3,sessionDirectories(context).size());
+   waiter.interrupt();waiter.join(5000);assertFalse("Capacity waiter is stuck",waiter.isAlive());
+   assertTrue("Expected interrupted capacity wait",error.get() instanceof InterruptedException);assertNull(result.get());
+   assertEquals("Unacquired slot was incorrectly released",0,capacity.availablePermits());
+   for(ExternalCore core:active){assertTrue(core.isRunning());exchangeTcp(core);}
+   active.get(0).close();active.get(0).close();assertEquals("Double close over-released capacity",1,capacity.availablePermits());
+   try(ExternalCore replacement=ExternalCore.start(context,directProfile("full-clash"),null)){
+    assertEquals(0,capacity.availablePermits());exchangeTcp(replacement);
+   }
+  }finally{
+   waiter.interrupt();for(ExternalCore core:active)core.close();waiter.join(35000);
+   ExternalCore unexpected=result.get();if(unexpected!=null)unexpected.close();
+  }
+  assertEquals(3,capacity.availablePermits());assertEquals(baseline,sessionDirectories(context));
+  android.util.Log.i("ParvazProbe","CAPACITY_WAIT_CANCEL_NO_OVERRELEASE_OK SDK="+android.os.Build.VERSION.SDK_INT);
+ }
+ @Test public void repeatedStopsReapChildrenAndRemoveTrustBundles()throws Exception {
+  Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();java.util.Set<String> baseline=sessionDirectories(context);
+  java.util.concurrent.Semaphore capacity=(java.util.concurrent.Semaphore)coreField(null,"CAPACITY");assertEquals(3,capacity.availablePermits());
+  for(int cycle=0;cycle<4;cycle++){
+   ExternalCore core=ExternalCore.start(context,directProfile(cycle%2==0?"full-singbox":"full-clash"),null);
+   Process child=(Process)coreField(core,"process");java.io.File directory=(java.io.File)coreField(core,"directory");int port=core.port;
+   try{
+    assertTrue(directory.isDirectory());boolean trustPresent=false;
+    java.io.File[] children=directory.listFiles();assertNotNull(children);
+    for(java.io.File file:children)if(file.getName().startsWith("trust-")&&new java.io.File(file,"roots.pem").length()>0)trustPresent=true;
+    assertTrue("Session trust bundle missing",trustPresent);exchangeTcp(core);
+   }finally{core.close();core.close();}
+   assertTrue("Native child was not reaped",child.waitFor(5,java.util.concurrent.TimeUnit.SECONDS));
+   assertFalse(core.isRunning());assertNull(core.password);assertFalse("Private session directory remains",directory.exists());
+   try(java.net.ServerSocket socket=new java.net.ServerSocket()){
+    socket.setReuseAddress(true);socket.bind(new java.net.InetSocketAddress("127.0.0.1",port));
+   }
+   assertEquals(3,capacity.availablePermits());assertEquals(baseline,sessionDirectories(context));
+  }
+  android.util.Log.i("ParvazProbe","REPEATED_STOP_CHILD_TRUST_PORT_CAPACITY_CLEAN_OK cycles=4 SDK="+android.os.Build.VERSION.SDK_INT);
+ }
  private void assertRuntime(String kind)throws Exception {
   Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
    Profile p=new Profile();p.protocol=kind;p.rawJson=kind.equals("full-singbox")?"{\"outbounds\":[{\"type\":\"direct\"}]}":"{\"proxies\":[],\"rules\":[\"MATCH,DIRECT\"]}";

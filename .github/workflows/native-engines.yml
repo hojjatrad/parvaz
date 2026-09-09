@@ -58,10 +58,24 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
           import xml.etree.ElementTree as ET
-          for file in list(Path('tools/android-probe/build/outputs/androidTest-results').rglob('logcat*.txt'))+list(Path('.cache/native-results-29').rglob('logcat*.txt')):
-              for line in file.read_text(errors='replace').splitlines():
-                  if 'I ParvazProbe:' in line:print('::notice title=NATIVE_ANDROID_PROBE::'+line)
-          for file in Path('tools/android-probe/build/outputs/androidTest-results').rglob('*.xml'):
-              for item in ET.parse(file).getroot().iter('failure'):print('::error title=NATIVE_ANDROID_PROBE::'+(item.get('message') or item.text or 'Assertion failed')[:1800].replace('%','%25').replace('\n','%0A'))
+          roots=[Path('tools/android-probe/build/outputs/androidTest-results'),Path('.cache/native-results-29')]
+          successes={}
+          for root in roots:
+              for file in root.rglob('logcat*.txt'):
+                  for line in file.read_text(errors='replace').splitlines():
+                      if 'I ParvazProbe:' not in line:continue
+                      message=line.split('I ParvazProbe:',1)[1].strip()
+                      sdk=re.search(r'SDK=(\d+)',message)
+                      if sdk:successes.setdefault(sdk[1],set()).add(message)
+          # One notice per SDK avoids GitHub's per-step annotation count limit.
+          for sdk,messages in sorted(successes.items()):
+              print('::notice title=NATIVE_ANDROID_SDK_'+sdk+'::'+'; '.join(sorted(messages)).replace('%','%25'))
+          for root in roots:
+              for file in root.rglob('*.xml'):
+                  suite=ET.parse(file).getroot()
+                  if suite.tag=='testsuite':
+                      print('::notice title=NATIVE_TEST_TOTALS::'+root.name+' '+file.name+' '+str({key:suite.get(key) for key in ['tests','failures','errors','skipped']}))
+                  for item in suite.iter('failure'):print('::error title=NATIVE_ANDROID_PROBE::'+(item.get('message') or item.text or 'Assertion failed')[:1800].replace('%','%25').replace('\n','%0A'))
           PY
