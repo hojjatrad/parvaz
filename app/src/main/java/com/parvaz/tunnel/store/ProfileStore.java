@@ -153,9 +153,9 @@ public final class ProfileStore {
         if(!primarySubscription().isEmpty())return;
         Profile selected=getById(prefs.getString("selected_profile",""));
         String owner=selected==null?"":selected.subscriptionId;
-        for(Object o:f347c){Subscription sub=(Subscription)o;if(!owner.isEmpty()&&owner.equals(sub.id)){setPrimarySubscription(sub.id);return;}}
-        if(selected==null&&f347c.size()==1){Subscription sub=(Subscription)f347c.get(0);if(!sub.id.isEmpty()){setPrimarySubscription(sub.id);return;}}
-        setPrimarySubscription(MANUAL_GROUP);
+        for(Object o:f347c){Subscription sub=(Subscription)o;if(!owner.isEmpty()&&owner.equals(sub.id)){setPrimarySubscription(sub.id,false);return;}}
+        if(selected==null&&f347c.size()==1){Subscription sub=(Subscription)f347c.get(0);if(!sub.id.isEmpty()){setPrimarySubscription(sub.id,false);return;}}
+        setPrimarySubscription(MANUAL_GROUP,false);
     }
     public synchronized String primarySubscription() { return f345a.getString("primary_subscription",""); }
     public synchronized boolean scopeConfigured() { return "1".equals(f345a.getString("primary_choice","")); }
@@ -168,11 +168,12 @@ public final class ProfileStore {
     public synchronized Profile getActiveById(String id) {
         Profile p=getById(id);String primary=primarySubscription();return p!=null&&(primary.isEmpty()||(MANUAL_GROUP.equals(primary)?p.subscriptionId.isEmpty():primary.equals(p.subscriptionId)))?p:null;
     }
-    public synchronized void setPrimarySubscription(String id) {
+    public synchronized void setPrimarySubscription(String id) { setPrimarySubscription(id,true); }
+    private synchronized void setPrimarySubscription(String id,boolean enable) {
         if(id==null)throw new IllegalArgumentException("Missing primary source");
         try {
             ArrayList<Subscription> subs=f();boolean found=id.isEmpty()||MANUAL_GROUP.equals(id);JSONArray json=new JSONArray();
-            for(Subscription sub:subs){if(sub.id.equals(id)){found=true;sub.enabled=true;}json.put(sub.toJson());}
+            for(Subscription sub:subs){if(sub.id.equals(id)){found=true;if(enable)sub.enabled=true;}json.put(sub.toJson());}
             if(!found)throw new IllegalArgumentException("Unknown primary source");
             f345a.edit().putString("primary_subscription",id).putString("primary_choice","1").putString("subs",json.toString()).apply();
             f347c.clear();f347c.addAll(subs);revision++;

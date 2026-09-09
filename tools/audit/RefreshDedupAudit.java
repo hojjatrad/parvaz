@@ -92,6 +92,12 @@ public class RefreshDedupAudit {
         SubscriptionRefresh.Result changed=SubscriptionRefresh.runActive(drift.store,drift.prefs,()->false,url->{driftCalls[0]++;drift.store.setPrimarySubscription("b");return new SubscriptionUpdater.b(current,null);},true);
         check("Changing group during download never fetches a second group",driftCalls[0]==1&&changed.updated==0&&changed.failed>0);
         check("Stale response cannot populate the newly selected group",drift.store.e().size()==2&&drift.store.activeProfiles().size()==1&&drift.store.activeProfiles().get(0).remark.equals("b"));
+        PanelRefreshTest.Setup disabled=new PanelRefreshTest.Setup();disabled.sub("off","https://disabled.invalid/sub");disabled.add(PanelRefreshTest.profile("off","old"));
+        ((Subscription)disabled.store.f347c.get(0)).enabled=false;disabled.store.h();
+        disabled.prefs.edit().putString("selected_profile",((Profile)disabled.store.e().get(0)).id).apply();
+        SubscriptionRefresh.Result off=SubscriptionRefresh.runActive(disabled.store,disabled.prefs,()->false,url->{throw new AssertionError("disabled source fetched");},false);
+        check("Migration does not silently re-enable a disabled subscription",off.requested==0&&!((Subscription)disabled.store.f().get(0)).enabled);
+
     }
     public static void main(String[] args)throws Exception {
         Profile a=profile(),b=ProfileIdentity.copy(a);b.id="two";b.remark="second";b.network="";b.security="none";b.encryption="";b.wgMtu=1280;
