@@ -53,6 +53,11 @@ jobs:
                   if 'I ParvazProbe:' in line:print('::notice title=ANDROID_ARCHIVE_PROBE::'+line)
           for file in base.rglob('*.xml'):
               root=ET.parse(file).getroot()
+              print('::notice title=PLATFORM_TEST_COUNTS::'+root.get('name','')+' '+str({k:root.get(k,'0') for k in ['tests','failures','errors','skipped']}))
+              for case in root.iter('testcase'):
+                  if 'RestoreProcessDeathTest' in case.get('classname',''):
+                      status='failed' if any(case.find(tag) is not None for tag in ['failure','error','skipped']) else 'passed'
+                      print('::notice title=RESTORE_PROCESS_DEATH::'+case.get('name','')+' '+status)
               for item in root.iter('system-out'):
                   for line in (item.text or '').splitlines():
                       if 'ARCHIVE ' in line:print('::notice title=ANDROID_ARCHIVE_PROBE::'+line)

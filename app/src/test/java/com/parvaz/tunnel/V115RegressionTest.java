@@ -18,6 +18,8 @@ import com.parvaz.tunnel.store.Prefs;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.Before;
+import org.junit.After;
+import com.parvaz.tunnel.store.ProfileStore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
@@ -44,9 +46,17 @@ public class V115RegressionTest {
     @Before
     public void setUp() {
         context = ApplicationProvider.getApplicationContext();
+        // Robolectric replaces the Application/preference namespace between tests;
+        // production has one Application per process. Do not retain the previous
+        // test's process singleton (which now owns the restore coordinator).
+        if(ProfileStore.d!=null)System.out.println("V115_STALE_STORE_NAMESPACE="+
+            (ProfileStore.d.f345a!=context.getSharedPreferences("parvaz_store",0)));
+        ProfileStore.d=null;
         prefs = new Prefs(context);
         prefs.f343a.edit().clear().apply();
     }
+
+    @After public void clearProcessSingleton(){ProfileStore.d=null;}
 
     private Profile profile() throws Exception {
         ArrayList parsed = LinkParser.parseMany(LINK);
