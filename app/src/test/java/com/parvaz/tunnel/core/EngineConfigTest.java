@@ -22,9 +22,17 @@ public class EngineConfigTest {
   assertEquals("11111111-1111-4111-8111-111111111111",t.getString("uuid"));assertEquals("server-password",t.getString("password"));assertTrue(ProtocolSupport.isSupported(tuic));
  }
  @Test public void uriPasswordsKeepLiteralPlusAndPercentEscapes()throws Exception {
+  assertEquals("a+b",LinkParser.parseMany("hy2://a+b@server.invalid:443").get(0).uuid);
   assertEquals("secret%2F+",LinkParser.parseMany("hy2://secret%252F%2B@server.invalid:443").get(0).uuid);
   assertEquals("secret%2F+",LinkParser.parseMany("tuic://11111111-1111-4111-8111-111111111111:secret%252F%2B@server.invalid:443").get(0).quicKey);
   assertEquals("secret%2F+",LinkParser.parseMany("trojan://secret%252F%2B@server.invalid:443").get(0).uuid);
+ }
+ @Test public void mihomoSerializationIsYamlCompatibleAndLossless()throws Exception {
+  JSONObject root=new JSONObject().put("url","https://example.invalid/path").put("password","a\\/b+%2F");
+  String text=EngineConfig.serialize(root,"full-clash");
+  java.util.Map<?,?> yaml=new org.yaml.snakeyaml.Yaml(new org.yaml.snakeyaml.constructor.SafeConstructor(new org.yaml.snakeyaml.LoaderOptions())).load(text);
+  assertEquals(root.getString("password"),yaml.get("password"));assertEquals(root.getString("url"),yaml.get("url"));
+  assertEquals(root.getString("password"),new JSONObject(text).getString("password"));
  }
  @Test public void fullClashKeepsRulesGroupsAndScalarPasswordsWithoutPublicListeners()throws Exception {
   String yaml="mixed-port: 7890\nallow-lan: true\nexternal-controller: 0.0.0.0:9090\nproxies:\n - name: node\n   type: trojan\n   server: example.invalid\n   port: 443\n   password: yes\nproxy-groups:\n - name: group\n   type: select\n   proxies: [node]\nrules: [\"MATCH,group\"]\n";

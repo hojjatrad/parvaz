@@ -29,7 +29,7 @@ public final class ExternalCore implements AutoCloseable {
    builder.environment().keySet().removeIf(k->k.startsWith("CLASH_")||k.startsWith("SING_BOX_")||k.startsWith("SSL_CERT_"));builder.environment().put("GOMAXPROCS","2");
    session.process=builder.start();
    Thread drain=new Thread(()->{try(InputStream in=session.process.getInputStream()){byte[] buffer=new byte[4096];while(in.read(buffer)!=-1){/* Private engine logs are deliberately not published. */}}catch(IOException ignored){}},"parvaz-engine-output");drain.setDaemon(true);drain.start();
-   try(OutputStream input=session.process.getOutputStream()){input.write(EngineConfig.build(profile,session.port,session.dnsPort,session.username,session.password).toString().getBytes(StandardCharsets.UTF_8));}
+   try(OutputStream input=session.process.getOutputStream()){input.write(EngineConfig.serialize(EngineConfig.build(profile,session.port,session.dnsPort,session.username,session.password),profile.protocol).getBytes(StandardCharsets.UTF_8));}
    long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(30);boolean ready=false;
    while(System.nanoTime()<deadline){if(!session.alive())throw new IOException("Native configuration rejected (exit "+session.process.exitValue()+")");
     try{session.authenticate();ready=true;break;}catch(IOException unavailable){Thread.sleep(100);}

@@ -28,6 +28,9 @@ for original, destination in expected.items():
     apk = ROOT / 'app/build/outputs/apk/release' / original
     if not apk.is_file():
         raise SystemExit(f'Required APK is missing: {original}')
+    if not 0 < apk.stat().st_size <= 128 * 1024 * 1024:
+        raise SystemExit(f'APK exceeds the installed updater limit: {original}')
+    print(f'APK_SIZE_OK {destination} {apk.stat().st_size}')
     signature = subprocess.check_output([apksigner, 'verify', '--verbose', '--print-certs', '--min-sdk-version', '24', str(apk)], text=True)
     fingerprints = re.findall(r'Signer #\d+ certificate SHA-256 digest:\s*([0-9a-fA-F:]+)', signature)
     if len(fingerprints) != 1 or fingerprints[0].replace(':', '').lower() != pin['certificate_sha256']:

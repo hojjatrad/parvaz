@@ -6,6 +6,10 @@ import java.util.*;
 public final class EngineConfig {
  private EngineConfig(){}
  public static boolean external(String p){return Arrays.asList("hysteria2","hy2","tuic","full-singbox","full-clash").contains(p);}
+ /** Android JSON escapes solidus; Mihomo's YAML reader rejects that JSON escape. */
+ public static String serialize(JSONObject root,String protocol){
+  String text=root.toString();return ProtocolNames.canonical(protocol).equals("full-clash")?text.replace("\\/","/"):text;
+ }
  public static JSONObject build(Profile profile,int port,int dnsPort,String user,String password)throws JSONException {
   String protocol=ProtocolNames.canonical(profile.protocol);
   JSONObject root=FullConfig.isFull(protocol)?FullConfig.root(profile):new JSONObject();

@@ -39,3 +39,6 @@ release/*.zip
 # Generated Python bytecode
 __pycache__/
 *.py[cod]
+
+# Regenerated from pinned vendored sources before release builds
+app/src/main/assets/licenses/native-dependencies.txt

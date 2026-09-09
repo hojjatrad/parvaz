@@ -65,6 +65,8 @@ jobs:
           sdkmanager 'platforms;android-34' 'build-tools;34.0.0' 'ndk;27.2.12479018'
           bash tools/release/fetch_core.sh
           python3 tools/native/build.py
+      - name: Prepare corresponding source and in-APK dependency notices
+        run: python3 tools/native/source_bundle.py
       - name: Run Android unit tests
         run: ./gradlew --no-daemon --max-workers=2 :app:testDebugUnitTest
       - name: Validate permanent key and build signed APKs with safe diagnostics
@@ -78,9 +80,8 @@ jobs:
         run: |
           python3 tools/release/verify_apk.py
           python3 tools/native/verify_packaging.py
-      - name: Bundle corresponding GPL source
+      - name: Hash corresponding GPL source
         run: |
-          python3 tools/native/source_bundle.py
           sha256sum release-artifacts/*-source.tar.gz | sed 's#release-artifacts/##' >> release-artifacts/SHA256SUMS.txt
       - name: Prevent rollback of latest app, versionCode or core
         env:

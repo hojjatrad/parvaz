@@ -48,7 +48,7 @@ public final class FullConfig {
   inboundTag(root);
   JSONArray rules=root.optJSONArray("rules");if(rules!=null)for(int i=0;i<rules.length();i++){
    String rule=rules.optString(i,"").toUpperCase(Locale.ROOT);
-   if(rule.startsWith("PROCESS-")||rule.startsWith("IN-NAME,")||rule.startsWith("IN-TYPE,")||rule.startsWith("IN-PORT,"))throw new IllegalArgumentException("Desktop process/listener rules are not Android VPN rules");
+   if(java.util.regex.Pattern.compile("(^|[,(])\\s*(PROCESS-|IN-NAME,|IN-TYPE,|IN-PORT,|SRC-IP-CIDR|SRC-PORT,|UID,)").matcher(rule).find())throw new IllegalArgumentException("Desktop process/listener rules are not Android VPN rules");
   }
  }
  private static void validate(Object value,int depth)throws JSONException {
