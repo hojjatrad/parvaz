@@ -22,24 +22,6 @@ jobs:
               with urllib.request.urlopen(urllib.request.Request(base+path,headers=headers),timeout=30) as r:return json.load(r)
           class NoRedirect(urllib.request.HTTPRedirectHandler):
               def redirect_request(self,*args,**kwargs):return None
-          for attempt in range(1):
-              data=api('/actions/runs/34327073956/jobs')
-              for job in data['jobs']:
-                  active=[s['name']+': '+str(s['conclusion']) for s in job['steps'] if s['name'].startswith('Run reactivecircus') or s['status']=='in_progress']
-                  print('::notice title=PROBE_PROGRESS::'+job['name']+' '+job['status']+' '+str(job['conclusion'])+' '+str(active))
-              if all(j['status']=='completed' for j in data['jobs']):break
-              # One-shot read; no polling or modifications.
-          for job in data['jobs']:
-              if job['status']!='completed':continue
-              request=urllib.request.Request(base+'/actions/jobs/'+str(job['id'])+'/logs',headers=headers)
-              try:
-                  with urllib.request.build_opener(NoRedirect).open(request,timeout=30) as r:logs=r.read(8*1024*1024).decode(errors='replace')
-              except urllib.error.HTTPError as e:
-                  if e.code!=302:raise
-                  with urllib.request.urlopen(e.headers['Location'],timeout=30) as r:logs=r.read(8*1024*1024).decode(errors='replace')
-              for line in logs.splitlines():
-                  if any(x in line for x in ['ARCHIVE ','ParvazProbe','FAILURE:','What went wrong','Could not resolve','SDK location','error:','BUILD FAILED','BUILD SUCCESSFUL','Boot completed','Timeout waiting','AssertionError','Failure to parse','PackageParser','expected:']):
-                      print('::notice title=PROBE_RESULT::'+line[:800].replace('%','%25').replace('\r','').replace('\n',''))
           import io,zipfile,xml.etree.ElementTree as ET
           artifacts=api('/actions/runs/34327073956/artifacts')['artifacts']
           for artifact in artifacts:
@@ -51,8 +33,16 @@ jobs:
                   with urllib.request.urlopen(e.headers['Location'],timeout=30) as r:blob=r.read(1024*1024)
               with zipfile.ZipFile(io.BytesIO(blob)) as z:
                   for name in z.namelist():
+                      print('::notice title=PROBE_FILE::'+artifact['name']+' '+name)
+                      data=z.read(name)
+                      if 'logcat' in name.lower():
+                          lines=data.decode(errors='replace').splitlines()
+                          for line in lines:
+                              if 'ParvazProbe' in line or 'Failure to parse' in line or 'PackageParserException' in line:
+                                  print('::notice title=PARSE_REASON::'+line[:1200])
                       if not name.endswith('.xml'):continue
                       root=ET.fromstring(z.read(name))
-                      for child in root.iter('failure'):
+                      for child in root.iter():
+                          if not child.tag.endswith('failure'):continue
                           print('::notice title=PROBE_ASSERTION::'+artifact['name']+' '+(child.text or '')[:1600].replace('\n',' | ').replace('\r',''))
           PY
