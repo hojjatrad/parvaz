@@ -22,6 +22,7 @@ def prepareProbeSources=tasks.register('prepareProbeSources',Sync){
     from('../../app/src/main/java'){
         include 'com/parvaz/tunnel/core/ArchiveSignatures.java'
         include 'com/parvaz/tunnel/store/StoreCipher.java'
+        include 'com/parvaz/tunnel/store/RestoreJournal.java'
         include 'com/parvaz/tunnel/store/BackupCrypto.java'
         include 'com/parvaz/tunnel/store/BackupInput.java'
         if(project.hasProperty('nativeProbe')){

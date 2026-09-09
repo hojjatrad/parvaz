@@ -4,5 +4,5 @@
         android:networkSecurityConfig="@xml/native_test_trust">
         <service android:name="com.parvaz.probe.NativeOwnerService"
             android:exported="false" android:process=":native_owner"/>
-    </application>
+    <service android:name=".RestoreProcessService" android:exported="false" android:process=":restore_probe"/></application>
 </manifest>

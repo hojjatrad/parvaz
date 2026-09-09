@@ -2473,6 +2473,9 @@ public class MainActivity extends AppCompatActivity {
         Executor executorCompat$HandlerExecutor;
         super.onResume();
         if(recoveryBlocked)return;
+        try{ProfileStore.recoverBeforeUse(this);}catch(RuntimeException unavailable){
+            recoveryBlocked=true;startActivity(new Intent(this,BackupRecoveryActivity.class));finish();return;
+        }
         // Opt-in gesture: shake the phone to jump to the next server.
         if (this.L.f343a.getBoolean("shake_to_switch", false)) {
             if (this.shakeDetector == null) {
