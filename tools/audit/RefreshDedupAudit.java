@@ -87,6 +87,11 @@ public class RefreshDedupAudit {
         s.store.setPrimarySubscription(active);
         SmartImport.run(s.store,s.prefs,"https://new-failed.invalid/sub",()->false,url->{throw new java.io.IOException();});
         check("Failed new subscription cannot display another group's servers",s.store.activeProfiles().isEmpty()&&s.store.e().size()==4);
+        PanelRefreshTest.Setup drift=new PanelRefreshTest.Setup();drift.sub("a","https://a.invalid/sub");drift.sub("b","https://b.invalid/sub");
+        drift.add(PanelRefreshTest.profile("a","a"));drift.add(PanelRefreshTest.profile("b","b"));drift.store.setPrimarySubscription("a");int[] driftCalls={0};
+        SubscriptionRefresh.Result changed=SubscriptionRefresh.runActive(drift.store,drift.prefs,()->false,url->{driftCalls[0]++;drift.store.setPrimarySubscription("b");return new SubscriptionUpdater.b(current,null);},true);
+        check("Changing group during download never fetches a second group",driftCalls[0]==1&&changed.updated==0&&changed.failed>0);
+        check("Stale response cannot populate the newly selected group",drift.store.e().size()==2&&drift.store.activeProfiles().size()==1&&drift.store.activeProfiles().get(0).remark.equals("b"));
     }
     public static void main(String[] args)throws Exception {
         Profile a=profile(),b=ProfileIdentity.copy(a);b.id="two";b.remark="second";b.network="";b.security="none";b.encryption="";b.wgMtu=1280;

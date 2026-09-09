@@ -122,7 +122,7 @@ public class ClipboardHttpRegressionTest {
         Shadows.shadowOf(Looper.getMainLooper()).idle();
         String report=activity.L.f343a.getString("last_import_report","");assertTrue(report,report.contains("Requested=1"));assertTrue(report,report.contains("failed=0"));
         assertNoReportDialog();
-        assertTrue(((android.widget.TextView)activity.findViewById(com.parvaz.tunnel.R.id.source_group)).getText().toString().contains("14"));
+        assertEquals(activity.getString(com.parvaz.tunnel.R.string.active_group_label,"127.0.0.1",14),((android.widget.TextView)activity.findViewById(com.parvaz.tunnel.R.id.source_group)).getText().toString());
         assertEquals(14,activity.z.getItemCount());assertEquals(16,store.e().size());
         assertEquals(14,new ProfileStore(context).activeProfiles().size());
         String again=refreshAndWait(activity,true);assertTrue(again.contains("archived_records=2"));assertEquals(14,activity.z.getItemCount());
