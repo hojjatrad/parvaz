@@ -33,8 +33,7 @@ public final class RealBypassTester {
         if (profile == null) return -1;
         try {
             Prefs prefs = new Prefs(context);
-            String config = XrayConfigBuilder.b(profile, prefs, null, false, false);
-            long delay = Libv2ray.measureOutboundDelay(config, FILTERED_PROBE_URL);
+            long delay=ProxyMeasurement.measure(context,profile,FILTERED_PROBE_URL);
             return (delay > 0 && delay < 10000) ? (int) delay : -1;
         } catch (Throwable t) {
             return -1;

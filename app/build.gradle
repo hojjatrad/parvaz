@@ -65,6 +65,7 @@ android {
         jniLibs {
             // false stores libgojni uncompressed and adds ~45 MB. Always true.
             useLegacyPackaging true
+            keepDebugSymbols += ['**/libsingbox.so', '**/libmihomo.so']
         }
         resources {
             excludes += ['META-INF/*.kotlin_module', 'DebugProbesKt.bin',

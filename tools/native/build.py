@@ -33,7 +33,8 @@ for core in json.loads((ROOT/'tools/native/engines-lock.json').read_text()):
   cmd=['go','build','-p','2','-trimpath','-buildvcs=false']
   if not args.host:cmd+=['-buildmode=pie']
   if core['tags']:cmd+=['-tags',core['tags']]
-  cmd+=['-ldflags','-s -w','-o',str(output),core['package']]
+  version_symbol='github.com/sagernet/sing-box/constant.Version' if core['name']=='sing-box' else 'github.com/metacubex/mihomo/constant.Version'
+  cmd+=['-ldflags','-s -w -X '+version_symbol+'='+core['tag'].lstrip('v'),'-o',str(output),core['package']]
   subprocess.run(cmd,cwd=source,env=buildenv,check=True)
   print('ENGINE_BUILT',core['name'],core['tag'],abi,hashlib.sha256(output.read_bytes()).hexdigest(),flush=True)
  if not args.probe and not args.host:

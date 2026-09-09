@@ -33,7 +33,7 @@ public final class PingManager {
         long j;
         Context context = this.f6270a;
         try {
-            j = Libv2ray.measureOutboundDelay(XrayConfigBuilder.b(profile, new Prefs(context), null, false, false), context.getApplicationContext().getSharedPreferences("parvaz_prefs", 0).getString("ping_url", "https://www.gstatic.com/generate_204"));
+            j = ProxyMeasurement.measure(context,profile, context.getApplicationContext().getSharedPreferences("parvaz_prefs", 0).getString("ping_url", "https://www.gstatic.com/generate_204"));
         } catch (Exception unused) {
             j = -1;
         }

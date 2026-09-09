@@ -1095,7 +1095,7 @@ public class MainActivity extends AppCompatActivity {
             if(clipboard==null||!clipboard.hasPrimaryClip())return;String text=clipboard.getPrimaryClip().getItemAt(0).coerceToText(this).toString();
             new Thread(()->{try{
                 Profile profile=com.parvaz.tunnel.config.FullConfig.parse(text);
-                runOnUiThread(()->{if(isFinishing()||isDestroyed())return;ProfileStore store=ProfileStore.f(this);store.a(java.util.Collections.singletonList(profile),"");store.setPrimarySubscription(ProfileStore.MANUAL_GROUP);reload();});
+                runOnUiThread(()->{if(isFinishing()||isDestroyed())return;ProfileStore store=ProfileStore.f(this);store.a(new java.util.ArrayList<>(java.util.Collections.singletonList(profile)),"");store.setPrimarySubscription(ProfileStore.MANUAL_GROUP);reload();});
             }catch(Exception error){runOnUiThread(()->Snackbar.make(findViewById(android.R.id.content),R.string.full_config_invalid,Snackbar.LENGTH_SHORT).show());}},"parvaz-full-import").start();
           }).setNegativeButton(R.string.cancel,null).show();
     }

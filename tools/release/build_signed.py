@@ -73,7 +73,7 @@ def main():
             return
         log = Path(directory) / 'build.log'
         with log.open('wb') as output:
-            result = subprocess.run([str(ROOT / 'gradlew'), '--no-daemon', '--max-workers=2', ':app:assembleRelease'], env=env, stdout=output, stderr=subprocess.STDOUT)
+            result = subprocess.run([str(Path(__file__).resolve().parents[2] / 'gradlew'), '--no-daemon', '--max-workers=2', ':app:assembleRelease'], env=env, stdout=output, stderr=subprocess.STDOUT)
         if result.returncode:
             text = log.read_text(errors='replace')[-10000:]
             for name in NAMES:
