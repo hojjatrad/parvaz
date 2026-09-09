@@ -1116,13 +1116,17 @@ public class MainActivity extends AppCompatActivity {
         if(readingSharedInput||importing||manualRefreshing){Snackbar.make(findViewById(android.R.id.content),R.string.import_busy,Snackbar.LENGTH_SHORT).show();return;}
         final Intent input=new Intent(intent);intent.setData(null);if(Intent.ACTION_SEND.equals(intent.getAction()))intent.setAction(null);intent.removeExtra(Intent.EXTRA_TEXT);intent.removeExtra(Intent.EXTRA_STREAM);intent.setClipData(null);
         readingSharedInput=true;
-        new Thread(()->{
+        Runnable approved=()->new Thread(()->{
             String text="";try{text=com.parvaz.tunnel.core.SharedInput.read(getApplicationContext(),input);}catch(Exception ignored){}
             final String value=text;
             runOnUiThread(()->{readingSharedInput=false;if(isFinishing()||isDestroyed())return;
                 if(value.isEmpty())Snackbar.make(findViewById(android.R.id.content),R.string.shared_input_failed,Snackbar.LENGTH_SHORT).show();else importText(value);
             });
         },"parvaz-share-file").start();
+        new MaterialAlertDialogBuilder(this).setTitle(R.string.shared_import_title).setMessage(R.string.shared_import_confirm)
+            .setPositiveButton(android.R.string.ok,(dialog,which)->approved.run())
+            .setNegativeButton(android.R.string.cancel,(dialog,which)->readingSharedInput=false)
+            .setOnCancelListener(dialog->readingSharedInput=false).show();
     }
 
     private boolean importing;

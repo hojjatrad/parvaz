@@ -466,4 +466,6 @@ Tap + to paste a config link or add a subscription."</string>
 <string name="full_config_warning">This creates one independent manual configuration, not a subscription. Routing, direct exceptions, DNS and group defaults follow this file rather than simple app settings. Parvaz replaces listeners and disables remote administration, scripts and external file paths. Use only configurations you trust.</string>
     <string name="backup_busy">A backup operation is still running</string>
     <string name="backup_operation_failed">Backup could not be completed. Check the file and password, then retry.</string>
+    <string name="shared_import_title">Import shared configuration?</string>
+    <string name="shared_import_confirm">Another app supplied this input. Import it only if you trust its source. It can change the selected server group.</string>
 </resources>

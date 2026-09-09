@@ -20,6 +20,8 @@ for core in json.loads((ROOT/'tools/native/engines-lock.json').read_text()):
    if not parts:continue
    if member.issym() or member.islnk() or '..' in parts or member.name.startswith('/'):raise SystemExit('Unsafe source archive')
    member.name=str(Path(*parts));tar.extract(member,source,filter='data')
+ for patch in core.get('patches',[]):
+  subprocess.run(['patch','--batch','--forward','-p1','-i',str(ROOT/'tools/native/patches'/patch)],cwd=source,check=True)
  shutil.copyfile(ROOT/'tools/native/parvaz_parent_android.go',source/core['patchdir']/'parvaz_parent_android.go')
  env=dict(os.environ,GOMAXPROCS='2',GOTOOLCHAIN='auto')
  subprocess.run(['go','mod','download'],cwd=source,env=env,check=True)

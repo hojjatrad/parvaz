@@ -1,0 +1,17 @@
+--- a/protocol/direct/outbound.go
++++ b/protocol/direct/outbound.go
+@@ -99,7 +99,13 @@
+ }
+ 
+ func (h *Outbound) fetchMyAddresses() {
+-	myInterfaceNames := h.network.InterfaceMonitor().MyInterfaces()
++	// Parvaz: unprivileged Android may have no OS interface monitor.
++	// This child has only SOCKS listeners; Android owns the VPN TUN.
++	monitor := h.network.InterfaceMonitor()
++	if monitor == nil {
++		return
++	}
++	myInterfaceNames := monitor.MyInterfaces()
+ 	if len(myInterfaceNames) == 0 {
+ 		return
+ 	}

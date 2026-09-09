@@ -18,6 +18,7 @@ public final class EngineConfig {
    root.put("allow-lan",false).put("bind-address","127.0.0.1").put("mixed-port",port).put("port",0).put("socks-port",0).put("redir-port",0).put("tproxy-port",0);
    root.put("listeners",new JSONArray()).put("tunnels",new JSONArray()).put("tun",new JSONObject().put("enable",false));
    root.put("authentication",new JSONArray().put(user+":"+password)).put("skip-auth-prefixes",new JSONArray()).put("log-level","silent").put("geo-auto-update",false);
+   root.put("find-process-mode","off");
    root.put("profile",new JSONObject().put("store-selected",false).put("store-fake-ip",false));
    JSONObject dns=root.optJSONObject("dns");if(dns==null)dns=new JSONObject();
    dns.put("enable",true).put("listen","127.0.0.1:"+dnsPort);
@@ -28,6 +29,7 @@ public final class EngineConfig {
    root.put("dns",dns);return root;
   }
   root.put("log",new JSONObject().put("disabled",true));root.remove("experimental");root.remove("services");
+  if(protocol.equals("full-singbox")&&root.optJSONObject("route")!=null)root.getJSONObject("route").put("auto_detect_interface",false);
   String inboundTag=FullConfig.isFull(protocol)?FullConfig.inboundTag(root):"parvaz";
   root.put("inbounds",new JSONArray().put(new JSONObject().put("type","socks").put("tag",inboundTag).put("listen","127.0.0.1").put("listen_port",port).put("users",new JSONArray().put(new JSONObject().put("username",user).put("password",password)))));
   if(!protocol.equals("full-singbox")){

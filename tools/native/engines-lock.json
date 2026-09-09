@@ -8,7 +8,10 @@
     "sha256": "faa17ef1634429371401b495f32c498fa35b92e5872dce245ba44a9155f95f14",
     "package": "./cmd/sing-box",
     "patchdir": "cmd/sing-box",
-    "tags": "with_quic,with_utls,with_wireguard,with_gvisor"
+    "tags": "with_quic,with_utls,with_wireguard,with_gvisor",
+    "patches": [
+      "sing-box-optional-interface-monitor.patch"
+    ]
   },
   {
     "name": "mihomo",

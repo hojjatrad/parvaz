@@ -448,4 +448,6 @@
     <string name="backup_busy">یک عملیات پشتیبان‌گیری یا بازیابی در حال اجراست</string>
     <string name="backup_operation_failed">عملیات پشتیبان کامل نشد. فایل و گذرواژه را بررسی و دوباره تلاش کنید.</string>
     <string name="zxing_msg_default_status">برای اسکن، بارکد را داخل کادر قرار دهید.</string>
+    <string name="shared_import_title">پیکربندی اشتراکی وارد شود؟</string>
+    <string name="shared_import_confirm">این ورودی از برنامه‌ای دیگر یا انتخاب فایل آمده است. فقط در صورت اعتماد به منبع وارد کنید؛ ممکن است گروه سرور انتخاب‌شده تغییر کند.</string>
 </resources>

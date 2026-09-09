@@ -27,6 +27,12 @@ public class EngineConfigTest {
   assertEquals("secret%2F+",LinkParser.parseMany("tuic://11111111-1111-4111-8111-111111111111:secret%252F%2B@server.invalid:443").get(0).quicKey);
   assertEquals("secret%2F+",LinkParser.parseMany("trojan://secret%252F%2B@server.invalid:443").get(0).uuid);
  }
+ @Test public void wireguardBase64UserInfoPreservesPlus()throws Exception {
+  byte[] bytes=new byte[32];java.util.Arrays.fill(bytes,(byte)251);
+  String key=android.util.Base64.encodeToString(bytes,android.util.Base64.NO_WRAP);
+  String link="wireguard://"+key.replace("/","%2F")+"@server.invalid:51820?publickey="+java.net.URLEncoder.encode(key,"UTF-8");
+  assertEquals(key,LinkParser.parseWireguard(link).uuid);
+ }
  @Test public void mihomoSerializationIsYamlCompatibleAndLossless()throws Exception {
   JSONObject root=new JSONObject().put("url","https://example.invalid/path").put("password","a\\/b+%2F");
   String text=EngineConfig.serialize(root,"full-clash");
