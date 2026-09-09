@@ -57,6 +57,25 @@ public class SmartImportRegressionTest {
         assertEquals(1,store.removeDuplicates(prefs));assertNotNull(store.getById(p.id));assertTrue(prefs.getString("favorites","").contains(p.id));
         assertEquals(1,new ProfileStore(context).e().size());
     }
+    @Test public void quotaViewResetsFrozenPercentageAndShowsUniqueRows(){
+        Profile manual=LinkParser.parseMany(link).get(0);store.a(new ArrayList<>(Arrays.asList(manual)),"");
+        prefs.edit().putString("selected_profile",manual.id).putFloat("manual_service_total_gb",10).putLong("data_down",4300000000L).apply();
+        ProfileStore.d=store;
+        org.robolectric.android.controller.ActivityController<com.parvaz.tunnel.MainActivity> controller=org.robolectric.Robolectric.buildActivity(com.parvaz.tunnel.MainActivity.class).create();
+        com.parvaz.tunnel.MainActivity activity=controller.get();
+        try {
+            activity.quotaPercentText.setText("43%");activity.quotaBar.setProgress(43);activity.renderQuota();
+            assertEquals("0%",activity.quotaPercentText.getText().toString());assertEquals(0,activity.quotaBar.getProgress());
+            SmartImport.run(store,prefs,"https://panel.invalid/s",()->false,url->new SubscriptionUpdater.b(link,"upload=0;download=43;total=100"));
+            Profile owned=null;for(Object o:store.e()){Profile p=(Profile)o;if(!p.subscriptionId.isEmpty())owned=p;}
+            assertNotNull(owned);prefs.edit().putString("favorites",owned.id).apply();
+            activity.favOnly=true;activity.reload();
+            assertEquals(1,activity.z.getItemCount());assertTrue(activity.z.visibleFavorites.contains(manual.id));
+            activity.renderQuota();assertEquals("43%",activity.quotaPercentText.getText().toString());
+            Subscription sub=(Subscription)store.f().get(0);sub.url="";store.j(sub);activity.renderQuota();
+            assertEquals("0%",activity.quotaPercentText.getText().toString());
+        }finally{controller.destroy();ProfileStore.d=null;}
+    }
     @Test public void updateVersionAndMetadataGuards(){
         assertTrue(UpdateChecker.isNewer("v1.20","1.19.1"));assertFalse(UpdateChecker.isNewer("1.19.1","1.20"));
         UpdateChecker.Release r=new UpdateChecker.Release();r.version="1.20";r.size=1024;r.sha256=String.join("",Collections.nCopies(64,"a"));

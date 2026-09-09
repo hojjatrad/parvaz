@@ -76,6 +76,8 @@ public final class ServerAdapter extends RecyclerView.Adapter<ServerAdapter.b> {
         }
     }
 
+    public java.util.Set<String> visibleFavorites=new java.util.HashSet<>();
+
     public ServerAdapter(Context context, MainActivity.C0030l c0030l) {
         ArrayList arrayList = new ArrayList();
         this.g = arrayList;
@@ -173,7 +175,7 @@ public final class ServerAdapter extends RecyclerView.Adapter<ServerAdapter.b> {
         }
 
         // ---- favourite star --------------------------------------------------
-        boolean favorite = this.f.getFavorites().contains(profile.id);
+        boolean favorite = this.visibleFavorites.contains(profile.id);
         TextView star = holder.f374y;
         star.setText(favorite ? "\u2605" : "\u2606");
         star.setTextColor(favorite ? -415707 : 1720223880);

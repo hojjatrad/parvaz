@@ -30,12 +30,10 @@ public final class ServerAdapter_1 implements View.OnClickListener {
         Prefs prefs = mainActivity.L;
         String str = this.f357a.id;
         LinkedHashSet favorites = prefs.getFavorites();
-        if (favorites.remove(str)) {
-            z = false;
-        } else {
-            favorites.add(str);
-            z = true;
-        }
+        java.util.Set<String> ids=com.parvaz.tunnel.store.ProfileDuplicates.connectionIds(this.f357a,mainActivity.b0.e());
+        boolean any=false;for(String id:ids)if(favorites.contains(id)){any=true;break;}
+        z=!any;
+        if(any)favorites.removeAll(ids);else favorites.addAll(ids);
         StringBuilder sb = new StringBuilder();
         Iterator it = favorites.iterator();
         while (it.hasNext()) {

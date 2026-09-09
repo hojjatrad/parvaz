@@ -278,8 +278,8 @@ public class MainActivity extends AppCompatActivity {
         @Override // java.util.Comparator
         public final int compare(Object obj, Object obj2) {
             MainActivity mainActivity = MainActivity.this;
-            boolean contains = mainActivity.L.getFavorites().contains(((Profile) obj).id);
-            if (contains == mainActivity.L.getFavorites().contains(((Profile) obj2).id)) {
+            boolean contains = mainActivity.z.visibleFavorites.contains(((Profile) obj).id);
+            if (contains == mainActivity.z.visibleFavorites.contains(((Profile) obj2).id)) {
                 return 0;
             }
             if (contains) {
@@ -1304,10 +1304,11 @@ public class MainActivity extends AppCompatActivity {
     /* renamed from: H */
     public final void reload() {
         int i;
-        ArrayList<Profile> e=com.parvaz.tunnel.store.ProfileDuplicates.visible(this.b0.e(),this.L.f343a.getString("selected_profile",""),this.L.getFavorites());
+        com.parvaz.tunnel.store.ProfileDuplicates.Grouped group=com.parvaz.tunnel.store.ProfileDuplicates.group(this.b0.e(),this.L.f343a.getString("selected_profile",""),this.L.getFavorites());
+        ArrayList<Profile> e=group.profiles;this.z.visibleFavorites=group.favoriteIds;
         ArrayList<Profile> arrayList=new ArrayList<>();
         for(Profile profile:e) {
-            if(favOnly&&!L.getFavorites().contains(profile.id))continue;
+            if(favOnly&&!group.favoriteIds.contains(profile.id))continue;
             if(!query.isEmpty()&&!profile.remark.toLowerCase(Locale.ROOT).contains(query)&&!profile.address.toLowerCase(Locale.ROOT).contains(query)&&!profile.protocol.toLowerCase(Locale.ROOT).contains(query))continue;
             arrayList.add(profile);
         }
@@ -1353,7 +1354,7 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         Profile currentProfile=b0.getById(L.f343a.getString("selected_profile",""));
-        Subscription subscription=com.parvaz.tunnel.core.QuotaState.source(currentProfile,b0.f());
+        Subscription subscription=com.parvaz.tunnel.core.QuotaState.source(currentProfile,b0.f(),b0.e());
         boolean fromServer=com.parvaz.tunnel.core.QuotaState.known(subscription);
         long totalBytes=fromServer?subscription.quotaTotal:0L;
         long usedBytes=fromServer?subscription.quotaUsed():0L;
@@ -1442,7 +1443,7 @@ public class MainActivity extends AppCompatActivity {
 
     public final void showQuotaDetailsDialog() {
         Profile currentProfile=b0.getById(L.f343a.getString("selected_profile",""));
-        Subscription subscription=com.parvaz.tunnel.core.QuotaState.source(currentProfile,b0.f());
+        Subscription subscription=com.parvaz.tunnel.core.QuotaState.source(currentProfile,b0.f(),b0.e());
         boolean fa = "fa".equals(this.L.f343a.getString("lang", "fa")) || "fa".equals(Locale.getDefault().getLanguage());
 
         if (com.parvaz.tunnel.core.QuotaState.known(subscription) && subscription.hasQuota()) {
@@ -1451,7 +1452,7 @@ public class MainActivity extends AppCompatActivity {
             long total = subscription.quotaTotal;
             long upload = Math.max(0L, subscription.quotaUpload);
             long download = Math.max(0L, subscription.quotaDownload);
-            long used = upload + download;
+            long used = subscription.quotaUsed();
             long left = Math.max(0L, total - used);
             int pct = com.parvaz.tunnel.core.QuotaState.percent(used,total);
 

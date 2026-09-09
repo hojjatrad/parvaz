@@ -66,6 +66,10 @@ public class SmartImportAudit {
         check("View keeps selected representative",ProfileDuplicates.visible(s.store.e(),selected,new HashSet<>()).stream().anyMatch(p->((Profile)p).id.equals(selected)));
         Profile different=ProfileIdentity.copy(s.store.getById(selected));different.rawJson=raw("different.example.invalid");different.id="different";s.store.a(new ArrayList<>(Arrays.asList(different)),"");
         check("Different server not collapsed",ProfileDuplicates.visible(s.store.e(),selected,new HashSet<>()).size()==4);
+        Profile primary=(Profile)s.store.e().get(0);Profile same=ProfileIdentity.copy(primary);same.id="fav-independent";same.subscriptionId="another-source";
+        ProfileDuplicates.Grouped group=ProfileDuplicates.group(Arrays.asList(primary,same),primary.id,new HashSet<>(Arrays.asList(same.id)));
+        check("Cross-source favorite follows selected visible representative",group.profiles.size()==1&&group.favoriteIds.contains(primary.id));
+        check("Favorite toggles can address every source copy",ProfileDuplicates.connectionIds(primary,Arrays.asList(primary,same)).size()==2);
         check("Percentage overflow guarded",QuotaState.percent(Long.MAX_VALUE,Long.MAX_VALUE)==100);
         Subscription q=new Subscription();q.replaceUserinfo("upload=NaN; download=Infinity; total=1000",1000);
         check("Nonfinite quota rejected",!QuotaState.known(q));
