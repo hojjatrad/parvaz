@@ -25,6 +25,7 @@ jobs:
           import io,zipfile,xml.etree.ElementTree as ET
           artifacts=api('/actions/runs/34327073956/artifacts')['artifacts']
           for artifact in artifacts:
+              if artifact['name']!='archive-probe-29':continue
               request=urllib.request.Request(artifact['archive_download_url'],headers=headers)
               try:
                   with urllib.request.build_opener(NoRedirect).open(request,timeout=30) as r:blob=r.read(1024*1024)
@@ -33,12 +34,11 @@ jobs:
                   with urllib.request.urlopen(e.headers['Location'],timeout=30) as r:blob=r.read(1024*1024)
               with zipfile.ZipFile(io.BytesIO(blob)) as z:
                   for name in z.namelist():
-                      print('::notice title=PROBE_FILE::'+artifact['name']+' '+name)
                       data=z.read(name)
                       if 'logcat' in name.lower():
                           lines=data.decode(errors='replace').splitlines()
                           for line in lines:
-                              if 'ParvazProbe' in line or 'Failure to parse' in line or 'PackageParserException' in line:
+                              if 'ParvazProbe' in line or 'Failure to parse' in line or 'PackageParserException' in line or 'Caused by:' in line:
                                   print('::notice title=PARSE_REASON::'+line[:1200])
                       if not name.endswith('.xml'):continue
                       root=ET.fromstring(z.read(name))
