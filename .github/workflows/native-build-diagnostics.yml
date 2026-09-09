@@ -19,7 +19,7 @@ jobs:
           headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json','User-Agent':'Parvaz-native-diagnostics'}
           def api(path):
               with urllib.request.urlopen(urllib.request.Request(base+path,headers=headers),timeout=30) as response:return json.load(response)
-          run=34350811462
+          run=34353616632
           info=api('/actions/runs/'+str(run))
           assert info['path']=='.github/workflows/native-engines.yml'
           jobs=api('/actions/runs/'+str(run)+'/jobs')['jobs']
