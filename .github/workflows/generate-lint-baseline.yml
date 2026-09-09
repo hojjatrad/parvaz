@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: f6d0b29
+          ref: f6d0b2977691e34d7574febcb7fbfddceffd46fd
           persist-credentials: false
       - uses: actions/setup-java@v5
         with: {distribution: temurin, java-version: '17'}
