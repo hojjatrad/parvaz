@@ -460,4 +460,8 @@ Tap + to paste a config link or add a subscription."</string>
     <string name="lan_secure_guide">HTTP proxy: %1$s:%2$d\nUsername: parvaz\nPassword: %3$s\nSession-only credentials; reconnecting requires enabling sharing again. Only clients supporting proxy authentication can use this. This is not automatic hotspot tunneling. Use a trusted private LAN: proxy authentication itself is not encrypted on Wi-Fi.</string>
     <string name="import_file">Import configuration file</string>
     <string name="shared_input_failed">Could not read this input. Select a UTF-8 configuration file under 5 MiB.</string>
+<string name="import_full_config">Import complete configuration (advanced)</string>
+<string name="import_full_paste">Import from clipboard</string>
+<string name="full_config_invalid">Invalid or unsupported complete configuration. Use ordinary import for server lists.</string>
+<string name="full_config_warning">This creates one independent manual configuration, not a subscription. Routing, direct exceptions, DNS and group defaults follow this file rather than simple app settings. Parvaz replaces listeners and disables remote administration, scripts and external file paths. Use only configurations you trust.</string>
 </resources>

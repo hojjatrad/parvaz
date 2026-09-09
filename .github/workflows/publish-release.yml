@@ -63,7 +63,7 @@ jobs:
           sdkmanager 'platforms;android-34' 'build-tools;34.0.0'
           bash tools/release/fetch_core.sh
       - name: Run Android unit tests
-        run: gradle --no-daemon --max-workers=2 :app:testDebugUnitTest
+        run: ./gradlew --no-daemon --max-workers=2 :app:testDebugUnitTest
       - name: Validate permanent key and build signed APKs with safe diagnostics
         env:
           PARVAZ_KEYSTORE_BASE64: ${{ secrets.PARVAZ_KEYSTORE_BASE64 }}

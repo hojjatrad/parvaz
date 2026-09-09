@@ -40,6 +40,7 @@ public class App extends Application {
     @Override // android.app.Application
     public final void onCreate() {
         super.onCreate();
+        com.parvaz.tunnel.core.ExternalCore.cleanOrphans(this);
         Thread.setDefaultUncaughtExceptionHandler(new CrashReporter.a(getApplicationContext(), Thread.getDefaultUncaughtExceptionHandler()));
         boolean z = false;
         SharedPreferences sharedPreferences = getApplicationContext().getSharedPreferences("parvaz_safemode", 0);

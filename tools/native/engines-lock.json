@@ -1,0 +1,24 @@
+[
+  {
+    "name": "sing-box",
+    "repository": "SagerNet/sing-box",
+    "tag": "v1.14.0",
+    "commit": "0b8995879f29a9b98ee027bc17b75e101445b238",
+    "url": "https://codeload.github.com/SagerNet/sing-box/tar.gz/0b8995879f29a9b98ee027bc17b75e101445b238",
+    "sha256": "faa17ef1634429371401b495f32c498fa35b92e5872dce245ba44a9155f95f14",
+    "package": "./cmd/sing-box",
+    "patchdir": "cmd/sing-box",
+    "tags": "with_quic,with_utls,with_wireguard,with_gvisor"
+  },
+  {
+    "name": "mihomo",
+    "repository": "MetaCubeX/mihomo",
+    "tag": "v1.19.30",
+    "commit": "ac017cdd246ce8bd547653d927e7bf77d7ee73d5",
+    "url": "https://codeload.github.com/MetaCubeX/mihomo/tar.gz/ac017cdd246ce8bd547653d927e7bf77d7ee73d5",
+    "sha256": "971dd4533e4e2c3dad7473e8115200da8c0d7471b4b61da54da896345c5b3850",
+    "package": ".",
+    "patchdir": ".",
+    "tags": ""
+  }
+]

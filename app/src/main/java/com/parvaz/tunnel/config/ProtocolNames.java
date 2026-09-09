@@ -17,6 +17,8 @@ public final class ProtocolNames {
         }
     }
 
+    public static boolean hasEngine(String name){String p=canonical(name);return hasBuilder(p)||p.equals("hysteria2")||p.equals("tuic")||p.equals("full-xray")||p.equals("full-singbox")||p.equals("full-clash");}
+
     /** Protocol-level support only. Transport/credentials still need validation by Xray. */
     public static boolean hasBuilder(String name) {
         switch (canonical(name)) {

@@ -59,7 +59,7 @@ public final class ClashParser {
                     Profile profile=map(new JSONObject((Map<?,?>)entry));
                     result.add(profile);
                     if(profile.allowInsecure)result.warn("TLS_VERIFICATION_DISABLED",i+1);
-                    if(!ProtocolNames.hasBuilder(profile.protocol)) result.warn("CORE_UNSUPPORTED",i+1);
+                    if(!ProtocolNames.hasEngine(profile.protocol)) result.warn("CORE_UNSUPPORTED",i+1);
                 } catch(Invalid e){result.reject(e.code,i+1);}
                   catch(JSONException e){result.reject("INVALID_PROXY_NODE",i+1);}
             }

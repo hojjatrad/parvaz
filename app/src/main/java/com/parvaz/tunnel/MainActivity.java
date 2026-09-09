@@ -304,6 +304,7 @@ public class MainActivity extends AppCompatActivity {
             if(i==7){mainActivity.removeDuplicateConnections();return;}
             if(i==8){mainActivity.showLastImportReport();return;}
             if(i==9){mainActivity.showStoredReport("last_refresh_report",R.string.last_refresh_report,R.string.refresh_report_help);return;}
+            if(i==13){mainActivity.importFullConfiguration();return;}
             if(i==12){if(mainActivity.sharedDocumentPicker!=null)mainActivity.sharedDocumentPicker.launch(new String[]{"text/*","application/json","application/yaml","application/octet-stream"});return;}
             if(i==11){mainActivity.showPrimarySubscriptionPicker(false);return;}
             if(i==10){mainActivity.showStoredReport("last_duplicate_report",R.string.last_duplicate_report,R.string.duplicate_report_help);return;}
@@ -1087,6 +1088,18 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /* renamed from: C */
+    private void importFullConfiguration(){
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this).setTitle(R.string.import_full_config).setMessage(R.string.full_config_warning)
+          .setPositiveButton(R.string.import_full_paste,(d,w)->{
+            android.content.ClipboardManager clipboard=(android.content.ClipboardManager)getSystemService(Context.CLIPBOARD_SERVICE);
+            if(clipboard==null||!clipboard.hasPrimaryClip())return;String text=clipboard.getPrimaryClip().getItemAt(0).coerceToText(this).toString();
+            new Thread(()->{try{
+                Profile profile=com.parvaz.tunnel.config.FullConfig.parse(text);
+                runOnUiThread(()->{if(isFinishing()||isDestroyed())return;ProfileStore store=ProfileStore.f(this);store.a(java.util.Collections.singletonList(profile),"");store.setPrimarySubscription(ProfileStore.MANUAL_GROUP);reload();});
+            }catch(Exception error){runOnUiThread(()->Snackbar.make(findViewById(android.R.id.content),R.string.full_config_invalid,Snackbar.LENGTH_SHORT).show());}},"parvaz-full-import").start();
+          }).setNegativeButton(R.string.cancel,null).show();
+    }
+
     private boolean readingSharedInput;
     private androidx.activity.result.ActivityResultLauncher<String[]> sharedDocumentPicker;
     public final void handleIntent(Intent intent) {
@@ -1771,7 +1784,7 @@ public class MainActivity extends AppCompatActivity {
 
     /* renamed from: N */
     public final void showAddDialog() {
-        String[] strArr = {getString(R.string.scan_qr), getString(R.string.add_from_clipboard), getString(R.string.add_manual_link), getString(R.string.add_raw_json), getString(R.string.add_subscription), getString(R.string.update_subscriptions), getString(R.string.backup_restore), getString(R.string.remove_duplicates),getString(R.string.last_import_report),getString(R.string.last_refresh_report),getString(R.string.last_duplicate_report),getString(R.string.primary_subscription),getString(R.string.import_file)};
+        String[] strArr = {getString(R.string.scan_qr), getString(R.string.add_from_clipboard), getString(R.string.add_manual_link), getString(R.string.add_raw_json), getString(R.string.add_subscription), getString(R.string.update_subscriptions), getString(R.string.backup_restore), getString(R.string.remove_duplicates),getString(R.string.last_import_report),getString(R.string.last_refresh_report),getString(R.string.last_duplicate_report),getString(R.string.primary_subscription),getString(R.string.import_file),getString(R.string.import_full_config)};
         MaterialAlertDialogBuilder materialAlertDialogBuilder = new MaterialAlertDialogBuilder(this);
         materialAlertDialogBuilder.setTitle(R.string.add_server);
         materialAlertDialogBuilder.setItems(strArr, new F());

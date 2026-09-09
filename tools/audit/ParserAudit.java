@@ -34,7 +34,7 @@ public class ParserAudit {
         check("Trojan builder emits TLS", XrayConfigBuilder.c(trojan,new Prefs()).getJSONObject("streamSettings").getString("security").equals("tls"));
         Profile tuic = LinkParser.parseMany("{\"outbounds\":[{\"type\":\"tuic\",\"tag\":\"demo\",\"server\":\"example.invalid\",\"server_port\":443,\"uuid\":\"11111111-1111-4111-8111-111111111111\",\"password\":\"dummy\"}]}").get(0);
         check("Sing-box TUIC preserves second credential", tuic.quicKey.equals("dummy"));
-        check("TUIC still correctly marked non-connectable", !ProtocolSupport.isSupported(tuic) && ProtocolSupport.isKnownUnsupported(tuic));
+        check("TUIC selects the bundled native engine", ProtocolSupport.isSupported(tuic) && !ProtocolSupport.isKnownUnsupported(tuic));
         String raw = "{\"outbounds\":[{\"protocol\":\"socks\",\"settings\":{\"servers\":[{\"address\":\"example.invalid\",\"port\":1080}]}}]}";
         check("Single Xray JSON accepted", LinkParser.parseMany(raw).size()==1);
         check("JSON config array accepted", LinkParser.parseMany("["+raw+","+raw+"]").size()==2);

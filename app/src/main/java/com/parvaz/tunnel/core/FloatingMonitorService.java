@@ -74,7 +74,7 @@ public class FloatingMonitorService extends Service {
         startForeground(NOTIFY_ID, n);
 
         initFloatingView();
-        registerReceiver(stateReceiver, new IntentFilter("com.parvaz.tunnel.STATE"));
+        androidx.core.content.ContextCompat.registerReceiver(this,stateReceiver,new IntentFilter("com.parvaz.tunnel.STATE"),androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     private void createNotificationChannel() {

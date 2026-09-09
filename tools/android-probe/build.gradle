@@ -29,3 +29,22 @@ def copyStoreCipher = tasks.register('copyStoreCipher', Copy) {
     into layout.buildDirectory.dir('generated/probeJava/com/parvaz/tunnel/store')
 }
 tasks.named('preBuild').configure { dependsOn copyStoreCipher }
+
+// Native tests are opt-in so archive/Keystore-only checks remain small.
+if(project.hasProperty('nativeProbe')) {
+    android.sourceSets.main.jniLibs.srcDirs = ['../../.cache/native-probe']
+    android.packagingOptions.jniLibs.useLegacyPackaging = true
+    def copyNativeHelpers = tasks.register('copyNativeHelpers', Copy) {
+        from('../../app/src/main/java') {
+            include 'com/parvaz/tunnel/core/ExternalCore.java'
+            include 'com/parvaz/tunnel/config/EngineConfig.java'
+            include 'com/parvaz/tunnel/config/ProtocolNames.java'
+            include 'com/parvaz/tunnel/model/Profile.java'
+        }
+        into layout.buildDirectory.dir('generated/probeJava')
+    }
+    tasks.named('preBuild').configure { dependsOn copyNativeHelpers }
+} else {
+    android.sourceSets.main.java.exclude 'com/parvaz/tunnel/config/FullConfig.java'
+    android.sourceSets.androidTest.java.exclude '**/NativeEngineTest.java'
+}

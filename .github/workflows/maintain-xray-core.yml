@@ -45,7 +45,7 @@ jobs:
           bash tools/audit/run.sh
           sdkmanager 'platforms;android-34' 'build-tools;34.0.0'
           bash tools/release/fetch_core.sh
-          gradle --no-daemon --max-workers=2 :app:testDebugUnitTest
+          ./gradlew --no-daemon --max-workers=2 :app:testDebugUnitTest
       - name: Sign tested candidate with the unchanged permanent key
         if: steps.candidate.outputs.changed == 'true'
         env:

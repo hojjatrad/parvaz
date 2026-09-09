@@ -56,9 +56,10 @@ public final class LeakTester {
         }
 
         public boolean allPassed() {
-            if(checks.isEmpty())return false;
-            for(Check check:checks)if(check.status!=PASS)return false;
-            return true;
+            if(checks.size()!=3)return false;
+            java.util.Set<String> names=new java.util.HashSet<>();
+            for(Check check:checks){if(check.status!=PASS)return false;names.add(check.name);}
+            return names.contains("ip")&&names.contains("dns")&&names.contains("ipv6");
         }
     }
 
@@ -149,9 +150,6 @@ public final class LeakTester {
             if (resolverIp.isEmpty()) {
                 return new Check("dns", UNKNOWN, "");
             }
-            // An Iranian resolver while the exit is abroad is the leak signature.
-            boolean iranianResolver = geo.toLowerCase(java.util.Locale.US).contains("iran")
-                    || geo.toUpperCase(java.util.Locale.US).startsWith("IR");
             String detail = geo.isEmpty() ? resolverIp : (resolverIp + " (" + geo + ")");
             // Resolver geography cannot establish the DNS route. Evidence only.
             return new Check("dns", UNKNOWN, detail);

@@ -48,7 +48,7 @@ public final class SingBoxParser {
                         if(Arrays.asList("direct","block","dns","selector","urltest").contains(type)){result.warn("HELPER_NOT_IMPORTED",position);continue;}
                         Profile p=map(o,"endpoints".equals(section));result.add(p);
                         if(p.allowInsecure)result.warn("TLS_VERIFICATION_DISABLED",position);
-                        if(!ProtocolNames.hasBuilder(p.protocol))result.warn("CORE_UNSUPPORTED",position);
+                        if(!ProtocolNames.hasEngine(p.protocol))result.warn("CORE_UNSUPPORTED",position);
                     }catch(Invalid e){result.reject(e.code,position);}
                 }
             }

@@ -23,6 +23,7 @@ public final class CoreManager {
 
     /* renamed from: b */
     public volatile boolean running = false;
+    private ExternalCore external;
 
     /* JADX WARN: Can't change package for inner class: R1.a.a to com.parvaz.tunnel.core.CoreManager$1 */
     /* renamed from: R1.a$a */
@@ -125,54 +126,31 @@ public final class CoreManager {
     }
 
     /* renamed from: c */
-    public final synchronized void start(Context context, Profile profile, int i, Runnable runnable) {
-        boolean z;
-        CoreController coreController;
-        try {
-            try {
-                if (this.running && (coreController = this.controller) != null && coreController.getIsRunning()) {
-                    z = true;
-                } else {
-                    z = false;
-                }
-                if (z) {
-                    stop();
-                }
-                Prefs prefs = new Prefs(context);
-                String string = prefs.f343a.getString("chain_profile", "");
-                if (string != null && !string.isEmpty() && !string.equals(profile.id)) {
-                    String b2 = XrayConfigBuilder.b(profile, prefs, ProfileStore.f(context).getById(string), true, true);
-                    Log.i("ParvazCore", "starting core for " + profile.remark + " (chained)");
-                    CoreController newCoreController = Libv2ray.newCoreController(new a(runnable));
-                    this.controller = newCoreController;
-                    newCoreController.startLoop(b2, i);
-                    this.running = this.controller.getIsRunning();
-                    if (!this.running) {
-                        throw new IllegalStateException("core failed to start");
-                    }
-                } else {
-                    String b3 = XrayConfigBuilder.b(profile, prefs, null, true, true);
-                    Log.i("ParvazCore", "starting core for " + profile.remark);
-                    CoreController newCoreController2 = Libv2ray.newCoreController(new b(runnable));
-                    this.controller = newCoreController2;
-                    newCoreController2.startLoop(b3, i);
-                    this.running = this.controller.getIsRunning();
-                    if (!this.running) {
-                        throw new IllegalStateException("core failed to start");
-                    }
-                }
-            } catch (Exception e) {
-                this.running = false;
-                throw new IllegalStateException("core start failed: " + e.getMessage(), e);
-            }
-        } catch (Throwable th) {
-            throw th;
-        }
+    public final synchronized void start(Context context,Profile profile,int tunFd,Runnable failure) {
+        stop();
+        try{
+            Prefs prefs=new Prefs(context);String chainId=prefs.f343a.getString("chain_profile","");
+            Profile chain=chainId==null||chainId.isEmpty()||chainId.equals(profile.id)?null:ProfileStore.f(context).getById(chainId);
+            boolean nativeProfile=com.parvaz.tunnel.config.EngineConfig.external(profile.protocol);
+            if(chain!=null&&(nativeProfile||com.parvaz.tunnel.config.FullConfig.isFull(profile.protocol)||com.parvaz.tunnel.config.EngineConfig.external(chain.protocol)))
+                throw new IllegalArgumentException("Use a complete same-engine configuration for a multi-engine chain");
+            Profile relay=profile;
+            if(nativeProfile){external=ExternalCore.start(context,profile,()->{CoreManager.this.stop();if(failure!=null)failure.run();});relay=external.relay(profile);}
+            String config;
+            if(nativeProfile)config=com.parvaz.tunnel.config.ManagedConfig.xray(profile,relay,prefs,external.dnsPort,true,true);
+            else if(profile.protocol.equals("full-xray")){
+                Profile dummy=new Profile();dummy.protocol="socks";dummy.address="127.0.0.1";dummy.port=10810;
+                config=com.parvaz.tunnel.config.ManagedConfig.xray(profile,dummy,prefs,0,true,true);
+            }else config=XrayConfigBuilder.b(profile,prefs,chain,true,true);
+            controller=Libv2ray.newCoreController(new b(failure));controller.startLoop(config,tunFd);running=controller.getIsRunning();
+            if(!running)throw new IllegalStateException("Core failed to start");
+        }catch(Exception error){stop();throw new IllegalStateException("Core start failed: "+error.getMessage(),error);}
     }
 
     /* renamed from: d */
     public final synchronized void stop() {
         this.running = false;
+        if(external!=null){external.close();external=null;}
         CoreController coreController = this.controller;
         if (coreController != null) {
             try {

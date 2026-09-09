@@ -78,8 +78,9 @@ android {
     }
 
     lint {
-        abortOnError false
-        checkReleaseBuilds false
+        abortOnError true
+        checkReleaseBuilds true
+        baseline file('lint-baseline.xml')
     }
 
     testOptions {
@@ -121,10 +122,11 @@ dependencies {
 // instead of a 60-second Gradle round trip.
 tasks.register('dumpCp') {
     doLast {
+        rootProject.file('.cache').mkdirs()
         def cp = android.applicationVariants.find { it.name == 'release' }
                 .javaCompileProvider.get().classpath.files.collect { it.absolutePath }
-        new File('/opt/pb/cp.txt').text = cp.join(':')
-        new File('/opt/pb/boot.txt').text =
+        rootProject.file('.cache/cp.txt').text = cp.join(':')
+        rootProject.file('.cache/boot.txt').text =
                 android.bootClasspath.collect { it.absolutePath }.join(':')
         println "cp entries: ${cp.size()}"
     }

@@ -33,7 +33,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p .cache
-          if ! gradle --no-daemon --max-workers=2 :app:testDebugUnitTest :app:assembleDebug :app:minifyReleaseWithR8 >.cache/android-build.log 2>&1; then
+          if ! ./gradlew --no-daemon --max-workers=2 :app:testDebugUnitTest :app:assembleDebug :app:minifyReleaseWithR8 >.cache/android-build.log 2>&1; then
             tail -100 .cache/android-build.log
             python3 - <<'PY'
           from pathlib import Path

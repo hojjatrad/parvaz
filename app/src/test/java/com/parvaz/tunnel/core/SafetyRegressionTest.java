@@ -25,7 +25,8 @@ public class SafetyRegressionTest {
  @After public void after(){ProfileStore.d=null;}
  @Test public void unknownLeakResultsNeverPass(){
   LeakTester.Report r=new LeakTester.Report();assertFalse(r.allPassed());r.checks.add(new LeakTester.Check("dns",LeakTester.UNKNOWN,""));assertFalse(r.allPassed());assertEquals(0,r.failures());
-  r.checks.clear();r.checks.add(new LeakTester.Check("ip",LeakTester.PASS,""));assertTrue(r.allPassed());r.checks.add(new LeakTester.Check("ipv6",LeakTester.UNKNOWN,""));assertFalse(r.allPassed());
+  r.checks.clear();r.checks.add(new LeakTester.Check("ip",LeakTester.PASS,""));assertFalse(r.allPassed());
+  r.checks.add(new LeakTester.Check("dns",LeakTester.PASS,""));r.checks.add(new LeakTester.Check("ipv6",LeakTester.PASS,""));assertTrue(r.allPassed());r.checks.set(2,new LeakTester.Check("ipv6",LeakTester.UNKNOWN,""));assertFalse(r.allPassed());
  }
  @Test public void sharedTextAndContentFileAreBoundedAndRecognized()throws Exception {
   String link="vless://11111111-1111-4111-8111-111111111111@test.invalid:443";

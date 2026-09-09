@@ -17,7 +17,7 @@ public final class ProtocolSupport {
     }
 
     public static boolean isSupported(String protocol) {
-        return com.parvaz.tunnel.config.ProtocolNames.hasBuilder(protocol);
+        return com.parvaz.tunnel.config.ProtocolNames.hasEngine(protocol);
     }
 
     public static boolean isKnownUnsupported(String protocol) {
@@ -27,6 +27,7 @@ public final class ProtocolSupport {
 
     public static boolean isSupported(Profile profile) {
         if (profile == null) return false;
+        if(com.parvaz.tunnel.config.FullConfig.isFull(profile.protocol)){try{return com.parvaz.tunnel.config.FullConfig.parse(profile.rawJson).protocol.equals(profile.protocol);}catch(Exception error){return false;}}
         if (!"custom".equals(com.parvaz.tunnel.config.ProtocolNames.canonical(profile.protocol))) {
             return isSupported(profile.protocol);
         }

@@ -146,10 +146,10 @@ public class V115RegressionTest {
 
     @Test
     public void hysteriaAndTuicAreReportedUnsupported() {
-        assertFalse(ProtocolSupport.isSupported("hysteria2"));
-        assertFalse(ProtocolSupport.isSupported("hy2"));
-        assertFalse(ProtocolSupport.isSupported("tuic"));
-        assertTrue(ProtocolSupport.isKnownUnsupported("tuic"));
+        assertTrue(ProtocolSupport.isSupported("hysteria2"));
+        assertTrue(ProtocolSupport.isSupported("hy2"));
+        assertTrue(ProtocolSupport.isSupported("tuic"));
+        assertFalse(ProtocolSupport.isKnownUnsupported("tuic"));
     }
 
     @Test
@@ -170,6 +170,8 @@ public class V115RegressionTest {
         Profile hy = profile();
         hy.protocol = "hysteria2";
         list.add(hy);
+        assertEquals(0, ProtocolSupport.countUnsupported(list));
+        hy.protocol="unknown-protocol";
         assertEquals(1, ProtocolSupport.countUnsupported(list));
     }
 
