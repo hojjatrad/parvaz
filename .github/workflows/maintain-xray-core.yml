@@ -8,7 +8,7 @@ on:
 permissions:
   contents: write
 concurrency:
-  group: xray-core-maintenance
+  group: parvaz-stable-publication
   cancel-in-progress: false
 jobs:
   maintain:
@@ -56,6 +56,11 @@ jobs:
         run: |
           python3 tools/release/build_signed.py
           python3 tools/release/verify_apk.py
+      - name: Prevent rollback of latest app, versionCode or core
+        if: steps.candidate.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/release/check_release_order.py
       - name: Commit and tag only a verified new candidate; never force refs
         if: steps.candidate.outputs.changed == 'true' && steps.candidate.outputs.mode == 'new'
         env:
