@@ -28,8 +28,7 @@ public class ClipboardHttpRegressionTest {
         server=new ServerSocket();server.bind(new InetSocketAddress("127.0.0.1",0));
     }
     @After public void cleanup()throws Exception{if(controller!=null)controller.destroy();if(server!=null)server.close();if(serverThread!=null)serverThread.join(2000);ProfileStore.d=null;}
-    private MainActivity paste(String body)throws Exception{return paste(body,null);}
-    private MainActivity paste(String body,String urlOverride)throws Exception{
+    private void startServer(String body)throws Exception{
         serverThread=new Thread(()->{
             while(!server.isClosed())try(Socket client=server.accept()) {
                 client.setSoTimeout(5000);
@@ -41,10 +40,12 @@ public class ClipboardHttpRegressionTest {
                 client.getOutputStream().write(bytes);client.getOutputStream().flush();
             }catch(java.io.IOException ignored){if(server.isClosed())return;}
         },"test-loopback-http");serverThread.setDaemon(true);serverThread.start();
+    }
+    private MainActivity paste(String body)throws Exception {
+        startServer(body);
         controller=Robolectric.buildActivity(MainActivity.class).create();MainActivity activity=controller.get();
         ClipboardManager clipboard=(ClipboardManager)activity.getSystemService(Context.CLIPBOARD_SERVICE);
-        clipboard.setPrimaryClip(ClipData.newPlainText("sub",urlOverride==null?"http://127.0.0.1:"+server.getLocalPort()+"/secret-token":urlOverride));
-        if(urlOverride!=null)TunnelVpnService.serviceRunning=true;
+        clipboard.setPrimaryClip(ClipData.newPlainText("sub","http://127.0.0.1:"+server.getLocalPort()+"/secret-token"));
         activity.new F().onClick(null,1);
         long deadline=System.currentTimeMillis()+15000;
         while(activity.L.f343a.getString("last_import_report","").isEmpty()&&System.currentTimeMillis()<deadline){
@@ -59,13 +60,16 @@ public class ClipboardHttpRegressionTest {
         assertEquals(1,activity.z.getItemCount());assertEquals(View.VISIBLE,activity.pageServers.getVisibility());
         assertTrue(activity.L.f343a.getString("last_import_report","").contains("recognized=1"));
     }
-    @Test public void clipboardUsesOwnActiveProxyWithoutOriginDns()throws Exception {
+    @Test public void smartImportUsesOwnActiveProxyWithoutOriginDns()throws Exception {
         server.close();server=new ServerSocket();server.setReuseAddress(true);server.bind(new InetSocketAddress("127.0.0.1",10809));
+        startServer("vless://11111111-1111-4111-8111-111111111111@test.invalid:443?security=tls#proxy-test");
+        TunnelVpnService.serviceRunning=true;
+        java.util.concurrent.FutureTask<SmartImport.Result> task=new java.util.concurrent.FutureTask<>(()->SmartImport.run(context,"http://no-system-dns.invalid/secret-token",()->false));
+        Thread worker=new Thread(task,"test-proxy-import");worker.setDaemon(true);worker.start();
         try {
-            MainActivity activity=paste("vless://11111111-1111-4111-8111-111111111111@test.invalid:443?security=tls#proxy-test","http://no-system-dns.invalid/secret-token");
-            assertEquals(1,activity.z.getItemCount());
-            assertTrue(activity.L.f343a.getString("last_import_report","").contains("recognized=1"));
-        }finally{TunnelVpnService.serviceRunning=false;}
+            SmartImport.Result result=task.get(15,java.util.concurrent.TimeUnit.SECONDS);
+            assertEquals(1,result.recognized);assertEquals(1,result.fetched);assertEquals(0,result.failed);
+        }finally{TunnelVpnService.serviceRunning=false;task.cancel(true);}
     }
     @Test public void zeroResultShowsPersistentSafeFailureReport()throws Exception{
         MainActivity activity=paste("not-a-config-private-body");String report=activity.L.f343a.getString("last_import_report","");
