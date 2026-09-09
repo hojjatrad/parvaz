@@ -1,0 +1,40 @@
+name: Lint diagnostics without signing secrets
+on:
+  push:
+    branches: ['ci/lint-validation']
+permissions:
+  contents: read
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@v5
+        with: {distribution: temurin, java-version: '17'}
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '8.9', cache-disabled: true}
+      - name: Prepare SDK and public pinned core
+        run: |
+          sdkmanager 'platforms;android-34' 'build-tools;34.0.0'
+          bash tools/release/fetch_core.sh
+      - name: Report debug and release lint without private signing inputs
+        run: |
+          mkdir -p .cache
+          set +e
+          ./gradlew --no-daemon --max-workers=2 :app:lintDebug :app:lintRelease >.cache/lint.log 2>&1
+          code=$?
+          tail -100 .cache/lint.log
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as E
+          log=Path('.cache/lint.log').read_text(errors='replace')[-12000:]
+          print('::notice title=LINT_DIAGNOSTICS::'+log.replace('%','%25').replace('\n','%0A').replace('\r','%0D'))
+          for file in Path('app/build/reports').glob('lint-results*.xml'):
+              for issue in E.parse(file).getroot().findall('issue'):
+                  if issue.get('severity') in ('Error','Fatal'):
+                      print('::notice title=LINT_ISSUE::'+issue.get('id','')+' '+issue.get('message','').replace('%','%25').replace('\n','%0A'))
+          PY
+          exit $code
