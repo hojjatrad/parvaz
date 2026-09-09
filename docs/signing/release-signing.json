@@ -3,8 +3,9 @@
   "application_id": "com.parvaz.tunnel",
   "key_alias": "parvaz",
   "key_algorithm": "RSA-4096",
-  "certificate_sha256": "8c6b2c7979c254cb3c77a3fe005082abbe414cb98e48835dbc428c890ecf30f7",
-  "signing_generation": 2,
+  "certificate_sha256": "d1383b8f34da5d3299b13634de421487289d82c1bb47ec3bc7f20ae8d02fe500",
+  "signing_generation": 3,
   "legacy_in_place_upgrade_supported": false,
-  "note": "New signing identity. One-time migration required from releases signed with the lost legacy key. Never regenerate for routine updates."
+  "note": "Owner explicitly authorized replacement of the lost, never-published generation-2 key. Keep this generation-3 identity for all subsequent updates.",
+  "supersedes_unpublished_certificate_sha256": "8c6b2c7979c254cb3c77a3fe005082abbe414cb98e48835dbc428c890ecf30f7"
 }

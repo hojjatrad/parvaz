@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -28,12 +28,12 @@ jobs:
         run: |
           sdkmanager 'platforms;android-34' 'build-tools;34.0.0'
           bash tools/release/fetch_core.sh
-      - name: Compile Android app and run existing Android unit tests (no release secrets)
+      - name: Compile debug, run Android unit tests and check release R8 (no release secrets)
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p .cache
-          if ! gradle --no-daemon --max-workers=2 :app:testDebugUnitTest :app:assembleDebug >.cache/android-build.log 2>&1; then
+          if ! gradle --no-daemon --max-workers=2 :app:testDebugUnitTest :app:assembleDebug :app:minifyReleaseWithR8 >.cache/android-build.log 2>&1; then
             tail -100 .cache/android-build.log
             python3 - <<'PY'
           from pathlib import Path

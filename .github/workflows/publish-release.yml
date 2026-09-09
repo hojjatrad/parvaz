@@ -25,22 +25,22 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for name in PARVAZ_KEYSTORE_BASE64 PARVAZ_KEYSTORE_PASSWORD PARVAZ_KEY_ALIAS PARVAZ_KEY_PASSWORD; do
-            if [[ -z "${!name}" ]]; then echo "::error::Required signing secret is missing: $name"; exit 1; fi
-          done
+          python3 tools/release/build_signed.py --inputs-only
           python3 - <<'PY'
           import os, re
           from pathlib import Path
           version = re.search(r'versionName\s+"([^"]+)"', Path('app/build.gradle').read_text()).group(1)
           tag = 'v' + version
-          if os.environ.get('GITHUB_REF_TYPE') == 'tag' and os.environ['GITHUB_REF_NAME'] != tag:
+          if os.environ.get('GITHUB_REF_TYPE') != 'tag' or os.environ.get('GITHUB_REF_NAME') != tag:
               raise SystemExit('Tag does not match app version; publication refused.')
           if not Path('docs/releases/' + tag + '.md').is_file():
               raise SystemExit('Version-specific release/migration notes are missing.')
           with open(os.environ['GITHUB_ENV'], 'a') as out:
               out.write('RELEASE_VERSION=' + version + '\nRELEASE_TAG=' + tag + '\n')
           PY
-      - uses: actions/setup-java@v4
+      - name: Test signing guards with synthetic data
+        run: python3 -m unittest discover -s tools/release -p 'test_*.py'
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -64,32 +64,13 @@ jobs:
           bash tools/release/fetch_core.sh
       - name: Run Android unit tests
         run: gradle --no-daemon --max-workers=2 :app:testDebugUnitTest
-      - name: Decode existing keystore, verify pin and build signed APKs
+      - name: Validate permanent key and build signed APKs with safe diagnostics
         env:
           PARVAZ_KEYSTORE_BASE64: ${{ secrets.PARVAZ_KEYSTORE_BASE64 }}
           PARVAZ_KEYSTORE_PASSWORD: ${{ secrets.PARVAZ_KEYSTORE_PASSWORD }}
           PARVAZ_KEY_ALIAS: ${{ secrets.PARVAZ_KEY_ALIAS }}
           PARVAZ_KEY_PASSWORD: ${{ secrets.PARVAZ_KEY_PASSWORD }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          umask 077
-          KEY_DIR="$(mktemp -d "$RUNNER_TEMP/parvaz-signing-XXXXXX")"
-          trap 'rm -rf "$KEY_DIR"' EXIT
-          export PARVAZ_KEYSTORE_PATH="$KEY_DIR/parvaz-release.p12"
-          printf '%s' "$PARVAZ_KEYSTORE_BASE64" | base64 --decode > "$PARVAZ_KEYSTORE_PATH"
-          keytool -exportcert -alias "$PARVAZ_KEY_ALIAS" -keystore "$PARVAZ_KEYSTORE_PATH" \
-            -storepass:env PARVAZ_KEYSTORE_PASSWORD -file "$KEY_DIR/certificate.der" >/dev/null
-          python3 - "$KEY_DIR/certificate.der" <<'PY'
-          from pathlib import Path
-          import hashlib, json, sys
-          expected = json.loads(Path('docs/signing/release-signing.json').read_text())['certificate_sha256']
-          actual = hashlib.sha256(Path(sys.argv[1]).read_bytes()).hexdigest()
-          if actual != expected:
-              raise SystemExit('Wrong signing identity; refusing to build a release with a replacement key.')
-          print('Existing keystore matches the pinned permanent signing identity.')
-          PY
-          gradle --no-daemon --max-workers=2 :app:assembleRelease
+        run: python3 tools/release/build_signed.py
       - name: Verify APK signatures, package, version and file hashes
         run: python3 tools/release/verify_apk.py
       - name: Publish prerelease only after all checks pass

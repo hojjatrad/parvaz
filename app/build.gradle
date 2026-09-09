@@ -14,8 +14,8 @@ android {
         applicationId "com.parvaz.tunnel"
         minSdk 24
         targetSdk 34
-        versionCode 19
-        versionName "1.19"
+        versionCode 20
+        versionName "1.19.1"
         vectorDrawables.useSupportLibrary = true
 
         // libv2ray.aar also ships x86/x86_64 builds of libgojni. No Iranian Android
