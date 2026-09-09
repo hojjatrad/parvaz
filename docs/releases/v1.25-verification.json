@@ -1,0 +1,53 @@
+{
+  "version": "1.25",
+  "versionCode": 26,
+  "package": "com.parvaz.tunnel",
+  "tag": "v1.25",
+  "source_commit": "15e892b014bd3261e242be27bc96321e9578d2cf",
+  "release": "https://github.com/hojjatrad/parvaz/releases/tag/v1.25",
+  "assets": [
+    {
+      "name": "Parvaz-1.25-arm64.apk",
+      "size": 15879283,
+      "sha256": "7fcf77530675ece46fc338a9ce794ae0ac30b92417e62afef15ce8460a93854e",
+      "url": "https://github.com/hojjatrad/parvaz/releases/download/v1.25/Parvaz-1.25-arm64.apk"
+    },
+    {
+      "name": "Parvaz-1.25.apk",
+      "size": 28449028,
+      "sha256": "272bf1f878b0c1701c1ba78baf8a100ae51d5fce74fbca0c7dfc434fbe9ae0ce",
+      "url": "https://github.com/hojjatrad/parvaz/releases/download/v1.25/Parvaz-1.25.apk"
+    }
+  ],
+  "certificate_sha256": "d1383b8f34da5d3299b13634de421487289d82c1bb47ec3bc7f20ae8d02fe500",
+  "core": "v26.9.9",
+  "host_assertions": 304,
+  "python_guard_tests": 23,
+  "android_suite": "Passed; includes SDK 29/34 Robolectric ordinary clipboard import, automatic group selection, visible localized source header, scoped swipe, smaller complete replacement, and no automatic report dialogs.",
+  "validation_run": "https://github.com/hojjatrad/parvaz/actions/runs/34340546505",
+  "publication_run": "https://github.com/hojjatrad/parvaz/actions/runs/34341003767",
+  "independent_public_asset_stream_hashes_verified": true,
+  "test_scenarios": [
+    "Normal clipboard paste selects its subscription despite other stored sources.",
+    "Repeated swipe downloads one source, with no automatic report popup.",
+    "Two archived records stay stored but do not appear among 14 current rows.",
+    "A complete smaller response replaces those 14 with one current row, retaining only the two separate archived records.",
+    "Manual configurations do not trigger subscription downloads.",
+    "Legacy combined mode migrates from selected owner; ambiguous selection never guesses or downloads all sources.",
+    "Disabled subscription state survives migration.",
+    "In-flight source change cannot populate another group.",
+    "Technical reports open only on explicit menu request."
+  ],
+  "limitations": [
+    "No private subscription response was received; the exact panel contents and live connectivity remain untested.",
+    "Android UI tests use Robolectric, not a physical phone/live v2rayNG session.",
+    "Partial/invalid responses keep existing data; no forced cap of 14 servers.",
+    "Archive-signature native probe from v1.22 not rerun; existing installer/signature safeguards preserved."
+  ],
+  "workspace": {
+    "free_gib": 19.74,
+    "apks_retained_locally": false
+  },
+  "normal_latest_verified": true,
+  "latest_api_and_future_order_run": "https://github.com/hojjatrad/parvaz/actions/runs/34341467328"
+}
