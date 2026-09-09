@@ -42,7 +42,11 @@ public final class BackupManager {
             subs.add(sub);
         }
         ids.clear();for(int i=0;i<nodes.length();i++){
-            Profile p=Profile.fromJson(nodes.getJSONObject(i));if(p==null||!com.parvaz.tunnel.config.LinkParser.valid(p)||!ids.add(p.id))throw new IllegalArgumentException("Invalid profile");
+            JSONObject node=nodes.getJSONObject(i);
+            // Profile.fromJson() normalizes invalid ports to 443 for stored legacy data.
+            // A user-selected backup must not silently repair an explicit corrupt value.
+            validateBackupPort(node);
+            Profile p=Profile.fromJson(node);if(p==null||!com.parvaz.tunnel.config.LinkParser.valid(p)||!ids.add(p.id))throw new IllegalArgumentException("Invalid profile");
             profiles.add(p);
         }
         JSONObject settings=root.optJSONObject("settings");if(settings==null)settings=new JSONObject();
@@ -65,6 +69,18 @@ public final class BackupManager {
         store.restoreRecords(profiles,subs,root.optString("active_subscription",""));
         if(!edit.commit())throw new IllegalStateException("Settings restore commit failed");
         store.removeDuplicates(prefs);a result=new a();result.f341a=profiles.size();result.f342b=subs.size();return result;
+    }
+
+    private static void validateBackupPort(JSONObject node)throws JSONException {
+        if(!node.has("port"))return; // Retain the historical default for omitted fields.
+        Object raw=node.get("port");
+        if(!(raw instanceof Number)&&!(raw instanceof String))throw new IllegalArgumentException("Invalid backup profile port");
+        String text=raw.toString().trim();
+        if(text.length()>32)throw new IllegalArgumentException("Invalid backup profile port");
+        try {
+            int port=new java.math.BigDecimal(text).intValueExact();
+            if(port<1||port>65535)throw new ArithmeticException();
+        }catch(NumberFormatException|ArithmeticException invalid){throw new IllegalArgumentException("Invalid backup profile port");}
     }
 
     /* renamed from: b */

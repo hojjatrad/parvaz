@@ -70,6 +70,19 @@ public class BackupPreservationTest {
   JSONObject root=new JSONObject(good);root.getJSONArray("profiles").getJSONObject(1).put("port",0);reject(root.toString());
   root=new JSONObject(good);root.getJSONArray("profiles").getJSONObject(1).put("id","manual-fixture");reject(root.toString());
  }
+ @Test public void explicitMalformedPortsAreRejectedBeforeAnyWrites()throws Exception {
+  for(Object port:new Object[]{-1,65536,443.5,"not-a-port",JSONObject.NULL,true,new JSONArray(),"443.5","9999999999999999999999999999999999999999"}){
+   JSONObject root=new JSONObject(good);root.getJSONArray("profiles").getJSONObject(1).put("port",port);reject(root.toString());
+  }
+ }
+ @Test public void omittedAndIntegralLegacyPortFieldsRemainReadable()throws Exception {
+  for(Object port:new Object[]{null,"443",443.0}){
+   JSONObject root=new JSONObject(good);JSONObject profile=root.getJSONArray("profiles").getJSONObject(1);
+   if(port==null)profile.remove("port");else profile.put("port",port);
+   BackupManager.a(context,root.toString());assertEquals(443,store.getById("owned-fixture").port);
+   assertEquals(2,store.e().size());assertEquals("active-source",store.primarySubscription());
+  }
+ }
  @Test public void lateInvalidSubscriptionPreservesEverything()throws Exception {
   JSONObject root=new JSONObject(good);root.getJSONArray("subscriptions").getJSONObject(1).put("id","active-source");reject(root.toString());
   root=new JSONObject(good);root.getJSONArray("subscriptions").getJSONObject(1).put("url","file:///not-a-subscription");reject(root.toString());
