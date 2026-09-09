@@ -90,6 +90,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /* loaded from: classes.dex */
 public class MainActivity extends AppCompatActivity {
+    private boolean recoveryBlocked;
 
     /* renamed from: q0 */
     public static final /* synthetic */ int $r8$clinit = 0;
@@ -2298,6 +2299,10 @@ public class MainActivity extends AppCompatActivity {
     public final void onCreate(Bundle bundle) {
         File latest;
         super.onCreate(bundle);
+        try{ProfileStore.recoverBeforeUse(this);}catch(RuntimeException unavailable){
+            recoveryBlocked=true;startActivity(new Intent(this,BackupRecoveryActivity.class));finish();return;
+        }
+        if(getApplication() instanceof App)((App)getApplication()).initializeAfterRecovery();
         setContentView(R.layout.activity_main);
         this.L = new Prefs(this);
         this.b0 = ProfileStore.f(this);
@@ -2437,6 +2442,7 @@ public class MainActivity extends AppCompatActivity {
     @Override // androidx.activity.ComponentActivity, android.app.Activity
     public final void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
+        if(recoveryBlocked)return;
         setIntent(intent);
         handleIntent(intent);
     }
@@ -2444,6 +2450,7 @@ public class MainActivity extends AppCompatActivity {
     @Override // androidx.fragment.app.FragmentActivity, android.app.Activity
     public final void onPause() {
         super.onPause();
+        if(recoveryBlocked)return;
         quotaRefreshHandler.removeCallbacks(quotaRefreshTick);
         quotaRefreshHandler.removeCallbacks(automaticUpdateCheck);
         try {
@@ -2465,6 +2472,7 @@ public class MainActivity extends AppCompatActivity {
         int i;
         Executor executorCompat$HandlerExecutor;
         super.onResume();
+        if(recoveryBlocked)return;
         // Opt-in gesture: shake the phone to jump to the next server.
         if (this.L.f343a.getBoolean("shake_to_switch", false)) {
             if (this.shakeDetector == null) {

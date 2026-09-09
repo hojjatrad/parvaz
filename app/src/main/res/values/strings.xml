@@ -468,4 +468,8 @@ Tap + to paste a config link or add a subscription."</string>
     <string name="backup_operation_failed">Backup could not be completed. Check the file and password, then retry.</string>
     <string name="shared_import_title">Import shared configuration?</string>
     <string name="shared_import_confirm">Another app supplied this input. Import it only if you trust its source. It can change the selected server group.</string>
+    <string name="recovery_title">Backup recovery paused</string>
+    <string name="recovery_body">An interrupted backup could not be completed. Connections are blocked to avoid using mixed records and settings. Free storage or wait until device storage is available, then retry. If the encrypted journal or device key is damaged, retry may not help. Do not clear app data: the encrypted recovery file has been retained.</string>
+    <string name="recovery_retry">Retry recovery</string>
+    <string name="recovery_close">Close</string>
 </resources>

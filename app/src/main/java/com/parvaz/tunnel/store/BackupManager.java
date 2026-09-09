@@ -2,7 +2,6 @@ package com.parvaz.tunnel.store;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import com.parvaz.tunnel.RulesActivity__ExternalSyntheticOutline0;
 import com.parvaz.tunnel.model.Profile;
 import com.parvaz.tunnel.model.Subscription;
 import java.util.ArrayList;
@@ -27,7 +26,7 @@ public final class BackupManager {
         public int f342b;
     }
 
-    public static a a(Context context,String str)throws JSONException {
+    private static Prepared prepare(String str)throws JSONException {
         if(str==null||str.length()>16*1024*1024)throw new IllegalArgumentException("Backup size limit");
         com.parvaz.tunnel.config.LinkParser.checkJsonDepth(str);
         JSONObject root=new JSONObject(str);
@@ -50,7 +49,7 @@ public final class BackupManager {
             profiles.add(p);
         }
         JSONObject settings=root.optJSONObject("settings");if(settings==null)settings=new JSONObject();
-        SharedPreferences prefs=context.getSharedPreferences("parvaz_prefs",0);SharedPreferences.Editor edit=prefs.edit();
+        Patch edit=new Patch();
         // Explicit allowlist; keys controlling credentials, LAN exposure and update verification never come from a backup.
         for(String key:new String[]{"routing_mode","remote_dns","direct_dns","log_level","domain_strategy","ping_url","lang","per_app_mode","fragment_packets","fragment_length","fragment_interval","custom_rules","domains_direct","domains_proxy","domains_block","auto_wifi","auto_cell","trusted_wifi","chain_profile","selected_profile"})
             if(settings.has(key))edit.putString(key,settings.getString(key));
@@ -65,10 +64,66 @@ public final class BackupManager {
         // Import never turns on automatic VPN connection or LAN sharing unexpectedly.
         edit.putBoolean("connect_on_boot",false).putBoolean("lan_proxy",false);
         String selected=settings.optString("selected_profile","");if(!ids.contains(selected))edit.putString("selected_profile",profiles.isEmpty()?"":profiles.get(0).id);
-        ProfileStore store=ProfileStore.f(context);
-        store.restoreRecords(profiles,subs,root.optString("active_subscription",""));
-        if(!edit.commit())throw new IllegalStateException("Settings restore commit failed");
-        store.removeDuplicates(prefs);a result=new a();result.f341a=profiles.size();result.f342b=subs.size();return result;
+        return new Prepared(profiles,subs,root.optString("active_subscription",""),edit);
+    }
+
+    public static a a(Context context,String text)throws JSONException {
+        Prepared prepared=prepare(text); // Fully validate before touching a journal or store.
+        ProfileStore.f(context).restoreBackup(prepared.canonical());
+        a result=new a();result.f341a=prepared.profiles.size();result.f342b=prepared.subs.size();return result;
+    }
+
+    // Called only under the store's recovery/restore monitor. Revalidation also
+    // prevents a future/invalid journal payload from bypassing the backup policy.
+    static void replay(Context context,ProfileStore store,String canonical)throws Exception {
+        Prepared prepared=prepare(canonical);
+        SharedPreferences prefs=context.getSharedPreferences("parvaz_prefs",0);
+        store.restoreRecords(prepared.profiles,prepared.subs,prepared.primary);
+        prepared.patch.commit(prefs);
+        store.removeDuplicates(prefs);
+        // Duplicate cleanup may enqueue a favorite-alias edit with apply(). Flush
+        // the complete settings generation before the durable DONE marker.
+        if(!prefs.edit().commit())throw new IllegalStateException("Settings restore flush failed");
+    }
+
+    private static final class Prepared {
+        final ArrayList<Profile> profiles;final ArrayList<Subscription> subs;final String primary;final Patch patch;
+        Prepared(ArrayList<Profile> p,ArrayList<Subscription> s,String owner,Patch values){profiles=p;subs=s;primary=owner;patch=values;}
+        String canonical()throws JSONException {
+            JSONArray p=new JSONArray(),s=new JSONArray();for(Profile value:profiles)p.put(value.toJson());for(Subscription value:subs)s.put(value.toJson());
+            return new JSONObject().put("format",2).put("app","parvaz").put("profiles",p).put("subscriptions",s)
+                .put("active_subscription",primary).put("settings",patch.canonical()).toString();
+        }
+    }
+    private static final class Patch {
+        final java.util.Map<String,Object> values=new java.util.LinkedHashMap<>();
+        Patch putString(String key,String value){values.put(key,value);return this;}
+        Patch putBoolean(String key,boolean value){values.put(key,value);return this;}
+        Patch putInt(String key,int value){values.put(key,value);return this;}
+        Patch putFloat(String key,float value){if(!Float.isFinite(value))throw new IllegalArgumentException("Invalid quota");values.put(key,value);return this;}
+        JSONObject canonical()throws JSONException {
+            JSONObject result=new JSONObject();
+            for(java.util.Map.Entry<String,Object> entry:values.entrySet()){
+                Object value=entry.getValue();String key=entry.getKey();
+                if(key.equals("favorites")||key.equals("per_app_list")){
+                    JSONArray array=new JSONArray();String text=(String)value;if(!text.isEmpty())for(String item:text.split("\n",-1))array.put(item);value=array;
+                }
+                result.put(key,value);
+            }
+            return result;
+        }
+        void commit(SharedPreferences prefs){
+            SharedPreferences.Editor edit=prefs.edit();
+            for(java.util.Map.Entry<String,Object> entry:values.entrySet()){
+                String key=entry.getKey();Object value=entry.getValue();
+                if(value instanceof String)edit.putString(key,(String)value);
+                else if(value instanceof Boolean)edit.putBoolean(key,(Boolean)value);
+                else if(value instanceof Integer)edit.putInt(key,(Integer)value);
+                else if(value instanceof Float)edit.putFloat(key,(Float)value);
+                else throw new IllegalStateException("Invalid restore setting type");
+            }
+            if(!edit.commit())throw new IllegalStateException("Settings restore commit failed");
+        }
     }
 
     private static int backupPort(JSONObject node)throws JSONException {

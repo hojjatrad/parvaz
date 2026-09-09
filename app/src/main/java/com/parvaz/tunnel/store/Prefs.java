@@ -27,6 +27,7 @@ public final class Prefs {
 
     public Prefs(Context context) {
         this.appContext = context.getApplicationContext();
+        ProfileStore.recoverBeforeUse(this.appContext);
         this.f343a = this.appContext.getSharedPreferences("parvaz_prefs", 0);
     }
 

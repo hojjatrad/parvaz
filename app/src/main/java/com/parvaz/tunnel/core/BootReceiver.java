@@ -20,6 +20,9 @@ public class BootReceiver extends BroadcastReceiver {
             return;
         }
         if ("android.intent.action.BOOT_COMPLETED".equals(action) || "android.intent.action.MY_PACKAGE_REPLACED".equals(action) || "android.intent.action.QUICKBOOT_POWERON".equals(action)) {
+            try{ProfileStore.recoverBeforeUse(context);}catch(RuntimeException unavailable){
+                Log.w("ParvazVpn","boot: incomplete backup recovery, skipping");return;
+            }
             SharedPreferences sharedPreferences = context.getApplicationContext().getSharedPreferences("parvaz_prefs", 0);
             if (sharedPreferences.getBoolean("connect_on_boot", false)) {
                 if (ProfileStore.f(context).getById(sharedPreferences.getString("selected_profile", "")) == null) {

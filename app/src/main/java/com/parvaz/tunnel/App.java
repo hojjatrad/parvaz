@@ -40,7 +40,19 @@ public class App extends Application {
     @Override // android.app.Application
     public final void onCreate() {
         super.onCreate();
+        initializeAfterRecovery();
+    }
+
+    private boolean initialized;
+    public synchronized void initializeAfterRecovery(){
+        if(initialized)return;
         com.parvaz.tunnel.core.ExternalCore.cleanOrphans(this);
+        try{com.parvaz.tunnel.store.ProfileStore.recoverBeforeUse(this);}
+        catch(RuntimeException unavailable){
+            // Do not initialize native/background consumers with split generations.
+            Log.e("Parvaz/App","Backup recovery incomplete; automatic startup blocked");return;
+        }
+        initialized=true;
         Thread.setDefaultUncaughtExceptionHandler(new CrashReporter.a(getApplicationContext(), Thread.getDefaultUncaughtExceptionHandler()));
         boolean z = false;
         SharedPreferences sharedPreferences = getApplicationContext().getSharedPreferences("parvaz_safemode", 0);

@@ -17,6 +17,26 @@ public final class ProfileStore {
     public static ProfileStore d;
     private long revision;
     private final StoreCipher recordCipher;
+    private final Context appContext;
+    private final RestoreJournal restoreJournal;
+    private boolean restoring;
+    public static final class RestoreUnavailable extends IllegalStateException {
+        RestoreUnavailable(Exception cause){super("Backup recovery is incomplete; encrypted journal retained. Retry after storage becomes available.",cause);}
+    }
+    public static void recoverBeforeUse(Context context){if(RestoreJournal.hasState(context))f(context);}
+    public synchronized void recoverPendingRestore(){
+        if(restoring||!restoreJournal.hasState())return;
+        revision++;restoring=true;
+        try{restoreJournal.recover(canonical->BackupManager.replay(appContext,this,canonical));}
+        catch(Exception error){throw new RestoreUnavailable(error);}
+        finally{restoring=false;}
+    }
+    synchronized void restoreBackup(String canonical){
+        recoverPendingRestore();revision++;restoring=true;
+        try{restoreJournal.execute(canonical,plan->BackupManager.replay(appContext,this,plan));}
+        catch(Exception error){throw new RestoreUnavailable(error);}
+        finally{restoring=false;}
+    }
     private void commit(android.content.SharedPreferences.Editor editor){if(!editor.commit())throw new IllegalStateException("Profile store commit failed");}
 
     public static final class Snapshot {
@@ -47,7 +67,12 @@ public final class ProfileStore {
         this.f347c = arrayList2;
         HashMap hashMap = new HashMap();
         SharedPreferences sharedPreferences = context.getApplicationContext().getSharedPreferences("parvaz_store", 0);
-        this.recordCipher=StoreCipher.open(context,sharedPreferences);
+        this.appContext=context.getApplicationContext();
+        this.recordCipher=StoreCipher.open(context,sharedPreferences,RestoreJournal.hasState(context));
+        this.restoreJournal=new RestoreJournal(RestoreJournal.path(appContext),new RestoreJournal.Codec(){
+            public String seal(String plain){return recordCipher.encode("backup_restore_journal",plain);}
+            public String open(String encrypted){return recordCipher.decodeRequired("backup_restore_journal",encrypted);}
+        });
         this.f345a = sharedPreferences;
         arrayList.clear();
         arrayList2.clear();
@@ -98,14 +123,15 @@ public final class ProfileStore {
         }
     }
 
-    public static synchronized ProfileStore f(Context context) {
-        if (d == null) {
-            d = new ProfileStore(context);
-        }
-        return d;
+    public static ProfileStore f(Context context) {
+        ProfileStore store;
+        synchronized(ProfileStore.class){if(d==null)d=new ProfileStore(context);store=d;}
+        // Never hold the class monitor while waiting for a live store's monitor.
+        store.recoverPendingRestore();return store;
     }
 
     public final synchronized int a(ArrayList arrayList, String owner) {
+        recoverPendingRestore();
         java.util.HashSet<String> identities = new java.util.HashSet<>();
         for (Object o : f346b) {
             Profile p=(Profile)o;
@@ -125,6 +151,7 @@ public final class ProfileStore {
     }
 
     public final synchronized Profile b(Profile profile) {
+        recoverPendingRestore();
         String identity=ProfileIdentity.fingerprint(profile);
         for (Object o : f346b) {
             Profile existing=(Profile)o;
@@ -135,6 +162,7 @@ public final class ProfileStore {
     }
 
     public synchronized Subscription addOrGetSubscription(String input) {
+        recoverPendingRestore();
         String url=com.parvaz.tunnel.config.SubscriptionUrl.normalize(input);
         for(Object o:f347c) {
             Subscription sub=(Subscription)o;
@@ -152,6 +180,7 @@ public final class ProfileStore {
 
     /** Validate first; commit all restored records together, never a delete-first restore. */
     public synchronized void restoreRecords(java.util.List<Profile> profiles,java.util.List<Subscription> subscriptions,String primary)throws JSONException {
+        recoverPendingRestore();
         JSONArray pj=new JSONArray(),sj=new JSONArray();JSONObject pings=new JSONObject();boolean found=primary.isEmpty()||MANUAL_GROUP.equals(primary);
         for(Profile p:profiles){pj.put(p.toJson());if(p.ping>0)pings.put(p.id,p.ping);}
         for(Subscription sub:subscriptions){sj.put(sub.toJson());if(sub.id.equals(primary))found=true;}
@@ -165,6 +194,7 @@ public final class ProfileStore {
     public static final String MANUAL_GROUP="@manual";
     /** Migrate a combined view using its selected connection, never an unrelated source. */
     public synchronized void ensureActiveSubscription(SharedPreferences prefs) {
+        recoverPendingRestore();
         if(!primarySubscription().isEmpty())return;
         Profile selected=getById(prefs.getString("selected_profile",""));
         String owner=selected==null?"":selected.subscriptionId;
@@ -172,18 +202,24 @@ public final class ProfileStore {
         if(selected==null&&f347c.size()==1){Subscription sub=(Subscription)f347c.get(0);if(!sub.id.isEmpty()){setPrimarySubscription(sub.id,false);return;}}
         setPrimarySubscription(MANUAL_GROUP,false);
     }
-    public synchronized String primarySubscription() { return f345a.getString("primary_subscription",""); }
-    public synchronized boolean scopeConfigured() { return "1".equals(f345a.getString("primary_choice","")); }
-    public synchronized boolean isRefreshSource(String id) { String primary=primarySubscription();return primary.isEmpty()||primary.equals(id); }
+    public synchronized String primarySubscription() {
+        recoverPendingRestore(); return f345a.getString("primary_subscription",""); }
+    public synchronized boolean scopeConfigured() {
+        recoverPendingRestore(); return "1".equals(f345a.getString("primary_choice","")); }
+    public synchronized boolean isRefreshSource(String id) {
+        recoverPendingRestore(); String primary=primarySubscription();return primary.isEmpty()||primary.equals(id); }
     public synchronized ArrayList<Profile> activeProfiles() {
+        recoverPendingRestore();
         ArrayList<Profile> result=new ArrayList<>();String primary=primarySubscription();
         for(Object o:f346b){Profile p=(Profile)o;if(primary.isEmpty()||(MANUAL_GROUP.equals(primary)?p.subscriptionId.isEmpty():primary.equals(p.subscriptionId)))result.add(p);}
         return result;
     }
     public synchronized Profile getActiveById(String id) {
+        recoverPendingRestore();
         Profile p=getById(id);String primary=primarySubscription();return p!=null&&(primary.isEmpty()||(MANUAL_GROUP.equals(primary)?p.subscriptionId.isEmpty():primary.equals(p.subscriptionId)))?p:null;
     }
-    public synchronized void setPrimarySubscription(String id) { setPrimarySubscription(id,true); }
+    public synchronized void setPrimarySubscription(String id) {
+        recoverPendingRestore(); setPrimarySubscription(id,true); }
     private synchronized void setPrimarySubscription(String id,boolean enable) {
         if(id==null)throw new IllegalArgumentException("Missing primary source");
         try {
@@ -198,6 +234,7 @@ public final class ProfileStore {
     /** Remove legacy same-source duplicates and coalesce repeated URLs. Independent sources
      * remain separate underneath the single-row UI, so future refreshes cannot erase them. */
     public synchronized int removeDuplicates(SharedPreferences prefs) {
+        recoverPendingRestore();
         String selected=prefs.getString("selected_profile","");
         java.util.Set<String> favorites=new java.util.LinkedHashSet<>(java.util.Arrays.asList(prefs.getString("favorites","").split("\\n")));
         java.util.Map<String,String> owners=new java.util.HashMap<>();
@@ -239,6 +276,7 @@ public final class ProfileStore {
     }
 
     public synchronized void updateQuota(Snapshot snapshot,String userinfo,long now) {
+        recoverPendingRestore();
         if(snapshot==null||snapshot.revision!=revision)throw new StaleRefresh();
         try {
             ArrayList<Subscription> subs=f();boolean found=false;
@@ -254,6 +292,7 @@ public final class ProfileStore {
 
     public synchronized SubscriptionReconciler.Plan mergeSubscription(Snapshot snapshot,
             com.parvaz.tunnel.config.ImportResult parsed,String userinfo,long now,String selectedId) {
+        recoverPendingRestore();
         if(parsed.fatal||parsed.profiles.isEmpty())throw new IllegalArgumentException("No valid partial import");
         com.parvaz.tunnel.config.ImportResult union=new com.parvaz.tunnel.config.ImportResult();
         java.util.Set<String> incoming=new java.util.HashSet<>();
@@ -264,6 +303,7 @@ public final class ProfileStore {
 
     /** Capture detached metadata and a generation BEFORE starting a download. */
     public synchronized Snapshot beginRefresh(String id) {
+        recoverPendingRestore();
         for(Object o:f347c) {
             Subscription sub=(Subscription)o;
             if(sub.id.equals(id) && sub.enabled) {
@@ -280,6 +320,7 @@ public final class ProfileStore {
      */
     public synchronized SubscriptionReconciler.Plan replaceSubscription(Snapshot snapshot,
             com.parvaz.tunnel.config.ImportResult parsed, String userinfo, long now, String selectedId) {
+        recoverPendingRestore();
         if(snapshot==null || snapshot.revision!=revision) throw new StaleRefresh();
         if(!parsed.safeToReplace()) throw new IllegalArgumentException("Partial or empty subscription replacement refused");
         int index=-1;
@@ -304,11 +345,13 @@ public final class ProfileStore {
 
     /* renamed from: c */
     public final synchronized ArrayList e() {
+        recoverPendingRestore();
         return new ArrayList(this.f346b);
     }
 
     /* renamed from: d */
     public final synchronized ArrayList f() {
+        recoverPendingRestore();
         ArrayList<Subscription> result=new ArrayList<>();
         try { for(Object o:f347c)result.add(Subscription.fromJson(((Subscription)o).toJson())); }
         catch(org.json.JSONException e){throw new IllegalStateException("Subscription snapshot failed");}
@@ -317,6 +360,7 @@ public final class ProfileStore {
 
     /* renamed from: e */
     public final synchronized void g(String str) {
+        recoverPendingRestore();
         try {
             for (int size = this.f346b.size() - 1; size >= 0; size--) {
                 if (str.equals(((Profile) this.f346b.get(size)).subscriptionId)) {
@@ -330,6 +374,7 @@ public final class ProfileStore {
 
     /* renamed from: g */
     public final synchronized Profile getById(String str) {
+        recoverPendingRestore();
         String str2;
         Iterator it = this.f346b.iterator();
         while (it.hasNext()) {
@@ -342,6 +387,7 @@ public final class ProfileStore {
     }
 
     public final synchronized void h() {
+        recoverPendingRestore();
         revision++;
         try {
             JSONArray jSONArray = new JSONArray();
@@ -377,6 +423,7 @@ public final class ProfileStore {
     }
 
     public final synchronized void i(String str, int i) {
+        recoverPendingRestore();
         Profile byId = getById(str);
         if (byId != null) {
             byId.ping = i;
@@ -384,6 +431,7 @@ public final class ProfileStore {
     }
 
     public final synchronized void j(Subscription subscription) {
+        recoverPendingRestore();
         int i = 0;
         while (true) {
             if (i >= this.f347c.size()) {

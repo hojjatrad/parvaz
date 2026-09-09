@@ -22,6 +22,7 @@
     <permission android:name="com.parvaz.tunnel.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" android:protectionLevel="signature"/>
     <uses-permission android:name="com.parvaz.tunnel.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"/>
     <application android:allowBackup="false" android:appComponentFactory="androidx.core.app.CoreComponentFactory" android:dataExtractionRules="@xml/data_extraction_rules" android:extractNativeLibs="true" android:fullBackupContent="@xml/backup_rules" android:hasFragileUserData="false" android:icon="@mipmap/ic_launcher" android:label="@string/app_name" android:name="com.parvaz.tunnel.App" android:roundIcon="@mipmap/ic_launcher_round" android:supportsRtl="true" android:theme="@style/AppTheme" android:usesCleartextTraffic="true">
+        <activity android:name="com.parvaz.tunnel.BackupRecoveryActivity" android:exported="false"/>
         <activity android:configChanges="keyboardHidden|layoutDirection|locale|orientation|screenSize|uiMode" android:exported="true" android:launchMode="singleTask" android:name="com.parvaz.tunnel.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>

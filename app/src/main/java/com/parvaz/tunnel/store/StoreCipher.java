@@ -12,10 +12,11 @@ public final class StoreCipher {
     private static final String PREFIX="PARVAZ-GCM-1:",ALIAS="com.parvaz.tunnel.records.v1";
     private final SecretKey key;
     StoreCipher(SecretKey key){this.key=key;}
-    public static synchronized StoreCipher open(Context context,SharedPreferences prefs){
+    public static StoreCipher open(Context context,SharedPreferences prefs){return open(context,prefs,false);}
+    public static synchronized StoreCipher open(Context context,SharedPreferences prefs,boolean requireExistingKey){
         boolean encrypted="1".equals(prefs.getString("secure_records_version",""));for(String name:new String[]{"profiles","subs"})encrypted|=prefs.getString(name,"").startsWith(PREFIX);
         try{
-            StoreCipher cipher=new StoreCipher(loadKey(!encrypted));
+            StoreCipher cipher=new StoreCipher(loadKey(!(encrypted||requireExistingKey)));
             SharedPreferences.Editor edit=prefs.edit();boolean migrate=!"1".equals(prefs.getString("secure_records_version",""));
             edit.putString("secure_records_version","1");
             for(String name:new String[]{"profiles","subs"}){
@@ -41,6 +42,10 @@ public final class StoreCipher {
         System.arraycopy(iv,0,all,0,iv.length);System.arraycopy(encrypted,0,all,iv.length,encrypted.length);
         return PREFIX+Base64.encodeToString(all,Base64.NO_WRAP);
     }catch(Exception error){throw new IllegalStateException("Record encryption failed",error);}}
+    public String decodeRequired(String name,String value){
+        if(!value.startsWith(PREFIX))throw new IllegalStateException("Encrypted restore journal required");
+        return decode(name,value);
+    }
     public String decode(String name,String value){
         if(!value.startsWith(PREFIX))return value; // Only defaults or already-validated legacy input during migration.
         try{byte[] all=Base64.decode(value.substring(PREFIX.length()),Base64.NO_WRAP);if(all.length<28)throw new IllegalArgumentException();

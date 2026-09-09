@@ -1221,6 +1221,9 @@ public class TunnelVpnService extends VpnService {
 
     @Override // android.app.Service
     public final int onStartCommand(Intent intent, int flags, int startId) {
+        try{ProfileStore.recoverBeforeUse(this);}catch(RuntimeException unavailable){
+            Log.w("ParvazVpn","start: incomplete backup recovery, stopping");stopSelf();return START_NOT_STICKY;
+        }
         // Null intent => the system restarted us (START_STICKY) or an always-on
         // VPN profile launched us; treat that as a normal START.
         String action = (intent == null) ? "com.parvaz.tunnel.START" : intent.getAction();
