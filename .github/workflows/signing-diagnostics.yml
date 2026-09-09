@@ -1,0 +1,73 @@
+name: Diagnose signing and release build
+on:
+  push:
+    branches: ['release/signing-diagnostics']
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+          cache-disabled: true
+      - name: Prepare SDK and verified core
+        run: |
+          sdkmanager 'platforms;android-34' 'build-tools;34.0.0'
+          bash tools/release/fetch_core.sh
+      - name: Diagnose without publishing or exposing secrets
+        env:
+          PARVAZ_KEYSTORE_BASE64: ${{ secrets.PARVAZ_KEYSTORE_BASE64 }}
+          PARVAZ_KEYSTORE_PASSWORD: ${{ secrets.PARVAZ_KEYSTORE_PASSWORD }}
+          PARVAZ_KEY_ALIAS: ${{ secrets.PARVAZ_KEY_ALIAS }}
+          PARVAZ_KEY_PASSWORD: ${{ secrets.PARVAZ_KEY_PASSWORD }}
+        run: |
+          python3 - <<'PY'
+          import base64, hashlib, json, os, subprocess, tempfile
+          from pathlib import Path
+          def report(code, message, failure=False):
+              message = message.replace('%','%25').replace('\r','%0D').replace('\n','%0A')
+              print(('::error' if failure else '::notice')+' title='+code+'::'+message, flush=True)
+              if failure: raise SystemExit(1)
+          names=['PARVAZ_KEYSTORE_BASE64','PARVAZ_KEYSTORE_PASSWORD','PARVAZ_KEY_ALIAS','PARVAZ_KEY_PASSWORD']
+          env=os.environ.copy()
+          for name in names:
+              if not env.get(name): report('MISSING_SECRET',name,True)
+          # Whitespace around Base64 is harmless, but never modify the password silently.
+          try: raw=base64.b64decode(''.join(env[names[0]].split()),validate=True)
+          except Exception: report('INVALID_KEYSTORE_BASE64','The keystore Base64 secret is not valid Base64.',True)
+          if len(raw)<512: report('KEYSTORE_TOO_SHORT','Decoded secret is too short for the generated keystore.',True)
+          with tempfile.TemporaryDirectory(prefix='parvaz-key-check-',dir=os.environ['RUNNER_TEMP']) as directory:
+              key=Path(directory)/'key.p12'; key.write_bytes(raw);key.chmod(0o600)
+              env['PARVAZ_KEYSTORE_PATH']=str(key)
+              checked=subprocess.run(['keytool','-list','-keystore',str(key),'-storepass:env','PARVAZ_KEYSTORE_PASSWORD'],env=env,capture_output=True)
+              if checked.returncode:
+                  report('KEYSTORE_OPEN_FAILED','Cannot open keystore: wrong password, wrong file or damaged Base64 data. Secret contents were not printed.',True)
+              report('KEYSTORE_OPEN_OK','The keystore and store password are usable.')
+              cert=subprocess.run(['keytool','-exportcert','-alias',env['PARVAZ_KEY_ALIAS'],'-keystore',str(key),'-storepass:env','PARVAZ_KEYSTORE_PASSWORD'],env=env,capture_output=True)
+              if cert.returncode: report('KEY_ALIAS_FAILED','The configured key alias is not usable.',True)
+              expected=json.loads(Path('docs/signing/release-signing.json').read_text())['certificate_sha256']
+              actual=hashlib.sha256(cert.stdout).hexdigest()
+              if actual!=expected: report('CERTIFICATE_PIN_MISMATCH','The uploaded keystore belongs to a different signing identity.',True)
+              report('CERTIFICATE_PIN_OK','The uploaded keystore matches the permanent signing identity.')
+              log=Path(directory)/'build.log'
+              with log.open('wb') as output:
+                  built=subprocess.run(['gradle','--no-daemon','--max-workers=2',':app:assembleRelease'],env=env,stdout=output,stderr=subprocess.STDOUT)
+              if built.returncode:
+                  text=log.read_text(errors='replace')[-9000:]
+                  for name in names:
+                      if env[name]: text=text.replace(env[name],'[REDACTED]')
+                  text=text.replace(directory,'[TEMP_SIGNING_DIR]')
+                  report('RELEASE_BUILD_FAILED',text,True)
+              report('SIGNED_BUILD_OK','Signed release APKs built. This diagnostics workflow never publishes or uploads APKs.')
+          PY
