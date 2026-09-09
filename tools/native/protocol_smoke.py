@@ -105,7 +105,7 @@ try:
        response+=chunk
     except (OSError,TimeoutError,AssertionError):pass
     assert b'PARVAZ-TUNNELED-TCP-OK' not in response,'Unexpected direct fallback'
-    print('::notice title=PROTOCOL_SMOKE_OK::'+protocol+(' full routing/group + TCP + UDP + authentication + no direct fallback' if protocol=='full-clash' else 'TLS + wrong-SNI rejection + TCP + UDP + authentication + no direct fallback'),flush=True)
+    print('::notice title=PROTOCOL_SMOKE_OK::'+protocol+(' full routing/group + TCP + UDP + authentication + no direct fallback' if protocol=='full-clash' else ' TLS + wrong-SNI rejection + TCP + UDP + authentication + no direct fallback'),flush=True)
    finally:
     for p in processes:
      p.kill() if p.poll() is None else None

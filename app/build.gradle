@@ -135,7 +135,7 @@ tasks.register('dumpCp') {
     }
 }
 
-// Debug/test builds need no release keys. Release packaging must fail closed.
+// Debug/test/lint class jars need no release keys. APK/AAB packaging must fail closed.
 def requireReleaseSigning = tasks.register('requireReleaseSigning') {
     doLast {
         if (!releaseSigningReady) {
@@ -146,7 +146,7 @@ def requireReleaseSigning = tasks.register('requireReleaseSigning') {
 tasks.configureEach {
     if (name.toLowerCase(java.util.Locale.ROOT).contains('release') &&
             (name.startsWith('package') || name.startsWith('sign') || name.startsWith('assemble') ||
-             name.startsWith('bundle') || name.startsWith('validateSigning'))) {
+             (name.startsWith('bundle') && name.endsWith('Release')) || name.startsWith('validateSigning'))) {
         dependsOn(requireReleaseSigning)
     }
 }

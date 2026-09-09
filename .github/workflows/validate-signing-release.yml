@@ -35,11 +35,8 @@ jobs:
       - name: Run host regressions and prepare SDK/core
         run: |
           bash tools/audit/run.sh
-          sdkmanager 'platforms;android-34' 'build-tools;34.0.0' 'ndk;27.2.12479018'
+          sdkmanager 'platforms;android-34' 'build-tools;34.0.0'
           bash tools/release/fetch_core.sh
-          python3 tools/native/build.py
-      - name: Verify corresponding source bundle before publication
-        run: python3 tools/native/source_bundle.py
       - name: Check lint against reviewed legacy baseline
         run: ./gradlew --no-daemon --max-workers=2 :app:lintDebug :app:lintRelease
       - name: Run Android unit tests
@@ -55,6 +52,11 @@ jobs:
             exit 1
           fi
           cat .cache/android-unit.log
+      - name: Build pinned engines and prepare corresponding source after fast checks
+        run: |
+          sdkmanager 'ndk;27.2.12479018'
+          python3 tools/native/build.py
+          python3 tools/native/source_bundle.py
       - name: Build with the verified existing permanent key
         env:
           PARVAZ_KEYSTORE_BASE64: ${{ secrets.PARVAZ_KEYSTORE_BASE64 }}

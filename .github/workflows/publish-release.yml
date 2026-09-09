@@ -62,15 +62,17 @@ jobs:
       - name: Run JVM regressions and prepare SDK/core
         run: |
           bash tools/audit/run.sh
-          sdkmanager 'platforms;android-34' 'build-tools;34.0.0' 'ndk;27.2.12479018'
+          sdkmanager 'platforms;android-34' 'build-tools;34.0.0'
           bash tools/release/fetch_core.sh
-          python3 tools/native/build.py
-      - name: Prepare corresponding source and in-APK dependency notices
-        run: python3 tools/native/source_bundle.py
       - name: Check release lint against reviewed legacy baseline
         run: ./gradlew --no-daemon --max-workers=2 :app:lintRelease
       - name: Run Android unit tests
         run: ./gradlew --no-daemon --max-workers=2 :app:testDebugUnitTest
+      - name: Build pinned engines, corresponding source and dependency notices
+        run: |
+          sdkmanager 'ndk;27.2.12479018'
+          python3 tools/native/build.py
+          python3 tools/native/source_bundle.py
       - name: Validate permanent key and build signed APKs with safe diagnostics
         env:
           PARVAZ_KEYSTORE_BASE64: ${{ secrets.PARVAZ_KEYSTORE_BASE64 }}

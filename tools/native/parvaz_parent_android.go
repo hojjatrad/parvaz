@@ -1,4 +1,5 @@
 //go:build android && cgo
+// Added for Parvaz on 2026-09-09.
 // SPDX-License-Identifier: GPL-3.0-or-later
 package main
 /*
