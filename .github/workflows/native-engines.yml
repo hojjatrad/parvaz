@@ -39,6 +39,8 @@ jobs:
           target: default
           disable-animations: true
           script: ./gradlew -p tools/android-probe -PnativeProbe --no-daemon --max-workers=2 connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.parvaz.probe.NativeEngineTest
+      - name: Preserve Android 10 native probe results
+        run: cp -a tools/android-probe/build/outputs/androidTest-results .cache/native-results-29
       - uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -52,9 +54,9 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import xml.etree.ElementTree as ET
-          for file in Path('tools/android-probe/build/outputs/androidTest-results').rglob('logcat*.txt'):
+          for file in list(Path('tools/android-probe/build/outputs/androidTest-results').rglob('logcat*.txt'))+list(Path('.cache/native-results-29').rglob('logcat*.txt')):
               for line in file.read_text(errors='replace').splitlines():
                   if 'I ParvazProbe:' in line:print('::notice title=NATIVE_ANDROID_PROBE::'+line)
           for file in Path('tools/android-probe/build/outputs/androidTest-results').rglob('*.xml'):
-              for item in ET.parse(file).getroot().iter('failure'):print('::error title=NATIVE_ANDROID_PROBE::'+item.get('message','Assertion failed'))
+              for item in ET.parse(file).getroot().iter('failure'):print('::error title=NATIVE_ANDROID_PROBE::'+(item.get('message') or item.text or 'Assertion failed')[:1800].replace('%','%25').replace('\n','%0A'))
           PY

@@ -70,6 +70,7 @@ public final class BackupManager {
     /* renamed from: b */
     public static String export(Context context) throws JSONException {
         ProfileStore f = ProfileStore.f(context);
+        synchronized(f) {
         Prefs prefs = new Prefs(context);
         JSONObject jSONObject = new JSONObject();
         jSONObject.put("format", 2);
@@ -140,6 +141,10 @@ public final class BackupManager {
         }
         jSONObject2.put("per_app_list", jSONArray4);
         jSONObject.put("settings", jSONObject2);
-        return jSONObject.toString(2);
+        if(jSONArray.length()>5000||jSONArray2.length()>1000)throw new IllegalArgumentException("Backup count limit");
+        String result=jSONObject.toString(2);
+        if(result.getBytes(java.nio.charset.StandardCharsets.UTF_8).length>16*1024*1024)throw new IllegalArgumentException("Backup size limit");
+        return result;
+        }
     }
 }

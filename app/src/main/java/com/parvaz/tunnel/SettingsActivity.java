@@ -334,24 +334,7 @@ public class SettingsActivity extends AppCompatActivity {
         @Override // androidx.activity.result.ActivityResultCallback
         /* renamed from: a */
         public final void onActivityResult(Uri uri) {
-            Uri uri2 = uri;
-            SettingsActivity settingsActivity = SettingsActivity.this;
-            settingsActivity.getClass();
-            if (uri2 != null) {
-                try {
-                    OutputStream openOutputStream = settingsActivity.getContentResolver().openOutputStream(uri2);
-                    if (openOutputStream != null) {
-                        openOutputStream.write(settingsActivity.f6163c.getBytes(StandardCharsets.UTF_8));
-                        openOutputStream.flush();
-                        Snackbar.make(settingsActivity.findViewById(R.id.save), settingsActivity.getString(R.string.backup_saved, uri2.getLastPathSegment()), 0).show();
-                        openOutputStream.close();
-                        return;
-                    }
-                    throw new IllegalStateException("stream");
-                } catch (Exception e) {
-                    Snackbar.make(settingsActivity.findViewById(R.id.save), settingsActivity.getString(R.string.backup_failed, String.valueOf(e.getMessage())), 0).show();
-                }
-            }
+            saveBackupFile(uri);
         }
     }
 
@@ -659,31 +642,16 @@ public class SettingsActivity extends AppCompatActivity {
                 .setPositiveButton(android.R.string.ok, new android.content.DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(android.content.DialogInterface d, int w) {
-                        char[] pw = null;
-                        try {
-                            String typed = input.getText() == null ? "" : input.getText().toString();
-                            String json = BackupManager.export(SettingsActivity.this);
-                            String suffix;
-                            if (typed.length() == 0) {
-                                SettingsActivity.this.f6163c = json;
-                                suffix = ".json";
-                            } else {
-                                pw = typed.toCharArray();
-                                SettingsActivity.this.f6163c =
-                                        com.parvaz.tunnel.store.BackupCrypto.encrypt(json, pw);
-                                suffix = ".pvz";
-                            }
-                            SettingsActivity.this.z.launch("parvaz-backup-"
-                                    + new SimpleDateFormat("yyyyMMdd-HHmm", Locale.US)
-                                            .format(new Date()) + suffix);
-                        } catch (Exception e2) {
-                            Snackbar.make(view, getString(R.string.backup_failed,
-                                    String.valueOf(e2.getMessage())), 0).show();
-                        } finally {
-                            if (pw != null) {
-                                java.util.Arrays.fill(pw, '\0');
-                            }
-                        }
+                        final char[] password=(input.getText()==null?"":input.getText().toString()).toCharArray();input.setText("");
+                        if(!beginBackup()){java.util.Arrays.fill(password,'\0');return;}
+                        new Thread(()->{
+                            try{
+                                String json=BackupManager.export(getApplicationContext());
+                                String payload=password.length==0?json:com.parvaz.tunnel.store.BackupCrypto.encrypt(json,password);
+                                String suffix=password.length==0?".json":".pvz";
+                                finishBackup(()->{f6163c=payload;z.launch("parvaz-backup-"+new SimpleDateFormat("yyyyMMdd-HHmm",Locale.US).format(new Date())+suffix);});
+                            }catch(Exception error){backupFailed();}finally{java.util.Arrays.fill(password,'\0');}
+                        },"parvaz-backup-export").start();
                     }
                 })
                 .setNegativeButton(android.R.string.cancel, null)
@@ -692,7 +660,7 @@ public class SettingsActivity extends AppCompatActivity {
 
     /**
      * Restores a backup that turned out to be encrypted, prompting for the password and
-     * reporting a wrong one distinctly from a corrupt file (GCM tells us which).
+     * reporting authentication failure without claiming to distinguish a wrong password from corruption.
      */
     public void restoreEncrypted(final String envelope) {
         final android.widget.EditText input = new android.widget.EditText(this);
@@ -712,30 +680,50 @@ public class SettingsActivity extends AppCompatActivity {
                 .setPositiveButton(android.R.string.ok, new android.content.DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(android.content.DialogInterface d, int w) {
-                        char[] pw = null;
-                        try {
-                            String typed = input.getText() == null ? "" : input.getText().toString();
-                            pw = typed.toCharArray();
-                            String json = com.parvaz.tunnel.store.BackupCrypto.decrypt(envelope, pw);
-                            BackupManager.a res = BackupManager.a(SettingsActivity.this, json);
-                            Snackbar.make(findViewById(R.id.save),
-                                    getString(R.string.backup_restored,
-                                            Integer.valueOf(res.f341a), Integer.valueOf(res.f342b)),
-                                    0).show();
-                        } catch (javax.crypto.AEADBadTagException bad) {
-                            Snackbar.make(findViewById(R.id.save), R.string.backup_bad_password, 0).show();
-                        } catch (Exception e2) {
-                            Snackbar.make(findViewById(R.id.save), getString(R.string.restore_failed,
-                                    String.valueOf(e2.getMessage())), 0).show();
-                        } finally {
-                            if (pw != null) {
-                                java.util.Arrays.fill(pw, '\0');
-                            }
-                        }
+                        final char[] password=(input.getText()==null?"":input.getText().toString()).toCharArray();input.setText("");
+                        if(!beginBackup()){java.util.Arrays.fill(password,'\0');return;}
+                        new Thread(()->{
+                            try{restoreBackupText(com.parvaz.tunnel.store.BackupCrypto.decrypt(envelope,password));}
+                            catch(javax.crypto.AEADBadTagException bad){finishBackup(()->Snackbar.make(findViewById(R.id.save),R.string.backup_bad_password,0).show());}
+                            catch(Exception error){backupFailed();}finally{java.util.Arrays.fill(password,'\0');}
+                        },"parvaz-backup-decrypt").start();
                     }
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
+    }
+
+    private static final java.util.concurrent.atomic.AtomicBoolean BACKUP_BUSY=new java.util.concurrent.atomic.AtomicBoolean();
+    boolean beginBackup(){
+        if(BACKUP_BUSY.compareAndSet(false,true))return true;
+        Snackbar.make(findViewById(R.id.save),R.string.backup_busy,0).show();return false;
+    }
+    private void finishBackup(Runnable action){runOnUiThread(()->{BACKUP_BUSY.set(false);if(!isFinishing()&&!isDestroyed())action.run();});}
+    private void backupFailed(){finishBackup(()->Snackbar.make(findViewById(R.id.save),R.string.backup_operation_failed,0).show());}
+    private void restoreBackupText(String json)throws Exception {
+        BackupManager.a result=BackupManager.a(getApplicationContext(),json);
+        finishBackup(()->{android.widget.Toast.makeText(this,getString(R.string.backup_restored,result.f341a,result.f342b),android.widget.Toast.LENGTH_LONG).show();recreate();});
+    }
+    void readBackupFile(Uri uri){
+        if(!beginBackup())return;
+        new Thread(()->{try{
+            if(uri==null||!"content".equalsIgnoreCase(uri.getScheme()))throw new java.io.IOException("Use document picker");
+            String text;try(java.io.InputStream in=getContentResolver().openInputStream(uri)){
+                if(in==null)throw new java.io.IOException("Unavailable backup");text=com.parvaz.tunnel.store.BackupInput.read(in);
+            }
+            if(com.parvaz.tunnel.store.BackupCrypto.isEncrypted(text))finishBackup(()->restoreEncrypted(text));else restoreBackupText(text);
+        }catch(Exception error){backupFailed();}},"parvaz-backup-read").start();
+    }
+    private void saveBackupFile(Uri uri){
+        String payload=f6163c;f6163c="";
+        if(uri==null)return;
+        if(payload==null||payload.isEmpty()){Snackbar.make(findViewById(R.id.save),R.string.backup_operation_failed,0).show();return;}
+        if(!beginBackup())return;
+        new Thread(()->{try(java.io.OutputStream out=getContentResolver().openOutputStream(uri,"wt")){
+            if(out==null)throw new java.io.IOException("Unavailable destination");out.write(payload.getBytes(StandardCharsets.UTF_8));out.flush();
+        }catch(Exception error){backupFailed();return;}
+            finishBackup(()->Snackbar.make(findViewById(R.id.save),getString(R.string.backup_saved,uri.getLastPathSegment()),0).show());
+        },"parvaz-backup-write").start();
     }
 
     public void lambda$onCreate$22(View view) {

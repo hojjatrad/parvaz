@@ -35,15 +35,21 @@ try:
  with tempfile.TemporaryDirectory() as temp:
   temp=Path(temp);cert=temp/'cert.pem';key=temp/'key.pem'
   subprocess.run(['openssl','req','-x509','-newkey','rsa:2048','-nodes','-keyout',str(key),'-out',str(cert),'-days','1','-subj','/CN=localhost','-addext','subjectAltName=DNS:localhost,IP:127.0.0.1'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True)
-  for protocol in ['hysteria2','tuic']:
-   remote,local=port(socket.SOCK_DGRAM),port();user={'password':'integration-only-secret'}
+  for protocol in ['hysteria2','tuic','full-clash']:
+   remote,local=port(socket.SOCK_STREAM if protocol=='full-clash' else socket.SOCK_DGRAM),port();user={'password':'integration-only-secret'}
    if protocol=='tuic':user['uuid']='11111111-1111-4111-8111-111111111111'
    conf={'log':{'level':'error'},'inbounds':[{'type':protocol,'listen':'127.0.0.1','listen_port':remote,'users':[user],'tls':{'enabled':True,'alpn':['h3'],'certificate_path':str(cert),'key_path':str(key)}}],'outbounds':[{'type':'direct'}]}
+   if protocol=='full-clash':
+    conf['inbounds'][0]={'type':'socks','listen':'127.0.0.1','listen_port':remote,'users':[dict(user,username='remote-user')]}
    client=json.loads(subprocess.check_output(['java','-cp',CP,'com.parvaz.tunnel.config.FixtureConfig',protocol,str(remote),str(local),str(cert)],cwd=ROOT,text=True))
    processes=[]
    try:
     for name,config in [('server',conf),('client',client)]:
-     file=temp/(protocol+'-'+name+'.json');file.write_text(json.dumps(config));processes.append(subprocess.Popen([str(ENGINE),'run','-c',str(file)],stdout=subprocess.DEVNULL,stderr=subprocess.PIPE))
+     file=temp/(protocol+'-'+name+'.json');file.write_text(json.dumps(config))
+     command=[str(ENGINE),'run','-c',str(file)]
+     if protocol=='full-clash' and name=='client':
+      home=temp/'mihomo-home';home.mkdir();command=[str(ROOT/'.cache/native/host/mihomo'),'-d',str(home),'-f',str(file)]
+     processes.append(subprocess.Popen(command,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE))
     deadline=time.monotonic()+15
     while True:
      if any(p.poll() is not None for p in processes):raise RuntimeError('Fixture core exited: '+str([p.stderr.read().decode() for p in processes if p.poll() is not None]))
@@ -51,6 +57,8 @@ try:
      except OSError:
       if time.monotonic()>deadline:raise
       time.sleep(.1)
+    with socket.create_connection(('127.0.0.1',local),timeout=3) as unauth:
+     unauth.sendall(b'\5\1\0');assert exact(unauth,2)!=b'\5\0','Unauthenticated loopback access'
     with auth(local) as s:
      s.sendall(b'\5\1\0\1'+socket.inet_aton('127.0.0.1')+server.server_port.to_bytes(2,'big'));address(s);s.sendall(b'GET / HTTP/1.0\r\nHost: localhost\r\n\r\n');response=b''
      while True:
@@ -61,6 +69,27 @@ try:
     with auth(local) as control,socket.socket(type=socket.SOCK_DGRAM) as datagram:
      control.sendall(b'\5\3\0\1\0\0\0\0\0\0');relay=address(control);datagram.bind(('127.0.0.1',0));datagram.settimeout(5)
      frame=b'\0\0\0\1'+socket.inet_aton('127.0.0.1')+udp.getsockname()[1].to_bytes(2,'big')+b'PARVAZ-TUNNELED-UDP-OK';datagram.sendto(frame,('127.0.0.1',relay));assert datagram.recv(4096).endswith(b'PARVAZ-TUNNELED-UDP-OK')
+    if protocol!='full-clash':
+     bad=json.loads(json.dumps(client));badport=port();bad['inbounds'][0]['listen_port']=badport;bad['outbounds'][0]['tls']['server_name']='wrong-name.invalid'
+     badfile=temp/(protocol+'-wrong-sni.json');badfile.write_text(json.dumps(bad));badproc=subprocess.Popen([str(ENGINE),'run','-c',str(badfile)],stdout=subprocess.DEVNULL,stderr=subprocess.PIPE);processes.append(badproc)
+     deadline=time.monotonic()+15
+     while True:
+      if badproc.poll() is not None:raise RuntimeError('TLS-negative fixture failed to start')
+      try:control=auth(badport);control.close();break
+      except OSError:
+       if time.monotonic()>deadline:raise
+       time.sleep(.1)
+     rejected=b''
+     try:
+      with auth(badport) as control:
+       control.sendall(b'\5\1\0\1'+socket.inet_aton('127.0.0.1')+server.server_port.to_bytes(2,'big'));address(control);control.sendall(b'GET / HTTP/1.0\r\nHost: localhost\r\n\r\n')
+       while True:
+        chunk=control.recv(4096)
+        if not chunk:break
+        rejected+=chunk
+     except (OSError,TimeoutError,AssertionError):pass
+     assert b'PARVAZ-TUNNELED-TCP-OK' not in rejected,'Invalid TLS server name was accepted'
+     badproc.terminate();badproc.wait(timeout=5)
     processes[0].terminate();processes[0].wait(timeout=5)
     response=b''
     try:
@@ -76,7 +105,7 @@ try:
        response+=chunk
     except (OSError,TimeoutError,AssertionError):pass
     assert b'PARVAZ-TUNNELED-TCP-OK' not in response,'Unexpected direct fallback'
-    print('::notice title=PROTOCOL_SMOKE_OK::'+protocol+' verified TLS + TCP + UDP + no direct fallback',flush=True)
+    print('::notice title=PROTOCOL_SMOKE_OK::'+protocol+(' full routing/group + TCP + UDP + authentication + no direct fallback' if protocol=='full-clash' else 'TLS + wrong-SNI rejection + TCP + UDP + authentication + no direct fallback'),flush=True)
    finally:
     for p in processes:
      p.kill() if p.poll() is None else None

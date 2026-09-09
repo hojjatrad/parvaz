@@ -1127,7 +1127,7 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean importing;
     public final void importText(String text) {
-        if(importing||manualRefreshing){Snackbar.make(findViewById(android.R.id.content),R.string.import_busy,0).show();return;}
+        if(importing||manualRefreshing||readingSharedInput){Snackbar.make(findViewById(android.R.id.content),R.string.import_busy,0).show();return;}
         if(text==null||text.trim().isEmpty()){Snackbar.make(connectButton,R.string.clipboard_empty,0).show();return;}
         importing=true;refresh.setRefreshing(true);
         Snackbar.make(connectButton,R.string.import_detecting,0).show();
@@ -2390,10 +2390,13 @@ public class MainActivity extends AppCompatActivity {
             this.F.launch("android.permission.POST_NOTIFICATIONS");
         }
         sharedDocumentPicker=registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),uri->{if(uri!=null)handleIntent(new Intent(Intent.ACTION_VIEW,uri));});
-        fullDocumentPicker=registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),uri->{if(uri!=null)new Thread(()->{
-            String text="";try{text=com.parvaz.tunnel.core.SharedInput.content(getApplicationContext(),uri);}catch(Exception ignored){}final String input=text;
-            runOnUiThread(()->{if(!isFinishing()&&!isDestroyed())importFullText(input);});
-        },"parvaz-full-file").start();});
+        fullDocumentPicker=registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),uri->{
+            if(uri==null)return;
+            if(importing||manualRefreshing||readingSharedInput){Snackbar.make(connectButton,R.string.import_busy,Snackbar.LENGTH_SHORT).show();return;}
+            readingSharedInput=true;new Thread(()->{
+                String text="";try{text=com.parvaz.tunnel.core.SharedInput.content(getApplicationContext(),uri);}catch(Exception ignored){}final String input=text;
+                runOnUiThread(()->{readingSharedInput=false;if(!isFinishing()&&!isDestroyed())importFullText(input);});
+            },"parvaz-full-file").start();});
         handleIntent(getIntent());
         this.connectButton.postDelayed(new A(), 4000L);
         try {

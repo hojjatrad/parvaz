@@ -67,6 +67,8 @@ jobs:
           python3 tools/native/build.py
       - name: Prepare corresponding source and in-APK dependency notices
         run: python3 tools/native/source_bundle.py
+      - name: Check release lint against reviewed legacy baseline
+        run: ./gradlew --no-daemon --max-workers=2 :app:lintRelease
       - name: Run Android unit tests
         run: ./gradlew --no-daemon --max-workers=2 :app:testDebugUnitTest
       - name: Validate permanent key and build signed APKs with safe diagnostics

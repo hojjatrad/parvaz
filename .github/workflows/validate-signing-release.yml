@@ -41,7 +41,7 @@ jobs:
       - name: Verify corresponding source bundle before publication
         run: python3 tools/native/source_bundle.py
       - name: Check lint against reviewed legacy baseline
-        run: ./gradlew --no-daemon --max-workers=2 :app:lintDebug
+        run: ./gradlew --no-daemon --max-workers=2 :app:lintDebug :app:lintRelease
       - name: Run Android unit tests
         run: |
           if ! ./gradlew --no-daemon --max-workers=2 :app:testDebugUnitTest > .cache/android-unit.log 2>&1; then

@@ -27,35 +27,6 @@ public final class SettingsActivity_28 implements DialogInterface.OnClickListene
 
     @Override // android.content.DialogInterface.OnClickListener
     public final void onClick(DialogInterface dialogInterface, int i) {
-        Uri uri = this.f231a;
-        SettingsActivity settingsActivity = this.f232b;
-        settingsActivity.getClass();
-        try {
-            InputStream openInputStream = settingsActivity.getContentResolver().openInputStream(uri);
-            if (openInputStream != null) {
-                ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-                byte[] bArr = new byte[8192];
-                while (true) {
-                    int read = openInputStream.read(bArr);
-                    if (read <= 0) {
-                        String text = new String(byteArrayOutputStream.toByteArray(), StandardCharsets.UTF_8);
-                        openInputStream.close();
-                        // Encrypted exports need the password before anything can be read.
-                        if (com.parvaz.tunnel.store.BackupCrypto.isEncrypted(text)) {
-                            settingsActivity.restoreEncrypted(text);
-                            return;
-                        }
-                        BackupManager.a a = BackupManager.a(settingsActivity, text);
-                        Snackbar.make(settingsActivity.findViewById(R.id.save), settingsActivity.getString(R.string.backup_restored, Integer.valueOf(a.f341a), Integer.valueOf(a.f342b)), 0).show();
-                        return;
-                    }
-                    byteArrayOutputStream.write(bArr, 0, read);
-                }
-            } else {
-                throw new IllegalStateException("stream");
-            }
-        } catch (Exception e) {
-            Snackbar.make(settingsActivity.findViewById(R.id.save), settingsActivity.getString(R.string.restore_failed, String.valueOf(e.getMessage())), 0).show();
-        }
+        f232b.readBackupFile(f231a);
     }
 }
