@@ -416,7 +416,7 @@
     <string name="refresh_report_help">این پنجره گزارش نتیجه است، نه لزوماً خطا. SUCCESS یعنی موفق، PARTIAL یعنی بخشی موفق و FAILED یعنی شکست. ERROR علت خطا و NOTE نکتهٔ پردازش است. scope=PRIMARY یعنی فقط ساب اصلی. فقط تعداد و کدهای ثابت ثبت می‌شوند. در پاسخ خالی یا ناقص، سرورهای قبلی حفظ می‌شوند. REFRESH_ALREADY_RUNNING یعنی عملیات قبلی در مهلت انتظار تمام نشده است.</string>
     <string name="duplicate_report_help">این پنجره گزارش بررسی است؛ removed_records=0 به‌تنهایی خطا نیست. archived_records تعداد رکوردهای کنارگذاشته‌شده از نمایش است. فقط اتصال‌های معادل یکی می‌شوند. مالکیت ساب‌های مستقل حفظ می‌شود ولی اتصال یکسان یک ردیف دارد. آدرس و پورت یکسان با UUID، رمز، TLS یا تنظیمات انتقال متفاوت، اتصال تکراری نیست. differing_fields فقط نام فیلدهای متفاوت است؛ رمز و آدرس در آن نیست.</string>
     <string name="refresh_busy">ابتدا منتظر پایان افزودن یا به‌روزرسانی فعلی بمانید.</string>
-    <string name="primary_subscription">انتخاب ساب اصلی</string>
+    <string name="primary_subscription">انتخاب ساب</string>
     <string name="primary_count">سرور</string>
     <string name="primary_disconnect">پیش از تغییر ساب اصلی، اتصال خود پرواز را قطع کنید.</string>
     <string name="primary_explanation">فقط سرورهای این ساب نمایش داده و به‌روز می‌شوند. ساب‌های دیگر و کانفیگ‌های دستی بدون حذف دائمی کنار گذاشته می‌شوند و در انتخاب اتصال استفاده نمی‌شوند. پاسخ کامل و معتبر، فهرست قبلی همین ساب را جایگزین و اتصال‌های یکسان را یکی می‌کند. در خطا یا پاسخ ناقص، اطلاعات قبلی حفظ می‌شود. تعداد ثابت یا سالم‌بودن اتصال تضمین نمی‌شود.</string>
@@ -424,4 +424,13 @@
     <string name="primary_clipboard">لینک اصلی از کلیپ‌بورد</string>
     <string name="primary_invalid">ابتدا فقط یک لینک ساب HTTP/HTTPS را کپی کنید.</string>
     <string name="primary_saved">ساب انتخاب شد؛ منابع دیگر حذف نشده‌اند.</string>
+    <string name="manual_group">کانفیگ‌های دستی</string>
+    <string name="source_unavailable">ساب در دسترس نیست</string>
+    <string name="active_group_label">%1$s · %2$d سرور  ▾</string>
+    <string name="manual_no_refresh">این گروه لینک ساب ندارد؛ از بالای فهرست، ساب را انتخاب کنید.</string>
+    <string name="refresh_failed_short">به‌روزرسانی این ساب کامل نشد؛ اطلاعات قبلی حفظ شد.</string>
+    <string name="import_failed_short">افزودن به‌طور کامل انجام نشد.</string>
+    <string name="import_done_short">افزوده شد.</string>
+    <string name="operation_done_short">انجام شد.</string>
+    <string name="operation_failed_short">عملیات انجام نشد.</string>
 </resources>

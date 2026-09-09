@@ -282,6 +282,7 @@ public class TunnelVpnService extends VpnService {
             try {
                 Prefs prefs = new Prefs(tunnelVpnService);
                 tunnelVpnService.f = prefs;
+                ProfileStore.f(tunnelVpnService).ensureActiveSubscription(prefs.f343a);
                 Profile byId = ProfileStore.f(tunnelVpnService).getActiveById(prefs.f343a.getString("selected_profile", ""));
                 tunnelVpnService.profile = byId;
                 if (byId == null) {

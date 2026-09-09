@@ -70,7 +70,7 @@ public class SmartImportRegressionTest {
             Profile owned=null;for(Object o:store.e()){Profile p=(Profile)o;if(!p.subscriptionId.isEmpty())owned=p;}
             assertNotNull(owned);prefs.edit().putString("favorites",owned.id).apply();
             activity.favOnly=true;activity.reload();
-            assertEquals(1,activity.z.getItemCount());assertTrue(activity.z.visibleFavorites.contains(manual.id));
+            assertEquals(1,activity.z.getItemCount());assertTrue(activity.z.visibleFavorites.contains(owned.id));
             activity.renderQuota();assertEquals("43%",activity.quotaPercentText.getText().toString());
             Subscription sub=(Subscription)store.f().get(0);sub.url="";store.j(sub);activity.renderQuota();
             assertEquals("0%",activity.quotaPercentText.getText().toString());
@@ -90,7 +90,7 @@ public class SmartImportRegressionTest {
             assertEquals(2,store.e().size());assertEquals(2,activity.z.getItemCount());
             String report=prefs.getString("last_duplicate_report","");assertTrue(report.contains("removed_records=1"));assertTrue(report.contains("uuid"));
             assertFalse(report.contains(a.uuid));assertFalse(report.contains(a.address));
-            assertTrue(org.robolectric.shadows.ShadowDialog.getLatestDialog().isShowing());
+            assertFalse(org.robolectric.shadows.ShadowDialog.getLatestDialog().isShowing());
         }finally{controller.destroy();ProfileStore.d=null;}
     }
     @Test public void mainSourcePickerRestrictsRowsWithoutDeletingOtherAccounts()throws Exception {
@@ -103,16 +103,15 @@ public class SmartImportRegressionTest {
         Profile archived=(Profile)store.e().get(0);prefs.edit().putString("selected_profile",archived.id).commit();ProfileStore.d=store;
         org.robolectric.android.controller.ActivityController<com.parvaz.tunnel.MainActivity> controller=org.robolectric.Robolectric.buildActivity(com.parvaz.tunnel.MainActivity.class).create();
         try {
-            com.parvaz.tunnel.MainActivity activity=controller.get();activity.reload();assertEquals(98,activity.z.getItemCount());
-            activity.new F().onClick(null,11);
+            com.parvaz.tunnel.MainActivity activity=controller.get();activity.reload();assertEquals(14,activity.z.getItemCount());
+            activity.findViewById(com.parvaz.tunnel.R.id.source_group).performClick();
             androidx.appcompat.app.AlertDialog picker=(androidx.appcompat.app.AlertDialog)org.robolectric.shadows.ShadowDialog.getLatestDialog();
             picker.getListView().performItemClick(null,1,1);org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
-            ((androidx.appcompat.app.AlertDialog)org.robolectric.shadows.ShadowDialog.getLatestDialog()).getButton(android.content.DialogInterface.BUTTON_POSITIVE).performClick();
-            org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
             assertEquals(14,activity.z.getItemCount());assertEquals(98,store.e().size());assertNull(store.getActiveById(archived.id));
             assertNotNull(store.getActiveById(prefs.getString("selected_profile","")));
             assertEquals(14,new ProfileStore(context).activeProfiles().size());
-            activity.applyPrimarySubscription("",false);assertEquals(98,activity.z.getItemCount());
+            activity.applyPrimarySubscription("",false);assertEquals(0,activity.z.getItemCount());
+            activity.new m().onRefresh();assertFalse(activity.refresh.isRefreshing());assertFalse(picker.isShowing());
         }finally{controller.destroy();ProfileStore.d=null;}
     }
     @Test public void updateVersionAndMetadataGuards(){

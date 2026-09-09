@@ -62,6 +62,32 @@ public class RefreshDedupAudit {
         check("Failure is prioritized for existing import consumers",partial.codes.get(0).equals("NETWORK_FAILURE"));
         check("Per-source report is credential and endpoint free",!report.contains("private-token")&&!report.contains(".invalid")&&!report.contains("99999999"));
     }
+    static void activeGroupScenarios()throws Exception {
+        PanelRefreshTest.Setup s=new PanelRefreshTest.Setup();
+        s.sub("old-a","https://old-a.invalid/sub");s.sub("old-b","https://old-b.invalid/sub");
+        s.add(PanelRefreshTest.profile("old-a","a"));s.add(PanelRefreshTest.profile("old-b","b"));
+        String current=SmartImportAudit.raw("current.invalid");
+        SmartImport.Result imported=SmartImport.run(s.store,s.prefs,"v2rayng://install-config?url=https%3A%2F%2Fcurrent.invalid%2Fsub",()->false,url->{check("Wrapper resolves exactly the new source",url.equals("https://current.invalid/sub"));return new SubscriptionUpdater.b("["+current+","+current+"]",null);});
+        check("Normal import automatically chooses only its source",imported.failed==0&&s.store.activeProfiles().size()==1&&s.store.e().size()==3);
+        String active=s.store.primarySubscription();int[] requests={0};
+        SubscriptionRefresh.Result refreshed=SubscriptionRefresh.runActive(s.store,s.prefs,()->false,url->{requests[0]++;check("Swipe engine fetches no archived URL",url.equals("https://current.invalid/sub"));return new SubscriptionUpdater.b(current,null);},true);
+        check("Active refresh is one source, not a bulk refresh",requests[0]==1&&refreshed.updated==1&&s.store.e().size()==3);
+        SmartImport.run(s.store,s.prefs,"https://current.invalid/sub",()->false,url->new SubscriptionUpdater.b(current,null));
+        check("Repeated ordinary paste keeps one source and same active ownership",s.store.f().size()==3&&s.store.primarySubscription().equals(active)&&s.store.activeProfiles().size()==1);
+        s.store.setPrimarySubscription("");s.prefs.edit().putString("selected_profile",s.store.activeProfiles().get(0).id).apply();
+        s.store.ensureActiveSubscription(s.prefs);
+        check("Old combined view migrates to selected connection owner",s.store.primarySubscription().equals("old-a"));
+        PanelRefreshTest.Setup ambiguous=new PanelRefreshTest.Setup();ambiguous.sub("a","https://a.invalid/sub");ambiguous.sub("b","https://b.invalid/sub");
+        SubscriptionRefresh.Result none=SubscriptionRefresh.runActive(ambiguous.store,ambiguous.prefs,()->false,url->{throw new AssertionError("must not guess a source");},false);
+        check("No selected owner cannot trigger all-source download",none.requested==0&&none.failed==1&&ambiguous.store.primarySubscription().equals(ProfileStore.MANUAL_GROUP));
+        SmartImport.run(s.store,s.prefs,SmartImportAudit.raw("manual.invalid"),()->false,url->{throw new AssertionError();});
+        check("Single configuration enters manual group instead of another subscription",s.store.primarySubscription().equals(ProfileStore.MANUAL_GROUP)&&s.store.activeProfiles().size()==1);
+        SubscriptionRefresh.Result manual=SubscriptionRefresh.runActive(s.store,s.prefs,()->false,url->{throw new AssertionError();},true);
+        check("Manual group never refreshes archived subscriptions",manual.codes.contains("NO_ACTIVE_SUBSCRIPTION")&&manual.requested==0);
+        s.store.setPrimarySubscription(active);
+        SmartImport.run(s.store,s.prefs,"https://new-failed.invalid/sub",()->false,url->{throw new java.io.IOException();});
+        check("Failed new subscription cannot display another group's servers",s.store.activeProfiles().isEmpty()&&s.store.e().size()==4);
+    }
     public static void main(String[] args)throws Exception {
         Profile a=profile(),b=ProfileIdentity.copy(a);b.id="two";b.remark="second";b.network="";b.security="none";b.encryption="";b.wgMtu=1280;
         check("Explicit defaults collapse across imported records",key(a).equals(key(b)));
@@ -107,6 +133,7 @@ public class RefreshDedupAudit {
             String safe=SubscriptionRefresh.safeReport(done);check("Refresh report identifies operation and excludes source",safe.contains("OPERATION_REFRESH")&&!safe.contains("private-token")&&!safe.contains("one.invalid"));
         }finally{release.countDown();pool.shutdownNow();}
         primaryScenarios();
+        activeGroupScenarios();
         System.out.println("REFRESH/DEDUP TOTAL: "+count+" assertions passed.");
     }
 }

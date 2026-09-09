@@ -14,8 +14,8 @@ android {
         applicationId "com.parvaz.tunnel"
         minSdk 24
         targetSdk 34
-        versionCode 25
-        versionName "1.24"
+        versionCode 26
+        versionName "1.25"
         resValue "string", "bundled_core_version", new groovy.json.JsonSlurper().parse(rootProject.file('tools/release/core-lock.json')).tag
         vectorDrawables.useSupportLibrary = true
 

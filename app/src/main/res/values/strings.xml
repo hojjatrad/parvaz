@@ -435,7 +435,7 @@ Tap + to paste a config link or add a subscription."</string>
     <string name="refresh_report_help">This is the refresh result, not the clipboard import report. It contains counts and fixed codes only. Old servers are retained when a response is empty or partial. REFRESH_ALREADY_RUNNING means another refresh did not finish within the wait period.</string>
     <string name="duplicate_report_help">Only equivalent connections are merged. Independent subscription copies remain stored but appear once. Same address/port with different UUID, password, TLS or transport options is not a duplicate. differing_fields lists field names only; it contains no passwords or addresses.</string>
     <string name="refresh_busy">Wait for the current import or refresh to finish.</string>
-    <string name="primary_subscription">Choose main subscription</string>
+    <string name="primary_subscription">Subscription group</string>
     <string name="primary_count">servers</string>
     <string name="primary_disconnect">Disconnect Parvaz before changing the main subscription.</string>
     <string name="primary_explanation">Only this subscription will be displayed and refreshed. Other subscriptions and manual profiles stay stored but are excluded from connection selection. A complete valid response replaces this source’s old list and deduplicates identical connections. Invalid or partial responses retain existing data. No fixed server count or connectivity guarantee is imposed.</string>
@@ -443,4 +443,13 @@ Tap + to paste a config link or add a subscription."</string>
     <string name="primary_clipboard">Main link from clipboard</string>
     <string name="primary_invalid">Copy exactly one HTTP/HTTPS subscription link first.</string>
     <string name="primary_saved">Source selected. Other stored sources were not deleted.</string>
+    <string name="manual_group">Manual configurations</string>
+    <string name="source_unavailable">Subscription unavailable</string>
+    <string name="active_group_label">%1$s · %2$d servers  ▾</string>
+    <string name="manual_no_refresh">This group has no subscription link. Select a subscription above.</string>
+    <string name="refresh_failed_short">Could not fully update this subscription. Previous data was kept.</string>
+    <string name="import_failed_short">Import did not fully complete.</string>
+    <string name="import_done_short">Added.</string>
+    <string name="operation_done_short">Done.</string>
+    <string name="operation_failed_short">Could not complete the operation.</string>
 </resources>

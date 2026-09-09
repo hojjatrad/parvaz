@@ -31,14 +31,19 @@ public final class SmartImport {
             if(!input.configs.trim().isEmpty()) {
                 result.parsed=LinkParser.parseDetailed(input.configs);
                 result.recognized+=result.parsed.profiles.size();
-                if(!result.parsed.fatal)result.added+=store.a(result.parsed.profiles,"");
+                if(!result.parsed.fatal){
+                    result.added+=store.a(result.parsed.profiles,"");
+                    if(!result.parsed.profiles.isEmpty()&&input.subscriptions.isEmpty())store.setPrimarySubscription(ProfileStore.MANUAL_GROUP);
+                }
                 if(result.parsed.profiles.isEmpty()){result.failed++;result.codes.add("NO_LOCAL_CONFIGURATIONS");}
                 result.codes.addAll(result.parsed.issues.subList(0,Math.min(8,result.parsed.issues.size())));
             }
+            boolean activate=true;
             for(String url:input.subscriptions) {
                 if(cancelled.getAsBoolean())break;
                 result.requested++;
                 Subscription sub=store.addOrGetSubscription(url);
+                if(activate){store.setPrimarySubscription(sub.id);activate=false;}
                 SubscriptionRefresh.Result refresh=SubscriptionRefresh.runOne(store,prefs,cancelled,fetcher,sub.id);
                 result.added+=refresh.added;result.subscriptions+=refresh.updated;result.failed+=refresh.failed;
                 result.fetched+=refresh.fetched;result.recognized+=refresh.recognized;

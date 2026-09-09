@@ -465,7 +465,7 @@ public class MainActivity extends AppCompatActivity {
             if(isFinishing()||isDestroyed())return;
             if(userInitiated)refresh.setRefreshing(false);
             if(!importing)MainActivity.this.reload();
-            if(userInitiated)showStoredReport("last_refresh_report",R.string.last_refresh_report,R.string.refresh_report_help);
+            if(userInitiated&&result.failed>0)Snackbar.make(findViewById(android.R.id.content),R.string.refresh_failed_short,Snackbar.LENGTH_SHORT).show();
         }
 
         @Override // com.parvaz.tunnel.core.SubscriptionUpdater.a
@@ -892,8 +892,7 @@ public class MainActivity extends AppCompatActivity {
 
         @Override // androidx.swiperefreshlayout.widget.SwipeRefreshLayout.OnRefreshListener
         public void onRefresh() {
-            if(!MainActivity.this.b0.f().isEmpty())MainActivity.this.updateSubscriptions();
-            else MainActivity.this.pingAll();
+            MainActivity.this.updateSubscriptions();
         }
     }
 
@@ -1093,7 +1092,7 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean importing;
     public final void importText(String text) {
-        if(importing){Snackbar.make(connectButton,R.string.import_busy,0).show();return;}
+        if(importing||manualRefreshing){Snackbar.make(findViewById(android.R.id.content),R.string.import_busy,0).show();return;}
         if(text==null||text.trim().isEmpty()){Snackbar.make(connectButton,R.string.clipboard_empty,0).show();return;}
         importing=true;refresh.setRefreshing(true);
         Snackbar.make(connectButton,R.string.import_detecting,0).show();
@@ -1111,9 +1110,10 @@ public class MainActivity extends AppCompatActivity {
                 String report=com.parvaz.tunnel.core.SmartImport.safeReport(result,com.parvaz.tunnel.core.UpdateChecker.currentVersion(this))
                     +"\nSDK_"+android.os.Build.VERSION.SDK_INT+"; PARVAZ_RUNNING_"+com.parvaz.tunnel.core.TunnelVpnService.serviceRunning;
                 L.f343a.edit().putString("last_import_report",report).apply();
-                if(result.recognized>0){selectTab(1);Snackbar.make(findViewById(android.R.id.content),summary,Snackbar.LENGTH_LONG).show();}
-                if(result.failed>0||result.recognized==0||result.parsed.rejected>0)showLastImportReport();
-                else if(result.parsed.warnings>0)showImportSummary(result.parsed);
+                if(result.recognized>0)selectTab(1);
+                if(result.failed>0||result.recognized==0||result.parsed.rejected>0)
+                    Snackbar.make(findViewById(android.R.id.content),R.string.import_failed_short,Snackbar.LENGTH_SHORT).show();
+                else Snackbar.make(findViewById(android.R.id.content),R.string.import_done_short,Snackbar.LENGTH_SHORT).show();
             });
         },"parvaz-smart-import").start();
     }
@@ -1134,34 +1134,33 @@ public class MainActivity extends AppCompatActivity {
         if(TunnelVpnService.serviceRunning||state==1){new MaterialAlertDialogBuilder(this).setMessage(R.string.primary_disconnect).setPositiveButton(R.string.ok,null).show();return;}
         java.util.ArrayList<Subscription> subs=b0.f();String[] names=new String[subs.size()];
         for(int i=0;i<subs.size();i++){Subscription sub=subs.get(i);names[i]=(i+1)+". "+sub.name+" — "+sub.count+" "+getString(R.string.primary_count);}
-        new MaterialAlertDialogBuilder(this).setTitle(R.string.primary_subscription).setItems(names,(dialog,which)->{
-            Subscription sub=subs.get(which);
-            new MaterialAlertDialogBuilder(this).setTitle(sub.name).setMessage(R.string.primary_explanation)
-                .setNegativeButton(R.string.cancel,null).setPositiveButton(R.string.ok,(d,w)->applyPrimarySubscription(sub.id,refreshAfter)).show();
-        }).setNegativeButton(R.string.cancel,null)
-          .setPositiveButton(R.string.primary_all,(d,w)->applyPrimarySubscription("",refreshAfter))
-          .setNeutralButton(R.string.primary_clipboard,(d,w)->{
-              ClipboardManager clipboard=(ClipboardManager)getSystemService("clipboard");
-              try{
-                  if(clipboard==null||!clipboard.hasPrimaryClip())throw new IllegalArgumentException();
-                  String text=clipboard.getPrimaryClip().getItemAt(0).coerceToText(this).toString();
-                  com.parvaz.tunnel.config.ImportInput input=com.parvaz.tunnel.config.ImportInput.parse(text);
-                  if(input.subscriptions.size()!=1||!input.configs.trim().isEmpty())throw new IllegalArgumentException();
-                  final String url=input.subscriptions.iterator().next();
-                  new MaterialAlertDialogBuilder(this).setTitle(R.string.primary_subscription).setMessage(R.string.primary_explanation)
-                      .setNegativeButton(R.string.cancel,null).setPositiveButton(R.string.ok,(confirm,button)->{
-                          try{Subscription sub=b0.addOrGetSubscription(url);applyPrimarySubscription(sub.id,true);}
-                          catch(Exception error){Snackbar.make(findViewById(android.R.id.content),R.string.primary_invalid,Snackbar.LENGTH_LONG).show();}
-                      }).show();
-              }catch(Exception error){Snackbar.make(findViewById(android.R.id.content),R.string.primary_invalid,Snackbar.LENGTH_LONG).show();}
-          }).show();
+        new MaterialAlertDialogBuilder(this).setTitle(R.string.primary_subscription)
+            .setItems(names,(dialog,which)->applyPrimarySubscription(subs.get(which).id,refreshAfter))
+            .setNegativeButton(R.string.cancel,null)
+            .setPositiveButton(R.string.manual_group,(d,w)->applyPrimarySubscription(ProfileStore.MANUAL_GROUP,false))
+            .setNeutralButton(R.string.add_from_clipboard,(d,w)->{
+                ClipboardManager clipboard=(ClipboardManager)getSystemService("clipboard");
+                if(clipboard!=null&&clipboard.hasPrimaryClip())importText(clipboard.getPrimaryClip().getItemAt(0).coerceToText(this).toString());
+                else Snackbar.make(findViewById(android.R.id.content),R.string.clipboard_empty,Snackbar.LENGTH_SHORT).show();
+            }).show();
+    }
+    public final void renderSourceGroup() {
+        TextView label=findViewById(R.id.source_group);if(label==null)return;
+        String id=b0.primarySubscription(),name=getString(R.string.manual_group);
+        if(!ProfileStore.MANUAL_GROUP.equals(id)){
+            name=getString(R.string.source_unavailable);
+            for(Object o:b0.f()){Subscription sub=(Subscription)o;if(id.equals(sub.id)){name=sub.name;break;}}
+        }
+        int count=com.parvaz.tunnel.store.ProfileDuplicates.visible(b0.activeProfiles(),L.f343a.getString("selected_profile",""),L.getFavorites()).size();
+        label.setText(getString(R.string.active_group_label,name,count));
     }
     public final void applyPrimarySubscription(String id,boolean refreshAfter) {
         if(importing||manualRefreshing||TunnelVpnService.serviceRunning||state==1)return;
+        if(id.isEmpty())id=ProfileStore.MANUAL_GROUP;
         try{b0.setPrimarySubscription(id);}catch(IllegalArgumentException error){showPrimarySubscriptionPicker(refreshAfter);return;}
         query="";favOnly=false;searchInput.setText("");renderFavFilter();reload();
         if(refreshAfter)updateSubscriptions();
-        else Snackbar.make(findViewById(android.R.id.content),R.string.primary_saved,Snackbar.LENGTH_LONG).show();
+
     }
 
     public final void showStoredReport(String key,int title,int help) {
@@ -1174,7 +1173,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void removeDuplicateConnections() {
-        if(!b0.scopeConfigured()&&b0.f().size()>1){showPrimarySubscriptionPicker(false);return;}
         if(importing||manualRefreshing){Snackbar.make(findViewById(android.R.id.content),R.string.refresh_busy,Snackbar.LENGTH_LONG).show();return;}
         new MaterialAlertDialogBuilder(this).setTitle(R.string.remove_duplicates)
             .setMessage(R.string.remove_duplicates_confirm).setNegativeButton(R.string.cancel,null)
@@ -1185,10 +1183,10 @@ public class MainActivity extends AppCompatActivity {
                         +com.parvaz.tunnel.store.DuplicateReport.safe(b0.activeProfiles(),count)
                         +"\nscope="+(b0.primarySubscription().isEmpty()?"ALL":"PRIMARY")+"; total_stored_records="+b0.e().size()+"; archived_records="+(b0.e().size()-b0.activeProfiles().size());
                     L.f343a.edit().putString("last_duplicate_report",report).apply();
-                    showStoredReport("last_duplicate_report",R.string.last_duplicate_report,R.string.duplicate_report_help);
+                    Snackbar.make(findViewById(android.R.id.content),R.string.operation_done_short,Snackbar.LENGTH_SHORT).show();
                 }catch(Exception e){
                     L.f343a.edit().putString("last_duplicate_report","OPERATION_DUPLICATES\nstatus=FAILED\nDUPLICATE_CLEANUP_FAILED").apply();
-                    showStoredReport("last_duplicate_report",R.string.last_duplicate_report,R.string.duplicate_report_help);
+                    Snackbar.make(findViewById(android.R.id.content),R.string.operation_failed_short,Snackbar.LENGTH_SHORT).show();
                 }
             }).show();
     }
@@ -1378,6 +1376,7 @@ public class MainActivity extends AppCompatActivity {
 
     /* renamed from: H */
     public final void reload() {
+        b0.ensureActiveSubscription(L.f343a);renderSourceGroup();
         int i;
         if(b0.getActiveById(L.f343a.getString("selected_profile",""))==null){
             java.util.List<Profile> active=b0.activeProfiles();
@@ -1433,7 +1432,7 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         Profile currentProfile=b0.getActiveById(L.f343a.getString("selected_profile",""));
-        Subscription subscription=com.parvaz.tunnel.core.QuotaState.source(currentProfile,b0.f(),b0.activeProfiles());
+        Subscription subscription=com.parvaz.tunnel.core.QuotaState.source(currentProfile,b0.f(),b0.e());
         boolean fromServer=com.parvaz.tunnel.core.QuotaState.known(subscription);
         long totalBytes=fromServer?subscription.quotaTotal:0L;
         long usedBytes=fromServer?subscription.quotaUsed():0L;
@@ -1522,7 +1521,7 @@ public class MainActivity extends AppCompatActivity {
 
     public final void showQuotaDetailsDialog() {
         Profile currentProfile=b0.getActiveById(L.f343a.getString("selected_profile",""));
-        Subscription subscription=com.parvaz.tunnel.core.QuotaState.source(currentProfile,b0.f(),b0.activeProfiles());
+        Subscription subscription=com.parvaz.tunnel.core.QuotaState.source(currentProfile,b0.f(),b0.e());
         boolean fa = "fa".equals(this.L.f343a.getString("lang", "fa")) || "fa".equals(Locale.getDefault().getLanguage());
 
         if (com.parvaz.tunnel.core.QuotaState.known(subscription) && subscription.hasQuota()) {
@@ -1908,7 +1907,7 @@ public class MainActivity extends AppCompatActivity {
         if(isFinishing()||isDestroyed())return;
         long now=System.currentTimeMillis();
         long last=L.f343a.getLong("quota_refresh_attempt",0);
-        if(!importing&&!manualRefreshing&&!b0.f().isEmpty()&&(now-last>=300000L||now<last)) {
+        if(!importing&&!manualRefreshing&&!ProfileStore.MANUAL_GROUP.equals(b0.primarySubscription())&&!b0.f().isEmpty()&&(now-last>=300000L||now<last)) {
             L.f343a.edit().putLong("quota_refresh_attempt",now).apply();
             new Thread(new SubscriptionUpdater_4(new SubscriptionUpdater(MainActivity.this),new J()),"parvaz-quota-refresh").start();
         }
@@ -1916,10 +1915,14 @@ public class MainActivity extends AppCompatActivity {
     }};
 
     public final void updateSubscriptions() {
-        if(!b0.scopeConfigured()&&b0.f().size()>1){refresh.setRefreshing(false);showPrimarySubscriptionPicker(true);return;}
         if(importing||manualRefreshing) {
             if(!manualRefreshing)refresh.setRefreshing(false);
             Snackbar.make(findViewById(android.R.id.content),R.string.refresh_busy,Snackbar.LENGTH_LONG).show();return;
+        }
+        b0.ensureActiveSubscription(L.f343a);
+        if(ProfileStore.MANUAL_GROUP.equals(b0.primarySubscription())){
+            refresh.setRefreshing(false);
+            Snackbar.make(findViewById(android.R.id.content),R.string.manual_no_refresh,Snackbar.LENGTH_SHORT).show();return;
         }
         manualRefreshing=true;refresh.setRefreshing(true);
         L.f343a.edit().putLong("quota_refresh_attempt",System.currentTimeMillis()).apply();
@@ -2259,6 +2262,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         this.L = new Prefs(this);
         this.b0 = ProfileStore.f(this);
+        this.b0.ensureActiveSubscription(this.L.f343a);
         this.K = new PingManager(this);
         this.connectButton = findViewById(R.id.connect_button);
         this.statusText = (TextView) findViewById(R.id.status_text);
@@ -2307,6 +2311,8 @@ public class MainActivity extends AppCompatActivity {
         this.pingAllButton = imageButton;
         imageButton.setOnClickListener(new q());
         ((ImageButton) findViewById(R.id.btn_sort)).setOnClickListener(new r());
+        findViewById(R.id.source_group).setOnClickListener(v->showPrimarySubscriptionPicker(false));
+        renderSourceGroup();
         this.searchInput = (EditText) findViewById(R.id.search_input);
         this.favFilter = (TextView) findViewById(R.id.btn_fav_filter);
         this.ipText = (TextView) findViewById(R.id.ip_text);

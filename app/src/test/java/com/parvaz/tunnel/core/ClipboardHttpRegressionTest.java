@@ -28,14 +28,17 @@ public class ClipboardHttpRegressionTest {
         server=new ServerSocket();server.bind(new InetSocketAddress("127.0.0.1",0));
     }
     @After public void cleanup()throws Exception{if(controller!=null)controller.destroy();if(server!=null)server.close();if(serverThread!=null)serverThread.join(2000);ProfileStore.d=null;}
+    volatile String responseBody;
+    private void assertNoReportDialog(){android.app.Dialog d=org.robolectric.shadows.ShadowDialog.getLatestDialog();assertTrue(d==null||!d.isShowing());}
     private void startServer(String body)throws Exception{
+        responseBody=body;
         serverThread=new Thread(()->{
             while(!server.isClosed())try(Socket client=server.accept()) {
                 client.setSoTimeout(5000);
                 java.io.BufferedReader reader=new java.io.BufferedReader(new java.io.InputStreamReader(client.getInputStream(),java.nio.charset.StandardCharsets.US_ASCII));
                 String line;int size=0;
                 while((line=reader.readLine())!=null&&!line.isEmpty()){size+=line.length();if(size>8192)throw new java.io.IOException("header limit");}
-                byte[] bytes=body.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                byte[] bytes=responseBody.getBytes(java.nio.charset.StandardCharsets.UTF_8);
                 client.getOutputStream().write(("HTTP/1.1 200 OK\r\nContent-Length: "+bytes.length+"\r\nConnection: close\r\n\r\n").getBytes(java.nio.charset.StandardCharsets.US_ASCII));
                 client.getOutputStream().write(bytes);client.getOutputStream().flush();
             }catch(java.io.IOException ignored){if(server.isClosed())return;}
@@ -92,7 +95,7 @@ public class ClipboardHttpRegressionTest {
         String second=refreshAndWait(activity,true);assertTrue(second.contains("updated=1"));assertEquals(1,activity.z.getItemCount());
         assertEquals("previous import",activity.L.f343a.getString("last_import_report",""));
         assertTrue(second.contains("OPERATION_REFRESH"));assertFalse(second.contains("secret-token"));
-        assertTrue(org.robolectric.shadows.ShadowDialog.getLatestDialog().isShowing());
+        assertNoReportDialog();
     }
     @Test public void manualRefreshFailureIsVisibleAndPreservesExistingServer()throws Exception {
         startServer("unrecognized-private-body");
@@ -103,7 +106,7 @@ public class ClipboardHttpRegressionTest {
         String report=refreshAndWait(activity);assertTrue(report.contains("failed=1"));assertTrue(report.contains("NO_VALID_CONFIGURATIONS"));
         assertEquals(1,activity.z.getItemCount());assertFalse(report.contains("private-body"));
     }
-    @Test public void primaryClipboardReplacesOnlyOneSourceAndRefreshesFourteenRows()throws Exception {
+    @Test public void ordinaryClipboardSelectsItsGroupAndSwipeNeverMixesOldSources()throws Exception {
         ProfileStore store=ProfileStore.f(context);
         for(int i=0;i<2;i++){
             com.parvaz.tunnel.model.Subscription sub=store.addOrGetSubscription("https://archived"+i+".invalid/private-token");
@@ -113,24 +116,26 @@ public class ClipboardHttpRegressionTest {
         startServer(body.toString());controller=Robolectric.buildActivity(MainActivity.class).create();MainActivity activity=controller.get();
         ClipboardManager clipboard=(ClipboardManager)activity.getSystemService(Context.CLIPBOARD_SERVICE);
         clipboard.setPrimaryClip(ClipData.newPlainText("main","http://127.0.0.1:"+server.getLocalPort()+"/secret-token"));
-        activity.new F().onClick(null,11);
-        ((androidx.appcompat.app.AlertDialog)org.robolectric.shadows.ShadowDialog.getLatestDialog()).getButton(DialogInterface.BUTTON_NEUTRAL).performClick();
-        Shadows.shadowOf(Looper.getMainLooper()).idle();
-        ((androidx.appcompat.app.AlertDialog)org.robolectric.shadows.ShadowDialog.getLatestDialog()).getButton(DialogInterface.BUTTON_POSITIVE).performClick();
+        activity.new F().onClick(null,1); // Ordinary paste; no hidden primary-source setup.
         long deadline=System.currentTimeMillis()+15000;
-        while(activity.L.f343a.getString("last_refresh_report","").isEmpty()&&System.currentTimeMillis()<deadline){Shadows.shadowOf(Looper.getMainLooper()).idle();Thread.sleep(20);}
+        while(activity.L.f343a.getString("last_import_report","").isEmpty()&&System.currentTimeMillis()<deadline){Shadows.shadowOf(Looper.getMainLooper()).idle();Thread.sleep(20);}
         Shadows.shadowOf(Looper.getMainLooper()).idle();
-        String report=activity.L.f343a.getString("last_refresh_report","");assertTrue(report,report.contains("requested=1"));assertTrue(report,report.contains("updated=1"));
+        String report=activity.L.f343a.getString("last_import_report","");assertTrue(report,report.contains("Requested=1"));assertTrue(report,report.contains("failed=0"));
+        assertNoReportDialog();
+        assertTrue(((android.widget.TextView)activity.findViewById(com.parvaz.tunnel.R.id.source_group)).getText().toString().contains("14"));
         assertEquals(14,activity.z.getItemCount());assertEquals(16,store.e().size());
         assertEquals(14,new ProfileStore(context).activeProfiles().size());
         String again=refreshAndWait(activity,true);assertTrue(again.contains("archived_records=2"));assertEquals(14,activity.z.getItemCount());
-        assertFalse(again.contains("secret-token"));assertFalse(again.contains(".invalid"));
+        assertFalse(again.contains("secret-token"));assertFalse(again.contains(".invalid"));assertNoReportDialog();
+        responseBody="vless://22222222-2222-4222-8222-222222222222@replacement.invalid:443#new";
+        String smaller=refreshAndWait(activity,true);assertTrue(smaller.contains("requested=1"));assertEquals(1,activity.z.getItemCount());assertEquals(3,store.e().size());assertNoReportDialog();
+        activity.new F().onClick(null,9); // Technical details are opt-in only.
+        assertTrue(org.robolectric.shadows.ShadowDialog.getLatestDialog().isShowing());
     }
-    @Test public void zeroResultShowsPersistentSafeFailureReport()throws Exception{
+    @Test public void zeroResultStoresSafeFailureWithoutOpeningReport()throws Exception{
         MainActivity activity=paste("not-a-config-private-body");String report=activity.L.f343a.getString("last_import_report","");
         assertEquals(0,activity.z.getItemCount());assertTrue(report.contains("failed=1"));assertTrue(report.contains("NO_VALID_CONFIGURATIONS"));
         assertFalse(report.contains("secret-token"));assertFalse(report.contains("127.0.0.1"));assertFalse(report.contains("private-body"));
-        assertNotNull(org.robolectric.shadows.ShadowDialog.getLatestDialog());
-        assertTrue(org.robolectric.shadows.ShadowDialog.getLatestDialog().isShowing());
+        assertNoReportDialog();
     }
 }

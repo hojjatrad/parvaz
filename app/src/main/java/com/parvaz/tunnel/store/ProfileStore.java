@@ -147,21 +147,31 @@ public final class ProfileStore {
     }
 
     /** All records remain in e() for backups; connection consumers use this scoped view. */
+    public static final String MANUAL_GROUP="@manual";
+    /** Migrate a combined view using its selected connection, never an unrelated source. */
+    public synchronized void ensureActiveSubscription(SharedPreferences prefs) {
+        if(!primarySubscription().isEmpty())return;
+        Profile selected=getById(prefs.getString("selected_profile",""));
+        String owner=selected==null?"":selected.subscriptionId;
+        for(Object o:f347c){Subscription sub=(Subscription)o;if(!owner.isEmpty()&&owner.equals(sub.id)){setPrimarySubscription(sub.id);return;}}
+        if(selected==null&&f347c.size()==1){Subscription sub=(Subscription)f347c.get(0);if(!sub.id.isEmpty()){setPrimarySubscription(sub.id);return;}}
+        setPrimarySubscription(MANUAL_GROUP);
+    }
     public synchronized String primarySubscription() { return f345a.getString("primary_subscription",""); }
     public synchronized boolean scopeConfigured() { return "1".equals(f345a.getString("primary_choice","")); }
     public synchronized boolean isRefreshSource(String id) { String primary=primarySubscription();return primary.isEmpty()||primary.equals(id); }
     public synchronized ArrayList<Profile> activeProfiles() {
         ArrayList<Profile> result=new ArrayList<>();String primary=primarySubscription();
-        for(Object o:f346b){Profile p=(Profile)o;if(primary.isEmpty()||primary.equals(p.subscriptionId))result.add(p);}
+        for(Object o:f346b){Profile p=(Profile)o;if(primary.isEmpty()||(MANUAL_GROUP.equals(primary)?p.subscriptionId.isEmpty():primary.equals(p.subscriptionId)))result.add(p);}
         return result;
     }
     public synchronized Profile getActiveById(String id) {
-        Profile p=getById(id);return p!=null&&isRefreshSource(p.subscriptionId)?p:null;
+        Profile p=getById(id);String primary=primarySubscription();return p!=null&&(primary.isEmpty()||(MANUAL_GROUP.equals(primary)?p.subscriptionId.isEmpty():primary.equals(p.subscriptionId)))?p:null;
     }
     public synchronized void setPrimarySubscription(String id) {
         if(id==null)throw new IllegalArgumentException("Missing primary source");
         try {
-            ArrayList<Subscription> subs=f();boolean found=id.isEmpty();JSONArray json=new JSONArray();
+            ArrayList<Subscription> subs=f();boolean found=id.isEmpty()||MANUAL_GROUP.equals(id);JSONArray json=new JSONArray();
             for(Subscription sub:subs){if(sub.id.equals(id)){found=true;sub.enabled=true;}json.put(sub.toJson());}
             if(!found)throw new IllegalArgumentException("Unknown primary source");
             f345a.edit().putString("primary_subscription",id).putString("primary_choice","1").putString("subs",json.toString()).apply();

@@ -51,10 +51,10 @@ public final class SubscriptionRefresh {
             +"; retained="+r.retained+"; removed="+r.removed+detail;
     }
     public static Result runManual(Context context,BooleanSupplier cancelled) {
-        return runOne(ProfileStore.f(context),context.getApplicationContext().getSharedPreferences("parvaz_prefs",0),cancelled,SubscriptionUpdater::a,null,true);
+        return runActive(ProfileStore.f(context),context.getApplicationContext().getSharedPreferences("parvaz_prefs",0),cancelled,SubscriptionUpdater::a,true);
     }
     public static Result run(Context context,BooleanSupplier cancelled) {
-        return run(ProfileStore.f(context),context.getApplicationContext().getSharedPreferences("parvaz_prefs",0),cancelled,SubscriptionUpdater::a);
+        return runActive(ProfileStore.f(context),context.getApplicationContext().getSharedPreferences("parvaz_prefs",0),cancelled,SubscriptionUpdater::a,false);
     }
     static Result run(ProfileStore store,SharedPreferences prefs,BooleanSupplier cancelled,Fetcher fetcher) {
         return runOne(store,prefs,cancelled,fetcher,null);
@@ -63,6 +63,13 @@ public final class SubscriptionRefresh {
         return runOne(store,prefs,cancelled,fetcher,targetId,targetId!=null);
     }
     static Result runOne(ProfileStore store,SharedPreferences prefs,BooleanSupplier cancelled,Fetcher fetcher,String targetId,boolean wait) {
+        return runInternal(store,prefs,cancelled,fetcher,targetId,wait,false);
+    }
+    static Result runActive(ProfileStore store,SharedPreferences prefs,BooleanSupplier cancelled,Fetcher fetcher,boolean wait) {
+        store.ensureActiveSubscription(prefs);
+        return runInternal(store,prefs,cancelled,fetcher,null,wait,true);
+    }
+    private static Result runInternal(ProfileStore store,SharedPreferences prefs,BooleanSupplier cancelled,Fetcher fetcher,String targetId,boolean wait,boolean activeOnly) {
         Result result=new Result();result.scope=store.primarySubscription().isEmpty()?"ALL":"PRIMARY";
         boolean acquired;
         try {acquired=wait?LOCK.tryLock(60,java.util.concurrent.TimeUnit.SECONDS):LOCK.tryLock();}
@@ -70,10 +77,17 @@ public final class SubscriptionRefresh {
         if(!acquired){result.fail("REFRESH_ALREADY_RUNNING",true);return result;}
         try {
             store.removeDuplicates(prefs);
+            if(activeOnly){
+                targetId=store.primarySubscription();
+                if(targetId.isEmpty()||ProfileStore.MANUAL_GROUP.equals(targetId)){
+                    result.scope="MANUAL";result.fail("NO_ACTIVE_SUBSCRIPTION",false);return result;
+                }
+            }
             result.scope=store.primarySubscription().isEmpty()?"ALL":"PRIMARY";
             int sourceNumber=0;
             for(Object o:store.f()) {
                 if(stop(cancelled,result))break;
+                if(activeOnly&&!targetId.equals(store.primarySubscription())){result.fail("ACTIVE_SOURCE_CHANGED",false);break;}
                 Subscription listed=(Subscription)o;
                 sourceNumber++;
                 if(targetId!=null&&!targetId.equals(listed.id))continue;
