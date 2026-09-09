@@ -44,6 +44,7 @@ public class ClipboardHttpRegressionTest {
         controller=Robolectric.buildActivity(MainActivity.class).create();MainActivity activity=controller.get();
         ClipboardManager clipboard=(ClipboardManager)activity.getSystemService(Context.CLIPBOARD_SERVICE);
         clipboard.setPrimaryClip(ClipData.newPlainText("sub",urlOverride==null?"http://127.0.0.1:"+server.getLocalPort()+"/secret-token":urlOverride));
+        if(urlOverride!=null)TunnelVpnService.serviceRunning=true;
         activity.new F().onClick(null,1);
         long deadline=System.currentTimeMillis()+15000;
         while(activity.L.f343a.getString("last_import_report","").isEmpty()&&System.currentTimeMillis()<deadline){
@@ -60,7 +61,6 @@ public class ClipboardHttpRegressionTest {
     }
     @Test public void clipboardUsesOwnActiveProxyWithoutOriginDns()throws Exception {
         server.close();server=new ServerSocket();server.setReuseAddress(true);server.bind(new InetSocketAddress("127.0.0.1",10809));
-        TunnelVpnService.serviceRunning=true;
         try {
             MainActivity activity=paste("vless://11111111-1111-4111-8111-111111111111@test.invalid:443?security=tls#proxy-test","http://no-system-dns.invalid/secret-token");
             assertEquals(1,activity.z.getItemCount());

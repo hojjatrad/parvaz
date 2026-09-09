@@ -2,7 +2,7 @@ plugins { id 'com.android.application' version '8.5.2' }
 android {
     namespace 'com.parvaz.probe'
     compileSdk 34
-    sourceSets.main.java { srcDir '../../app/src/main/java'; include '**/ArchiveSignatures.java' }
+    sourceSets.main.java.srcDir layout.buildDirectory.dir('generated/probeJava')
     defaultConfig {
         applicationId 'com.parvaz.probe'
         minSdk 24
@@ -16,3 +16,10 @@ dependencies {
     androidTestImplementation 'androidx.test:runner:1.5.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
 }
+
+// Compile only this production helper, not the full native VPN application.
+def copyArchiveHelper = tasks.register('copyArchiveHelper', Copy) {
+    from '../../app/src/main/java/com/parvaz/tunnel/core/ArchiveSignatures.java'
+    into layout.buildDirectory.dir('generated/probeJava/com/parvaz/tunnel/core')
+}
+tasks.named('preBuild').configure { dependsOn copyArchiveHelper }
