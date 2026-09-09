@@ -1,0 +1,33 @@
+{
+  "version": "1.20",
+  "version_code": 21,
+  "source_commit": "32aea8ec090193cb806fda2652a386cd57160d6d",
+  "certificate_sha256": "d1383b8f34da5d3299b13634de421487289d82c1bb47ec3bc7f20ae8d02fe500",
+  "release_url": "https://github.com/hojjatrad/parvaz/releases/tag/v1.20",
+  "publication_run": 34318975182,
+  "signed_validation_run": 34318591297,
+  "host_assertions": 229,
+  "prerelease": false,
+  "physical_device_tests_completed": false,
+  "assets": [
+    {
+      "name": "Parvaz-1.20-arm64.apk",
+      "bytes": 15612583,
+      "sha256": "d5c5aaa60659eb6ecaddc6bf684b10075af3f6a34f152c46464474e14fcc0337",
+      "url": "https://github.com/hojjatrad/parvaz/releases/download/v1.20/Parvaz-1.20-arm64.apk"
+    },
+    {
+      "name": "Parvaz-1.20.apk",
+      "bytes": 27899628,
+      "sha256": "5927ec97bcae8dc48bf2610e78637b274607bd614b741c7b297286daf8f31827",
+      "url": "https://github.com/hojjatrad/parvaz/releases/download/v1.20/Parvaz-1.20.apk"
+    }
+  ],
+  "update_channel_check_run": 34319345350,
+  "update_channel_check_status": "success",
+  "new_android_test_methods": 7,
+  "new_android_api_levels": [
+    29,
+    34
+  ]
+}
