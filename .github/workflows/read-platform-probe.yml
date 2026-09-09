@@ -19,12 +19,16 @@ jobs:
           base='https://api.github.com/repos/hojjatrad/parvaz'
           headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json','User-Agent':'Parvaz-test-status'}
           def fetch(path):
-              with urllib.request.urlopen(urllib.request.Request(base+path,headers=headers),timeout=30) as r:return r.read()
+              request=urllib.request.Request(base+path,headers={k:v for k,v in headers.items() if k!='Authorization'})
+              request.add_unredirected_header('Authorization',headers['Authorization'])
+              with urllib.request.urlopen(request,timeout=30) as r:return r.read()
           for run in [34331530822,34331816056]:
               for job in json.loads(fetch('/actions/runs/'+str(run)+'/jobs'))['jobs']:
                   print('::notice title=TEST_STATUS::'+str(run)+' '+str(job['conclusion']))
                   if job['status']=='completed' and job['conclusion']=='failure':
-                      lines=fetch('/actions/jobs/'+str(job['id'])+'/logs').decode().splitlines()
+                      try:lines=fetch('/actions/jobs/'+str(job['id'])+'/logs').decode().splitlines()
+                      except Exception as e:
+                          print('::notice title=LOG_READ_ERROR::'+type(e).__name__+' '+str(getattr(e,'code','')));continue
                       relevant=[line for line in lines if any(word in line for word in ['error:',' FAILED','What went wrong','Execution failed','AssertionError','tests completed','Compilation failed'])]
                       for line in relevant[-20:]:print('::notice title=TEST_FAILURE::'+line.replace('%','%25').replace('\r','%0D').replace('\n','%0A'))
           PY
