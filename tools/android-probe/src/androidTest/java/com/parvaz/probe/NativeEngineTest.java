@@ -34,9 +34,9 @@ public class NativeEngineTest {
  private void exchangeTcp(ExternalCore core)throws Exception {
   try(java.net.ServerSocket target=new java.net.ServerSocket(0,1,java.net.InetAddress.getByName("127.0.0.1"))){
    target.setSoTimeout(3000);
-   Thread echo=new Thread(()->{try(java.net.Socket peer=target.accept()){peer.getOutputStream().write(new byte[]{79,75});}catch(Exception ignored){}});echo.setDaemon(true);echo.start();
+   Thread echo=new Thread(()->{try(java.net.Socket peer=target.accept()){peer.setSoTimeout(3000);if(peer.getInputStream().read()!=1)throw new java.io.IOException("Fixture request");peer.getOutputStream().write(new byte[]{79,75});}catch(Exception ignored){}});echo.setDaemon(true);echo.start();
    try(java.net.Socket socket=authenticated(core)){
-    int port=target.getLocalPort();socket.getOutputStream().write(new byte[]{5,1,0,1,127,0,0,1,(byte)(port>>8),(byte)port});readAddress(socket);assertEquals(79,socket.getInputStream().read());assertEquals(75,socket.getInputStream().read());
+    int port=target.getLocalPort();socket.getOutputStream().write(new byte[]{5,1,0,1,127,0,0,1,(byte)(port>>8),(byte)port});readAddress(socket);socket.getOutputStream().write(1);assertEquals(79,socket.getInputStream().read());assertEquals(75,socket.getInputStream().read());
    }finally{echo.join(3500);}
   }
  }
@@ -83,7 +83,7 @@ public class NativeEngineTest {
    p.allowInsecure=true;
    client=ExternalCore.start(context,p,null);exchangeTcp(client);exchangeUdp(client);
    server.destroy();assertTrue(server.waitFor(5,java.util.concurrent.TimeUnit.SECONDS));
-   boolean blocked=false;try{exchangeTcp(client);}catch(java.io.IOException expected){blocked=true;}assertTrue("Unexpected direct fallback",blocked);
+   boolean blocked=false;try{exchangeTcp(client);}catch(java.io.IOException|AssertionError expected){blocked=true;}assertTrue("Unexpected direct fallback",blocked);
    android.util.Log.i("ParvazProbe","ANDROID_QUIC_OK "+protocol+" TCP UDP server-down-blocked SDK="+android.os.Build.VERSION.SDK_INT);
   }finally{if(client!=null)client.close();server.destroyForcibly();server.waitFor(3,java.util.concurrent.TimeUnit.SECONDS);}
  }
