@@ -24,18 +24,24 @@ public class NativeEngineTest {
  @Test public void singboxStartsAuthenticatesAndStops()throws Exception {assertRuntime("full-singbox");}
  @Test public void mihomoStartsAuthenticatesAndStops()throws Exception {assertRuntime("full-clash");}
  private java.net.Socket authenticated(ExternalCore core)throws Exception {
-  java.net.Socket socket=new java.net.Socket("127.0.0.1",core.port);socket.setSoTimeout(2500);
+  return authenticated(core.port,core.username,core.password);
+ }
+ private java.net.Socket authenticated(int port,String username,String password)throws Exception {
+  java.net.Socket socket=new java.net.Socket("127.0.0.1",port);socket.setSoTimeout(2500);
   java.io.DataInputStream in=new java.io.DataInputStream(socket.getInputStream());java.io.OutputStream out=socket.getOutputStream();out.write(new byte[]{5,1,2});assertEquals(5,in.read());assertEquals(2,in.read());
-  byte[] user=core.username.getBytes("UTF-8"),pass=core.password.getBytes("UTF-8");out.write(1);out.write(user.length);out.write(user);out.write(pass.length);out.write(pass);assertEquals(1,in.read());assertEquals(0,in.read());return socket;
+  byte[] user=username.getBytes("UTF-8"),pass=password.getBytes("UTF-8");out.write(1);out.write(user.length);out.write(user);out.write(pass.length);out.write(pass);assertEquals(1,in.read());assertEquals(0,in.read());return socket;
  }
  private int readAddress(java.net.Socket socket)throws Exception {
   java.io.DataInputStream in=new java.io.DataInputStream(socket.getInputStream());assertEquals(5,in.read());assertEquals(0,in.read());in.read();int type=in.read();int count=type==1?4:type==4?16:in.read();byte[] address=new byte[count];in.readFully(address);return in.readUnsignedShort();
  }
  private void exchangeTcp(ExternalCore core)throws Exception {
+  exchangeTcp(core.port,core.username,core.password);
+ }
+ private void exchangeTcp(int proxyPort,String username,String password)throws Exception {
   try(java.net.ServerSocket target=new java.net.ServerSocket(0,1,java.net.InetAddress.getByName("127.0.0.1"))){
    target.setSoTimeout(3000);
    Thread echo=new Thread(()->{try(java.net.Socket peer=target.accept()){peer.setSoTimeout(3000);if(peer.getInputStream().read()!=1)throw new java.io.IOException("Fixture request");peer.getOutputStream().write(new byte[]{79,75});}catch(Exception ignored){}});echo.setDaemon(true);echo.start();
-   try(java.net.Socket socket=authenticated(core)){
+   try(java.net.Socket socket=authenticated(proxyPort,username,password)){
     int port=target.getLocalPort();socket.getOutputStream().write(new byte[]{5,1,0,1,127,0,0,1,(byte)(port>>8),(byte)port});readAddress(socket);socket.getOutputStream().write(1);assertEquals(79,socket.getInputStream().read());assertEquals(75,socket.getInputStream().read());
    }finally{echo.join(3500);}
   }
@@ -78,14 +84,83 @@ public class NativeEngineTest {
    }
    assertTrue("Fixture QUIC server did not bind",ready);
    Profile p=new Profile();p.protocol=protocol;p.address="127.0.0.1";p.port=port;p.uuid=protocol.equals("tuic")?"11111111-1111-4111-8111-111111111111":"integration-only-secret";p.quicKey="integration-only-secret";p.sni="localhost";p.alpn="h3";p.headerType="native";
-   // This self-signed emulator fixture tests transport only. Host fixtures separately
-   // test strict certificate verification and wrong-SNI rejection; app defaults stay strict.
-   p.allowInsecure=true;
+   // Only the helper debug APK trusts the disposable CA via Android's TrustManager.
+   // Production trust configuration is unchanged; no TLS bypass is used here.
+   p.allowInsecure=false;
    client=ExternalCore.start(context,p,null);exchangeTcp(client);exchangeUdp(client);
+   Profile wrongName=Profile.fromJson(p.toJson());wrongName.sni="not-the-fixture.invalid";
+   try(ExternalCore rejected=ExternalCore.start(context,wrongName,null)){
+    boolean blocked=false;try{exchangeTcp(rejected);}catch(java.io.IOException|AssertionError expected){blocked=true;}
+    assertTrue("Wrong SNI unexpectedly passed Android TLS verification",blocked);
+   }
    server.destroy();assertTrue(server.waitFor(5,java.util.concurrent.TimeUnit.SECONDS));
    boolean blocked=false;try{exchangeTcp(client);}catch(java.io.IOException|AssertionError expected){blocked=true;}assertTrue("Unexpected direct fallback",blocked);
-   android.util.Log.i("ParvazProbe","ANDROID_QUIC_OK "+protocol+" TCP UDP server-down-blocked SDK="+android.os.Build.VERSION.SDK_INT);
+   android.util.Log.i("ParvazProbe","ANDROID_QUIC_OK "+protocol+" strict-TLS wrong-SNI-blocked TCP UDP server-down-TCP-blocked SDK="+android.os.Build.VERSION.SDK_INT);
   }finally{if(client!=null)client.close();server.destroyForcibly();server.waitFor(3,java.util.concurrent.TimeUnit.SECONDS);}
+ }
+ @Test public void singboxSurvivesCallerThreadExit()throws Exception {assertCallerThreadExit("full-singbox");}
+ @Test public void mihomoSurvivesCallerThreadExit()throws Exception {assertCallerThreadExit("full-clash");}
+ private Profile directProfile(String kind){
+  Profile p=new Profile();p.protocol=kind;
+  p.rawJson=kind.equals("full-singbox")?"{\"outbounds\":[{\"type\":\"direct\"}]}":"{\"proxies\":[],\"rules\":[\"MATCH,DIRECT\"]}";return p;
+ }
+ private void assertCallerThreadExit(String kind)throws Exception {
+  Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+  java.util.concurrent.atomic.AtomicReference<ExternalCore> result=new java.util.concurrent.atomic.AtomicReference<>();
+  java.util.concurrent.atomic.AtomicReference<Throwable> error=new java.util.concurrent.atomic.AtomicReference<>();
+  Thread caller=new Thread(()->{try{result.set(ExternalCore.start(context,directProfile(kind),null));}catch(Throwable e){error.set(e);}},"fixture-short-lived-caller");
+  caller.start();caller.join(35000);
+  ExternalCore core=result.get();
+  try{
+   assertFalse("Caller did not finish",caller.isAlive());
+   if(error.get()!=null)throw new AssertionError("Caller startup failed",error.get());
+   assertNotNull(core);
+   long deadline=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(1);
+   while(System.nanoTime()<deadline){assertTrue("Engine died when its calling thread exited",core.isRunning());Thread.sleep(25);}
+   exchangeTcp(core);
+   android.util.Log.i("ParvazProbe","CALLER_THREAD_EXIT_OK "+kind+" SDK="+android.os.Build.VERSION.SDK_INT);
+  }finally{if(core!=null)core.close();if(caller.isAlive())caller.interrupt();}
+ }
+ @Test public void singboxClosesListenerOnOwnerDeath()throws Exception {assertOwnerDeath("full-singbox");}
+ @Test public void mihomoClosesListenerOnOwnerDeath()throws Exception {assertOwnerDeath("full-clash");}
+ private void assertOwnerDeath(String kind)throws Exception {
+  Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+  android.content.Intent intent=new android.content.Intent(context,NativeOwnerService.class);
+  java.util.concurrent.ArrayBlockingQueue<android.os.Messenger> owners=new java.util.concurrent.ArrayBlockingQueue<>(2);
+  java.util.concurrent.ArrayBlockingQueue<android.os.Message> replies=new java.util.concurrent.ArrayBlockingQueue<>(2);
+  java.util.concurrent.CountDownLatch lost=new java.util.concurrent.CountDownLatch(1);
+  android.content.ServiceConnection connection=new android.content.ServiceConnection(){
+   public void onServiceConnected(android.content.ComponentName name,android.os.IBinder binder){owners.offer(new android.os.Messenger(binder));}
+   public void onServiceDisconnected(android.content.ComponentName name){lost.countDown();}
+   public void onBindingDied(android.content.ComponentName name){lost.countDown();}
+  };
+  android.os.Messenger replyTo=new android.os.Messenger(new android.os.Handler(android.os.Looper.getMainLooper(),message->{replies.offer(android.os.Message.obtain(message));return true;}));
+  boolean bound=context.bindService(intent,connection,Context.BIND_AUTO_CREATE);
+  try{
+   assertTrue("Owner bind failed",bound);
+   android.os.Messenger owner=owners.poll(10,java.util.concurrent.TimeUnit.SECONDS);assertNotNull("Owner did not connect",owner);
+   android.os.Message start=android.os.Message.obtain();start.what=NativeOwnerService.START;start.replyTo=replyTo;
+   android.os.Bundle request=new android.os.Bundle();request.putString("kind",kind);start.setData(request);owner.send(start);
+   android.os.Message ready=replies.poll(35,java.util.concurrent.TimeUnit.SECONDS);assertNotNull("Owner startup timed out",ready);
+   assertEquals("Owner engine startup failed",NativeOwnerService.READY,ready.what);
+   android.os.Bundle data=ready.getData();int port=data.getInt("port"),pid=data.getInt("pid");
+   assertTrue("Owner must be a different test process",pid>0&&pid!=android.os.Process.myPid());
+   exchangeTcp(port,data.getString("username"),data.getString("password"));
+   android.os.Message crash=android.os.Message.obtain();crash.what=NativeOwnerService.CRASH;owner.send(crash);
+   assertTrue("Owner process death was not observed",lost.await(10,java.util.concurrent.TimeUnit.SECONDS));
+   context.unbindService(connection);bound=false;
+   long deadline=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(8);boolean closed=false;
+   while(System.nanoTime()<deadline){
+    try(java.net.Socket socket=new java.net.Socket()){socket.connect(new java.net.InetSocketAddress("127.0.0.1",port),300);}
+    catch(java.net.ConnectException refused){closed=true;break;}
+    Thread.sleep(50);
+   }
+   assertTrue("Native listener survived owner process death",closed);
+   try(java.net.ServerSocket replacement=new java.net.ServerSocket()){
+    replacement.setReuseAddress(true);replacement.bind(new java.net.InetSocketAddress("127.0.0.1",port));
+   }
+   android.util.Log.i("ParvazProbe","OWNER_DEATH_LISTENER_CLOSED_OK "+kind+" SDK="+android.os.Build.VERSION.SDK_INT);
+  }finally{if(bound)context.unbindService(connection);context.stopService(intent);}
  }
  private void assertRuntime(String kind)throws Exception {
   Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();

@@ -33,6 +33,9 @@ def prepareProbeSources=tasks.register('prepareProbeSources',Sync){
 }
 tasks.named('preBuild').configure { dependsOn prepareProbeSources }
 if(project.hasProperty('nativeProbe')){
+    android.sourceSets.main.manifest.srcFile 'src/native/AndroidManifest.xml'
+    android.sourceSets.main.java.srcDir 'src/native/java'
+    android.sourceSets.main.res.srcDirs=['src/native/res','../../.cache/native-test-res']
     android.sourceSets.main.jniLibs.srcDirs=['../../.cache/native-probe']
     android.sourceSets.main.assets.srcDirs=['../../.cache/native-test-assets']
     android.packagingOptions.jniLibs.useLegacyPackaging=true

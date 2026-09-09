@@ -29,8 +29,9 @@ jobs:
           python3 tools/native/protocol_smoke.py
       - name: Generate disposable loopback-only TLS fixtures
         run: |
-          mkdir -p .cache/native-test-assets
+          mkdir -p .cache/native-test-assets .cache/native-test-res/raw
           openssl req -x509 -newkey rsa:2048 -nodes -keyout .cache/native-test-assets/fixture-key.pem -out .cache/native-test-assets/fixture-cert.pem -days 1 -subj /CN=localhost -addext subjectAltName=DNS:localhost,IP:127.0.0.1 >/dev/null 2>&1
+          cp .cache/native-test-assets/fixture-cert.pem .cache/native-test-res/raw/native_fixture_ca.pem
       - name: Enable emulator acceleration
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
