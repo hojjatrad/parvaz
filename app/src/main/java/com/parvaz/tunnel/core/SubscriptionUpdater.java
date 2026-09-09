@@ -36,7 +36,8 @@ public final class SubscriptionUpdater {
 
     /** Fetch with system TLS validation, bounded bodies and safe redirects. */
     public static b a(String str) throws java.io.IOException {
-        return negotiate(str,SubscriptionHttpClient::fetch);
+        AppNetwork.Route route=AppNetwork.capture();
+        return negotiate(str,(url,format)->SubscriptionHttpClient.fetch(url,route::open,format,route.code));
     }
     interface FormatFetcher {SubscriptionHttpClient.Response fetch(String url,int format)throws java.io.IOException;}
     static b negotiate(String str,FormatFetcher fetcher)throws java.io.IOException {

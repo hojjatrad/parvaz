@@ -76,6 +76,22 @@ public class SmartImportRegressionTest {
             assertEquals("0%",activity.quotaPercentText.getText().toString());
         }finally{controller.destroy();ProfileStore.d=null;}
     }
+    @Test public void duplicateButtonCleansDefaultVariantsAndReportsDistinctCredentials()throws Exception {
+        Profile a=LinkParser.parseMany("vless://11111111-1111-4111-8111-111111111111@test.invalid:443#one").get(0);
+        Profile b=ProfileIdentity.copy(a);b.id="duplicate";b.network="";b.security="none";b.encryption="";
+        Profile other=ProfileIdentity.copy(a);other.id="different-credential";other.uuid="22222222-2222-4222-8222-222222222222";
+        store.f346b.add(a);store.f346b.add(b);store.f346b.add(other);store.h();ProfileStore.d=store;
+        org.robolectric.android.controller.ActivityController<com.parvaz.tunnel.MainActivity> controller=org.robolectric.Robolectric.buildActivity(com.parvaz.tunnel.MainActivity.class).create();
+        try {
+            com.parvaz.tunnel.MainActivity activity=controller.get();assertEquals(2,activity.z.getItemCount());
+            activity.new F().onClick(null,7);
+            ((androidx.appcompat.app.AlertDialog)org.robolectric.shadows.ShadowDialog.getLatestDialog()).getButton(android.content.DialogInterface.BUTTON_POSITIVE).performClick();
+            assertEquals(2,store.e().size());assertEquals(2,activity.z.getItemCount());
+            String report=prefs.getString("last_duplicate_report","");assertTrue(report.contains("removed_records=1"));assertTrue(report.contains("uuid"));
+            assertFalse(report.contains(a.uuid));assertFalse(report.contains(a.address));
+            assertTrue(org.robolectric.shadows.ShadowDialog.getLatestDialog().isShowing());
+        }finally{controller.destroy();ProfileStore.d=null;}
+    }
     @Test public void updateVersionAndMetadataGuards(){
         assertTrue(UpdateChecker.isNewer("v1.20","1.19.1"));assertFalse(UpdateChecker.isNewer("1.19.1","1.20"));
         UpdateChecker.Release r=new UpdateChecker.Release();r.version="1.20";r.size=1024;r.sha256=String.join("",Collections.nCopies(64,"a"));

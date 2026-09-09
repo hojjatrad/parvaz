@@ -71,6 +71,36 @@ public class ClipboardHttpRegressionTest {
             assertEquals(1,result.recognized);assertEquals(1,result.fetched);assertEquals(0,result.failed);
         }finally{TunnelVpnService.serviceRunning=false;task.cancel(true);}
     }
+    private String refreshAndWait(MainActivity activity)throws Exception {
+        activity.L.f343a.edit().remove("last_refresh_report").commit();activity.updateSubscriptions();
+        long deadline=System.currentTimeMillis()+15000;
+        while(activity.L.f343a.getString("last_refresh_report","").isEmpty()&&System.currentTimeMillis()<deadline){
+            Shadows.shadowOf(Looper.getMainLooper()).idle();Thread.sleep(20);
+        }
+        Shadows.shadowOf(Looper.getMainLooper()).idle();
+        String report=activity.L.f343a.getString("last_refresh_report","");assertFalse(report.isEmpty());
+        assertFalse(activity.refresh.isRefreshing());return report;
+    }
+    @Test public void manualRefreshButtonFetchesAndPersistsItsOwnReport()throws Exception {
+        startServer("vless://11111111-1111-4111-8111-111111111111@test.invalid:443?security=tls#refresh");
+        ProfileStore.f(context).addOrGetSubscription("http://127.0.0.1:"+server.getLocalPort()+"/secret-token");
+        controller=Robolectric.buildActivity(MainActivity.class).create();MainActivity activity=controller.get();
+        activity.L.f343a.edit().putString("last_import_report","previous import").commit();
+        String first=refreshAndWait(activity);assertTrue(first.contains("updated=1"));assertEquals(1,activity.z.getItemCount());
+        String second=refreshAndWait(activity);assertTrue(second.contains("updated=1"));assertEquals(1,activity.z.getItemCount());
+        assertEquals("previous import",activity.L.f343a.getString("last_import_report",""));
+        assertTrue(second.contains("OPERATION_REFRESH"));assertFalse(second.contains("secret-token"));
+        assertTrue(org.robolectric.shadows.ShadowDialog.getLatestDialog().isShowing());
+    }
+    @Test public void manualRefreshFailureIsVisibleAndPreservesExistingServer()throws Exception {
+        startServer("unrecognized-private-body");
+        com.parvaz.tunnel.model.Subscription sub=ProfileStore.f(context).addOrGetSubscription("http://127.0.0.1:"+server.getLocalPort()+"/secret-token");
+        java.util.ArrayList<com.parvaz.tunnel.model.Profile> old=com.parvaz.tunnel.config.LinkParser.parseMany("vless://11111111-1111-4111-8111-111111111111@old.invalid:443#old");
+        ProfileStore.f(context).a(old,sub.id);
+        controller=Robolectric.buildActivity(MainActivity.class).create();MainActivity activity=controller.get();
+        String report=refreshAndWait(activity);assertTrue(report.contains("failed=1"));assertTrue(report.contains("NO_VALID_CONFIGURATIONS"));
+        assertEquals(1,activity.z.getItemCount());assertFalse(report.contains("private-body"));
+    }
     @Test public void zeroResultShowsPersistentSafeFailureReport()throws Exception{
         MainActivity activity=paste("not-a-config-private-body");String report=activity.L.f343a.getString("last_import_report","");
         assertEquals(0,activity.z.getItemCount());assertTrue(report.contains("failed=1"));assertTrue(report.contains("NO_VALID_CONFIGURATIONS"));

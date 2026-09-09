@@ -16,7 +16,7 @@ public final class SubscriptionRefresh {
     private SubscriptionRefresh() {}
     interface Fetcher { SubscriptionUpdater.b fetch(String url) throws IOException; }
     public static final class Result {
-        public int updated, failed, skipped, serverCount, added, retained, removed, warnings, fetched, recognized;
+        public int requested, updated, failed, skipped, serverCount, added, retained, removed, warnings, fetched, recognized;
         public boolean retryable, cancelled;
         public final ArrayList<String> codes=new ArrayList<>();
         void fail(String code,boolean retry){failed++;retryable|=retry;if(codes.size()<10)codes.add(code);}
@@ -27,6 +27,14 @@ public final class SubscriptionRefresh {
             return summary.toString();
         }
     }
+    public static String safeReport(Result r) {
+        return "OPERATION_REFRESH\nrequested="+r.requested+"; fetched="+r.fetched+"; recognized="+r.recognized
+            +"; updated="+r.updated+"; failed="+r.failed+"; skipped="+r.skipped+"; added="+r.added
+            +"; retained="+r.retained+"; removed="+r.removed+"\n"+String.join("\n",r.codes);
+    }
+    public static Result runManual(Context context,BooleanSupplier cancelled) {
+        return runOne(ProfileStore.f(context),context.getApplicationContext().getSharedPreferences("parvaz_prefs",0),cancelled,SubscriptionUpdater::a,null,true);
+    }
     public static Result run(Context context,BooleanSupplier cancelled) {
         return run(ProfileStore.f(context),context.getApplicationContext().getSharedPreferences("parvaz_prefs",0),cancelled,SubscriptionUpdater::a);
     }
@@ -34,9 +42,12 @@ public final class SubscriptionRefresh {
         return runOne(store,prefs,cancelled,fetcher,null);
     }
     static Result runOne(ProfileStore store,SharedPreferences prefs,BooleanSupplier cancelled,Fetcher fetcher,String targetId) {
+        return runOne(store,prefs,cancelled,fetcher,targetId,targetId!=null);
+    }
+    static Result runOne(ProfileStore store,SharedPreferences prefs,BooleanSupplier cancelled,Fetcher fetcher,String targetId,boolean wait) {
         Result result=new Result();
         boolean acquired;
-        try {acquired=targetId==null?LOCK.tryLock():LOCK.tryLock(120,java.util.concurrent.TimeUnit.SECONDS);}
+        try {acquired=wait?LOCK.tryLock(60,java.util.concurrent.TimeUnit.SECONDS):LOCK.tryLock();}
         catch(InterruptedException e){Thread.currentThread().interrupt();result.cancelled=true;result.fail("CANCELLED",true);return result;}
         if(!acquired){result.fail("REFRESH_ALREADY_RUNNING",true);return result;}
         try {
@@ -47,6 +58,7 @@ public final class SubscriptionRefresh {
                 if(targetId!=null&&!targetId.equals(listed.id))continue;
                 ProfileStore.Snapshot snapshot=store.beginRefresh(listed.id);
                 if(snapshot==null){result.skipped++;continue;}
+                result.requested++;
                 try {
                     SubscriptionUpdater.b response=fetcher.fetch(snapshot.subscription.url);
                     if(stop(cancelled,result))break;
@@ -82,7 +94,7 @@ public final class SubscriptionRefresh {
             }
         }catch(Exception e){result.fail("REFRESH_FAILED",true);}
         finally{LOCK.unlock();}
-        if(targetId!=null&&result.updated==0&&result.failed==0)result.fail("SUBSCRIPTION_NOT_PROCESSED",true);
+        if(result.requested==0&&result.failed==0)result.fail(targetId!=null?"SUBSCRIPTION_NOT_PROCESSED":(result.skipped>0?"ALL_SUBSCRIPTIONS_DISABLED":"NO_SUBSCRIPTIONS"),false);
         return result;
     }
     private static boolean stop(BooleanSupplier cancelled,Result result) {

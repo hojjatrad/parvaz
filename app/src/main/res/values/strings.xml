@@ -429,4 +429,10 @@ Tap + to paste a config link or add a subscription."</string>
     <string name="update_install_permission">Allow installation from Parvaz in Android settings, then return here. Installation will never bypass your approval.</string>
     <string name="update_verifying">Verifying the APK hash, package, version and permanent signing certificate…</string>
     <string name="update_install_not_completed">Android did not confirm completion. Read its installation message, then retry here if appropriate.</string>
+
+    <string name="last_refresh_report">Last subscription refresh report</string>
+    <string name="last_duplicate_report">Duplicate check report</string>
+    <string name="refresh_report_help">This is the refresh result, not the clipboard import report. It contains counts and fixed codes only. Old servers are retained when a response is empty or partial. REFRESH_ALREADY_RUNNING means another refresh did not finish within the wait period.</string>
+    <string name="duplicate_report_help">Only equivalent connections are merged. Independent subscription copies remain stored but appear once. Same address/port with different UUID, password, TLS or transport options is not a duplicate. differing_fields lists field names only; it contains no passwords or addresses.</string>
+    <string name="refresh_busy">Wait for the current import or refresh to finish.</string>
 </resources>

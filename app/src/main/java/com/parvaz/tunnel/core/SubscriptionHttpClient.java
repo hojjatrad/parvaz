@@ -70,7 +70,7 @@ public final class SubscriptionHttpClient {
         return fetch(input,factory,format,"TEST");
     }
     private static final class Trace {String stage="OPEN";final long start=System.nanoTime();}
-    private static Response fetch(String input,ConnectionFactory factory,int format,String route)throws IOException {
+    static Response fetch(String input,ConnectionFactory factory,int format,String route)throws IOException {
         Trace trace=new Trace();
         try {return fetchInternal(input,factory,format,trace);}
         catch(IOException|IllegalArgumentException e) {

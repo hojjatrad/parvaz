@@ -410,4 +410,10 @@
     <string name="update_install_permission">در تنظیمات Android، اجازهٔ نصب از پرواز را فعال کنید و به این صفحه برگردید. نصب بدون تأیید شما انجام نمی‌شود.</string>
     <string name="update_verifying">در حال بررسی سلامت فایل، بسته، نسخه و امضای دائمی…</string>
     <string name="update_install_not_completed">Android تکمیل نصب را تأیید نکرد. پیام نصب‌کننده را بررسی کنید؛ در صورت نیاز از همین صفحه دوباره تلاش کنید.</string>
+
+    <string name="last_refresh_report">گزارش آخرین به‌روزرسانی ساب</string>
+    <string name="last_duplicate_report">گزارش بررسی تکراری‌ها</string>
+    <string name="refresh_report_help">این گزارش نتیجهٔ به‌روزرسانی ساب است، نه افزودن از حافظهٔ موقت. فقط تعداد و کدهای ثابت ثبت می‌شوند. در پاسخ خالی یا ناقص، سرورهای قبلی حفظ می‌شوند. REFRESH_ALREADY_RUNNING یعنی عملیات قبلی در مهلت انتظار تمام نشده است.</string>
+    <string name="duplicate_report_help">فقط اتصال‌های معادل یکی می‌شوند. مالکیت ساب‌های مستقل حفظ می‌شود ولی اتصال یکسان یک ردیف دارد. آدرس و پورت یکسان با UUID، رمز، TLS یا تنظیمات انتقال متفاوت، اتصال تکراری نیست. differing_fields فقط نام فیلدهای متفاوت است؛ رمز و آدرس در آن نیست.</string>
+    <string name="refresh_busy">ابتدا منتظر پایان افزودن یا به‌روزرسانی فعلی بمانید.</string>
 </resources>

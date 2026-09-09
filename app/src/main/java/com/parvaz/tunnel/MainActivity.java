@@ -303,6 +303,8 @@ public class MainActivity extends AppCompatActivity {
             mainActivity.getClass();
             if(i==7){mainActivity.removeDuplicateConnections();return;}
             if(i==8){mainActivity.showLastImportReport();return;}
+            if(i==9){mainActivity.showStoredReport("last_refresh_report",R.string.last_refresh_report,R.string.refresh_report_help);return;}
+            if(i==10){mainActivity.showStoredReport("last_duplicate_report",R.string.last_duplicate_report,R.string.duplicate_report_help);return;}
             String str = "";
             if (i == 0) {
                 try {
@@ -449,17 +451,20 @@ public class MainActivity extends AppCompatActivity {
     /* JADX WARN: Can't change package for inner class: com.parvaz.tunnel.MainActivity.J to com.parvaz.tunnel.MainActivity$x */
     /* loaded from: classes.dex */
     public class J implements SubscriptionUpdater.a {
-        public J() {
-        }
+        private final boolean userInitiated;
+        public J(){this(false);}
+        public J(boolean userInitiated){this.userInitiated=userInitiated;}
 
         @Override
         public void onComplete(com.parvaz.tunnel.core.SubscriptionRefresh.Result result) {
-            if(isFinishing()||isDestroyed()||importing)return;
-            MainActivity.this.refresh.setRefreshing(false);
-            MainActivity.this.reload();
-            String summary=getString(R.string.subscription_refresh_summary,result.updated,result.failed,com.parvaz.tunnel.store.ProfileDuplicates.visible(b0.e(),L.f343a.getString("selected_profile",""),L.getFavorites()).size(),result.warnings);
-            if(result.failed>0) summary += "\n" + result.errorSummary();
-            Snackbar.make(MainActivity.this.connectButton,summary,0).show();
+            String report="Parvaz "+com.parvaz.tunnel.core.UpdateChecker.currentVersion(MainActivity.this)
+                +"; SDK_"+android.os.Build.VERSION.SDK_INT+"\n"+com.parvaz.tunnel.core.SubscriptionRefresh.safeReport(result);
+            L.f343a.edit().putString(userInitiated?"last_refresh_report":"last_background_refresh_report",report).apply();
+            if(userInitiated)manualRefreshing=false;
+            if(isFinishing()||isDestroyed())return;
+            if(userInitiated)refresh.setRefreshing(false);
+            if(!importing)MainActivity.this.reload();
+            if(userInitiated)showStoredReport("last_refresh_report",R.string.last_refresh_report,R.string.refresh_report_help);
         }
 
         @Override // com.parvaz.tunnel.core.SubscriptionUpdater.a
@@ -1122,13 +1127,26 @@ public class MainActivity extends AppCompatActivity {
             }).show();
     }
 
+    public final void showStoredReport(String key,int title,int help) {
+        String report=L.f343a.getString(key,getString(R.string.import_report_empty));
+        new MaterialAlertDialogBuilder(this).setTitle(title).setMessage(getString(help)+"\n\n"+report)
+            .setPositiveButton(R.string.ok,null).setNeutralButton(R.string.copy_safe_report,(dialog,which)->{
+                ClipboardManager clipboard=(ClipboardManager)getSystemService("clipboard");
+                if(clipboard!=null)clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Parvaz safe report",report));
+            }).show();
+    }
+
     private void removeDuplicateConnections() {
+        if(importing||manualRefreshing){Snackbar.make(findViewById(android.R.id.content),R.string.refresh_busy,Snackbar.LENGTH_LONG).show();return;}
         new MaterialAlertDialogBuilder(this).setTitle(R.string.remove_duplicates)
             .setMessage(R.string.remove_duplicates_confirm).setNegativeButton(R.string.cancel,null)
             .setPositiveButton(R.string.ok,(dialog,which)->{
                 try {
                     int count=b0.removeDuplicates(L.f343a);reload();
-                    Snackbar.make(connectButton,getString(R.string.duplicates_removed,count),Snackbar.LENGTH_LONG).show();
+                    String report="Parvaz "+com.parvaz.tunnel.core.UpdateChecker.currentVersion(this)+"\n"
+                        +com.parvaz.tunnel.store.DuplicateReport.safe(b0.e(),count);
+                    L.f343a.edit().putString("last_duplicate_report",report).apply();
+                    showStoredReport("last_duplicate_report",R.string.last_duplicate_report,R.string.duplicate_report_help);
                 }catch(Exception e){Snackbar.make(connectButton,R.string.import_failed,Snackbar.LENGTH_LONG).show();}
             }).show();
     }
@@ -1695,7 +1713,7 @@ public class MainActivity extends AppCompatActivity {
 
     /* renamed from: N */
     public final void showAddDialog() {
-        String[] strArr = {getString(R.string.scan_qr), getString(R.string.add_from_clipboard), getString(R.string.add_manual_link), getString(R.string.add_raw_json), getString(R.string.add_subscription), getString(R.string.update_subscriptions), getString(R.string.backup_restore), getString(R.string.remove_duplicates),getString(R.string.last_import_report)};
+        String[] strArr = {getString(R.string.scan_qr), getString(R.string.add_from_clipboard), getString(R.string.add_manual_link), getString(R.string.add_raw_json), getString(R.string.add_subscription), getString(R.string.update_subscriptions), getString(R.string.backup_restore), getString(R.string.remove_duplicates),getString(R.string.last_import_report),getString(R.string.last_refresh_report),getString(R.string.last_duplicate_report)};
         MaterialAlertDialogBuilder materialAlertDialogBuilder = new MaterialAlertDialogBuilder(this);
         materialAlertDialogBuilder.setTitle(R.string.add_server);
         materialAlertDialogBuilder.setItems(strArr, new F());
@@ -1834,6 +1852,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /* renamed from: Q */
+    private boolean manualRefreshing=false;
     private final Handler quotaRefreshHandler=new Handler(Looper.getMainLooper());
     private final Runnable automaticUpdateCheck=()->{
         if(!isFinishing()&&!isDestroyed()&&(!L.f343a.getBoolean("app_lock",false)||unlocked))
@@ -1843,7 +1862,7 @@ public class MainActivity extends AppCompatActivity {
         if(isFinishing()||isDestroyed())return;
         long now=System.currentTimeMillis();
         long last=L.f343a.getLong("quota_refresh_attempt",0);
-        if(!importing&&!b0.f().isEmpty()&&(now-last>=300000L||now<last)) {
+        if(!importing&&!manualRefreshing&&!b0.f().isEmpty()&&(now-last>=300000L||now<last)) {
             L.f343a.edit().putLong("quota_refresh_attempt",now).apply();
             new Thread(new SubscriptionUpdater_4(new SubscriptionUpdater(MainActivity.this),new J()),"parvaz-quota-refresh").start();
         }
@@ -1851,12 +1870,15 @@ public class MainActivity extends AppCompatActivity {
     }};
 
     public final void updateSubscriptions() {
-        if (this.b0.f().isEmpty()) {
-            Snackbar.make(this.connectButton, R.string.no_subscriptions, 0).show();
-        } else {
-            this.refresh.setRefreshing(true);
-            new Thread(new SubscriptionUpdater_4(new SubscriptionUpdater(this), new J())).start();
+        if(importing||manualRefreshing) {
+            Snackbar.make(findViewById(android.R.id.content),R.string.refresh_busy,Snackbar.LENGTH_LONG).show();return;
         }
+        manualRefreshing=true;refresh.setRefreshing(true);
+        L.f343a.edit().putLong("quota_refresh_attempt",System.currentTimeMillis()).apply();
+        new Thread(()->{
+            com.parvaz.tunnel.core.SubscriptionRefresh.Result result=com.parvaz.tunnel.core.SubscriptionRefresh.runManual(this,()->isFinishing()||isDestroyed());
+            runOnUiThread(()->new J(true).onComplete(result));
+        },"parvaz-manual-refresh").start();
     }
 
     @Override // androidx.appcompat.app.AppCompatActivity, android.app.Activity, android.view.ContextThemeWrapper, android.content.ContextWrapper
