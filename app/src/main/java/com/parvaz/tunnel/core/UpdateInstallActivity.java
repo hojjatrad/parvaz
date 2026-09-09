@@ -60,9 +60,10 @@ public final class UpdateInstallActivity extends AppCompatActivity {
         },"parvaz-install-verify").start();
     }
     static Intent packageIntent(Uri uri) {
-        return new Intent(Intent.ACTION_INSTALL_PACKAGE).setDataAndType(uri,"application/vnd.android.package-archive")
-            .setClipData(ClipData.newRawUri("Verified Parvaz update",uri))
+        Intent intent=new Intent(Intent.ACTION_INSTALL_PACKAGE).setDataAndType(uri,"application/vnd.android.package-archive")
             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION).putExtra(Intent.EXTRA_RETURN_RESULT,true);
+        intent.setClipData(ClipData.newRawUri("Verified Parvaz update",uri));
+        return intent;
     }
     private void handoff(File file) {
         try {
