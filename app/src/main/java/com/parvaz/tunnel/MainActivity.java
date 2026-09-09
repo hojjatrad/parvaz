@@ -891,7 +891,8 @@ public class MainActivity extends AppCompatActivity {
 
         @Override // androidx.swiperefreshlayout.widget.SwipeRefreshLayout.OnRefreshListener
         public void onRefresh() {
-            MainActivity.this.pingAll();
+            if(!MainActivity.this.b0.f().isEmpty())MainActivity.this.updateSubscriptions();
+            else MainActivity.this.pingAll();
         }
     }
 
@@ -1871,6 +1872,7 @@ public class MainActivity extends AppCompatActivity {
 
     public final void updateSubscriptions() {
         if(importing||manualRefreshing) {
+            if(!manualRefreshing)refresh.setRefreshing(false);
             Snackbar.make(findViewById(android.R.id.content),R.string.refresh_busy,Snackbar.LENGTH_LONG).show();return;
         }
         manualRefreshing=true;refresh.setRefreshing(true);

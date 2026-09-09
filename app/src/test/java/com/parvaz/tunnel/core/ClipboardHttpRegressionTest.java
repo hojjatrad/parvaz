@@ -71,8 +71,10 @@ public class ClipboardHttpRegressionTest {
             assertEquals(1,result.recognized);assertEquals(1,result.fetched);assertEquals(0,result.failed);
         }finally{TunnelVpnService.serviceRunning=false;task.cancel(true);}
     }
-    private String refreshAndWait(MainActivity activity)throws Exception {
-        activity.L.f343a.edit().remove("last_refresh_report").commit();activity.updateSubscriptions();
+    private String refreshAndWait(MainActivity activity)throws Exception{return refreshAndWait(activity,false);}
+    private String refreshAndWait(MainActivity activity,boolean swipe)throws Exception {
+        activity.L.f343a.edit().remove("last_refresh_report").commit();
+        if(swipe)activity.new m().onRefresh();else activity.new F().onClick(null,5);
         long deadline=System.currentTimeMillis()+15000;
         while(activity.L.f343a.getString("last_refresh_report","").isEmpty()&&System.currentTimeMillis()<deadline){
             Shadows.shadowOf(Looper.getMainLooper()).idle();Thread.sleep(20);
@@ -87,7 +89,7 @@ public class ClipboardHttpRegressionTest {
         controller=Robolectric.buildActivity(MainActivity.class).create();MainActivity activity=controller.get();
         activity.L.f343a.edit().putString("last_import_report","previous import").commit();
         String first=refreshAndWait(activity);assertTrue(first.contains("updated=1"));assertEquals(1,activity.z.getItemCount());
-        String second=refreshAndWait(activity);assertTrue(second.contains("updated=1"));assertEquals(1,activity.z.getItemCount());
+        String second=refreshAndWait(activity,true);assertTrue(second.contains("updated=1"));assertEquals(1,activity.z.getItemCount());
         assertEquals("previous import",activity.L.f343a.getString("last_import_report",""));
         assertTrue(second.contains("OPERATION_REFRESH"));assertFalse(second.contains("secret-token"));
         assertTrue(org.robolectric.shadows.ShadowDialog.getLatestDialog().isShowing());
