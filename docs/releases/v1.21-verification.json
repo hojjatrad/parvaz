@@ -1,0 +1,71 @@
+{
+  "release": "v1.21",
+  "version_code": 22,
+  "application_id": "com.parvaz.tunnel",
+  "tag_source": "9af5bc58ef251b0a12fbe4de2bec46c13e4807b1",
+  "automation_followup_source": "1a93e44fcce2a359731241e6f26ef9bcee9c24f1",
+  "permanent_certificate_sha256": "d1383b8f34da5d3299b13634de421487289d82c1bb47ec3bc7f20ae8d02fe500",
+  "core": {
+    "repository": "2dust/AndroidLibXrayLite",
+    "tag": "v26.9.9",
+    "asset": "libv2ray.aar",
+    "url": "https://github.com/2dust/AndroidLibXrayLite/releases/download/v26.9.9/libv2ray.aar",
+    "sha256": "9ecf4c921568d8f4cb8550d3bafe08ff6f1d1984f45a6ad183dcdf52ee9302de"
+  },
+  "host_assertions": 245,
+  "release_python_tests_at_tag": 17,
+  "release_python_tests_after_order_guards": 23,
+  "android_test_sdks": [
+    29,
+    34
+  ],
+  "checks": [
+    {
+      "name": "App/core signed validation",
+      "run": "34322784900",
+      "status": "success"
+    },
+    {
+      "name": "Actual tag tests, signing and publication",
+      "run": "34323262120",
+      "status": "success"
+    },
+    {
+      "name": "Installed updater API and read-only release-order guard",
+      "run": "34323716256",
+      "status": "success"
+    },
+    {
+      "name": "Upstream core discovery check-only",
+      "run": "34322784804",
+      "status": "success"
+    }
+  ],
+  "assets": [
+    {
+      "name": "Parvaz-1.21-arm64.apk",
+      "url": "https://github.com/hojjatrad/parvaz/releases/download/v1.21/Parvaz-1.21-arm64.apk",
+      "bytes": 15854383,
+      "sha256": "9c27f19a93a9a7ce09886eee62250a85811b9def119e55a8b4d289737aaaa40f",
+      "independently_streamed": true
+    },
+    {
+      "name": "Parvaz-1.21.apk",
+      "url": "https://github.com/hojjatrad/parvaz/releases/download/v1.21/Parvaz-1.21.apk",
+      "bytes": 28424132,
+      "sha256": "300e19ef1dbfbb007879f1a62a78fc38065a3c47f1333f278c07134960d1c565",
+      "independently_streamed": true
+    }
+  ],
+  "latest_verified": true,
+  "draft": false,
+  "prerelease": false,
+  "limitations": [
+    "Private subscription response was not supplied; the original panel failure is not confirmed fixed.",
+    "Android tests are Robolectric, not physical-device TLS or VPN connectivity tests.",
+    "Native core was built and packaged; no actual phone tunnel was tested.",
+    "Daily core maintenance is on main; discovery and policy guards were exercised, not a future upstream-triggered full automatic publication.",
+    "Each HTTP format attempt retains a bounded 60-second transport budget, up to three formats per URL.",
+    "GitHub scheduling, permissions, network and failing checks can delay publication; installation needs Android approval."
+  ]
+}
