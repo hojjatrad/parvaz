@@ -289,8 +289,8 @@ public final class UpdateChecker {
     }
     static void verifyArchive(Context context,File file,Release release) throws Exception {
         android.content.pm.PackageManager pm=context.getPackageManager();
-        int flags=Build.VERSION.SDK_INT>=28?android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES:android.content.pm.PackageManager.GET_SIGNATURES;
-        android.content.pm.PackageInfo archive=pm.getPackageArchiveInfo(file.getAbsolutePath(),flags);
+        int flags=ArchiveSignatures.flags();
+        android.content.pm.PackageInfo archive=ArchiveSignatures.read(pm,file);
         android.content.pm.PackageInfo installed=pm.getPackageInfo(context.getPackageName(),flags);
         if(archive==null)throw new IllegalStateException("UPDATE_ARCHIVE_UNREADABLE");
         if(!context.getPackageName().equals(archive.packageName))throw new IllegalStateException("UPDATE_PACKAGE_ID_MISMATCH");

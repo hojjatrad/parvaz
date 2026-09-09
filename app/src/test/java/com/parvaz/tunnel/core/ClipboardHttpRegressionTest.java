@@ -28,7 +28,8 @@ public class ClipboardHttpRegressionTest {
         server=new ServerSocket();server.bind(new InetSocketAddress("127.0.0.1",0));
     }
     @After public void cleanup()throws Exception{if(controller!=null)controller.destroy();if(server!=null)server.close();if(serverThread!=null)serverThread.join(2000);ProfileStore.d=null;}
-    private MainActivity paste(String body)throws Exception{
+    private MainActivity paste(String body)throws Exception{return paste(body,null);}
+    private MainActivity paste(String body,String urlOverride)throws Exception{
         serverThread=new Thread(()->{
             while(!server.isClosed())try(Socket client=server.accept()) {
                 client.setSoTimeout(5000);
@@ -42,7 +43,7 @@ public class ClipboardHttpRegressionTest {
         },"test-loopback-http");serverThread.setDaemon(true);serverThread.start();
         controller=Robolectric.buildActivity(MainActivity.class).create();MainActivity activity=controller.get();
         ClipboardManager clipboard=(ClipboardManager)activity.getSystemService(Context.CLIPBOARD_SERVICE);
-        clipboard.setPrimaryClip(ClipData.newPlainText("sub","http://127.0.0.1:"+server.getLocalPort()+"/secret-token"));
+        clipboard.setPrimaryClip(ClipData.newPlainText("sub",urlOverride==null?"http://127.0.0.1:"+server.getLocalPort()+"/secret-token":urlOverride));
         activity.new F().onClick(null,1);
         long deadline=System.currentTimeMillis()+15000;
         while(activity.L.f343a.getString("last_import_report","").isEmpty()&&System.currentTimeMillis()<deadline){
@@ -56,6 +57,15 @@ public class ClipboardHttpRegressionTest {
         MainActivity activity=paste(org.json.JSONObject.quote(java.util.Base64.getEncoder().encodeToString(link.getBytes("UTF-8"))));
         assertEquals(1,activity.z.getItemCount());assertEquals(View.VISIBLE,activity.pageServers.getVisibility());
         assertTrue(activity.L.f343a.getString("last_import_report","").contains("recognized=1"));
+    }
+    @Test public void clipboardUsesOwnActiveProxyWithoutOriginDns()throws Exception {
+        server.close();server=new ServerSocket();server.setReuseAddress(true);server.bind(new InetSocketAddress("127.0.0.1",10809));
+        TunnelVpnService.serviceRunning=true;
+        try {
+            MainActivity activity=paste("vless://11111111-1111-4111-8111-111111111111@test.invalid:443?security=tls#proxy-test","http://no-system-dns.invalid/secret-token");
+            assertEquals(1,activity.z.getItemCount());
+            assertTrue(activity.L.f343a.getString("last_import_report","").contains("recognized=1"));
+        }finally{TunnelVpnService.serviceRunning=false;}
     }
     @Test public void zeroResultShowsPersistentSafeFailureReport()throws Exception{
         MainActivity activity=paste("not-a-config-private-body");String report=activity.L.f343a.getString("last_import_report","");

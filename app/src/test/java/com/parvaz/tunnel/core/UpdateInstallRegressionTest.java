@@ -13,6 +13,10 @@ import static org.junit.Assert.*;
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk={29,34},application=Application.class)
 public class UpdateInstallRegressionTest {
+    @Test public void archiveCertificateCollectionRequestsLegacyAndModernFlags() {
+        assertTrue((ArchiveSignatures.flags()&android.content.pm.PackageManager.GET_SIGNATURES)!=0);
+        assertTrue((ArchiveSignatures.flags()&android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES)!=0);
+    }
     @Test public void installIntentGrantsContentUriAndAsksForResult() {
         Intent intent=UpdateInstallActivity.packageIntent(Uri.parse("content://com.parvaz.tunnel.fileprovider/internal_cache/updates/parvaz-1.22.apk"));
         assertEquals(Intent.ACTION_INSTALL_PACKAGE,intent.getAction());assertEquals("content",intent.getData().getScheme());

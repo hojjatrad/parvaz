@@ -40,14 +40,18 @@ jobs:
           arch: x86_64
           target: default
           disable-animations: true
-          script: gradle -p tools/android-probe --no-daemon --max-workers=2 connectedDebugAndroidTest; result=$?; adb shell run-as com.parvaz.probe cat files/probe.txt | sed 's/^/::notice title=ANDROID_ARCHIVE_PROBE::/'; exit $result
+          script: gradle -p tools/android-probe --no-daemon --max-workers=2 connectedDebugAndroidTest
       - name: Expose public APK parser results
         if: always()
         run: |
           python3 - <<'PY'
           from pathlib import Path
           import xml.etree.ElementTree as ET
-          for file in Path('tools/android-probe/build/outputs/androidTest-results').rglob('*.xml'):
+          base=Path('tools/android-probe/build/outputs/androidTest-results')
+          for file in base.rglob('logcat*.txt'):
+              for line in file.read_text(errors='replace').splitlines():
+                  if 'I ParvazProbe:' in line:print('::notice title=ANDROID_ARCHIVE_PROBE::'+line)
+          for file in base.rglob('*.xml'):
               root=ET.parse(file).getroot()
               for item in root.iter('system-out'):
                   for line in (item.text or '').splitlines():

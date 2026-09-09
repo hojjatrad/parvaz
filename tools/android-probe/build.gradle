@@ -2,6 +2,7 @@ plugins { id 'com.android.application' version '8.5.2' }
 android {
     namespace 'com.parvaz.probe'
     compileSdk 34
+    sourceSets.main.java { srcDir '../../app/src/main/java'; include '**/ArchiveSignatures.java' }
     defaultConfig {
         applicationId 'com.parvaz.probe'
         minSdk 24
