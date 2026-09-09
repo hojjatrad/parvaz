@@ -32,4 +32,4 @@ with tarfile.open(output,'w:gz') as archive,tarfile.open(fileobj=io.BytesIO(trac
   if not (source/'vendor/modules.txt').is_file():raise SystemExit('Vendored corresponding source missing')
   archive.add(source,arcname='engines/'+core['name'])
  archive.add(xray,arcname='engines/xray-wrapper')
-print('SOURCE_BUNDLE_OK',output.name,output.stat().st_size)
+print('::notice title=SOURCE_BUNDLE_OK::'+output.name+' bytes='+str(output.stat().st_size))
