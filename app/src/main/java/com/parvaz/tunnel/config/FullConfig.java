@@ -27,16 +27,37 @@ public final class FullConfig {
   }
   else if(root.has("outbounds")&&CustomOutbound.extract(root)!=null)p.protocol="full-xray";
   else throw new IllegalArgumentException("Not a complete VPN configuration");
-  validate(root,0);p.address="full-config";p.port=443;p.rawJson=root.toString();p.remark=p.protocol;return p;
+  validate(root,0);validateInboundPolicy(root);p.address="full-config";p.port=443;p.rawJson=root.toString();p.remark=p.protocol;return p;
  }
  public static JSONObject root(Profile p)throws JSONException {Profile parsed=parse(p.rawJson);if(!parsed.protocol.equals(p.protocol))throw new IllegalArgumentException("Engine type mismatch");return JsonInput.object(parsed.rawJson);}
+ public static String inboundTag(JSONObject root)throws JSONException {
+  java.util.Set<String> names=new java.util.LinkedHashSet<>();collectInbound(root,names);
+  if(names.size()>1)throw new IllegalArgumentException("Multiple distinct inbound policies cannot be mapped to one Android VPN");
+  if(!names.isEmpty())return names.iterator().next();
+  JSONArray in=root.optJSONArray("inbounds");return in!=null&&in.length()>0&&in.optJSONObject(0)!=null?in.getJSONObject(0).optString("tag","parvaz"):"parvaz";
+ }
+ private static void collectInbound(Object value,java.util.Set<String> names)throws JSONException {
+  if(value instanceof JSONArray){JSONArray a=(JSONArray)value;for(int i=0;i<a.length();i++)collectInbound(a.get(i),names);}
+  if(!(value instanceof JSONObject))return;JSONObject o=(JSONObject)value;Iterator<String> keys=o.keys();
+  while(keys.hasNext()){String key=keys.next();Object child=o.get(key);
+   if(key.equals("inbound")||key.equals("inboundTag")){if(child instanceof String)names.add((String)child);else if(child instanceof JSONArray)for(int i=0;i<((JSONArray)child).length();i++)names.add(((JSONArray)child).getString(i));}
+   else collectInbound(child,names);
+  }
+ }
+ private static void validateInboundPolicy(JSONObject root)throws JSONException {
+  inboundTag(root);
+  JSONArray rules=root.optJSONArray("rules");if(rules!=null)for(int i=0;i<rules.length();i++){
+   String rule=rules.optString(i,"").toUpperCase(Locale.ROOT);
+   if(rule.startsWith("PROCESS-")||rule.startsWith("IN-NAME,")||rule.startsWith("IN-TYPE,")||rule.startsWith("IN-PORT,"))throw new IllegalArgumentException("Desktop process/listener rules are not Android VPN rules");
+  }
+ }
  private static void validate(Object value,int depth)throws JSONException {
   if(depth>32)throw new IllegalArgumentException("Configuration depth");
   if(value instanceof JSONArray){JSONArray a=(JSONArray)value;for(int i=0;i<a.length();i++)validate(a.get(i),depth+1);}
   if(!(value instanceof JSONObject))return;JSONObject o=(JSONObject)value;
   for(String key:new ArrayList<String>(){{Iterator<String> it=o.keys();while(it.hasNext())add(it.next());}}){
    Object child=o.get(key);String k=key.toLowerCase(Locale.ROOT);
-   if(Arrays.asList("script","post-up","post-down","network_namespace","network-namespace").contains(k))throw new IllegalArgumentException("Executable or privileged configuration is not allowed");
+   if(k.matches("(^|.*[-_])script($|[-_].*)")||Arrays.asList("command","post-up","post-down","network_namespace","network-namespace","process_name","process_path","package_name","user_id").contains(k))throw new IllegalArgumentException("Executable or privileged configuration is not allowed");
    boolean file=k.endsWith("_path")||k.endsWith("-path")||k.equals("certificatefile")||k.equals("keyfile")||k.equals("path")&&(o.has("url")||Arrays.asList("file","local","remote").contains(o.optString("type")));
    if(file&&child instanceof String){String path=(String)child;if(path.startsWith("/")||path.contains("..")||path.contains("\\")||path.contains(":"))throw new IllegalArgumentException("External file path is not allowed");}
    if(k.equals("url")&&child instanceof String&&!(child.toString().startsWith("https://")))throw new IllegalArgumentException("Provider URLs require HTTPS");

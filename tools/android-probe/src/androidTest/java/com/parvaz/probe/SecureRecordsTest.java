@@ -13,6 +13,9 @@ public class SecureRecordsTest {
   Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();SharedPreferences prefs=context.getSharedPreferences("cipher-probe",0);prefs.edit().clear().putString("profiles","private-test-credential").putString("subs","private-test-url").commit();
   StoreCipher cipher=StoreCipher.open(context,prefs);assertFalse(prefs.getString("profiles","").contains("private-test"));
   assertEquals("private-test-credential",StoreCipher.open(context,prefs).decode("profiles",prefs.getString("profiles","")));
+  java.io.File file=new java.io.File(context.getApplicationInfo().dataDir,"shared_prefs/cipher-probe.xml");
+  String disk=new String(java.nio.file.Files.readAllBytes(file.toPath()),java.nio.charset.StandardCharsets.UTF_8);
+  assertFalse(disk.contains("private-test-credential"));assertTrue(disk.contains("PARVAZ-GCM-1"));
   String old=prefs.getString("profiles","");KeyStore store=KeyStore.getInstance("AndroidKeyStore");store.load(null);store.deleteEntry("com.parvaz.tunnel.records.v1");
   try{StoreCipher.open(context,prefs);fail("Missing key must not silently rotate");}catch(IllegalStateException expected){}
   assertEquals(old,prefs.getString("profiles",""));prefs.edit().clear().commit();

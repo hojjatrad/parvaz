@@ -1092,16 +1092,25 @@ public class MainActivity extends AppCompatActivity {
         new com.google.android.material.dialog.MaterialAlertDialogBuilder(this).setTitle(R.string.import_full_config).setMessage(R.string.full_config_warning)
           .setPositiveButton(R.string.import_full_paste,(d,w)->{
             android.content.ClipboardManager clipboard=(android.content.ClipboardManager)getSystemService(Context.CLIPBOARD_SERVICE);
-            if(clipboard==null||!clipboard.hasPrimaryClip())return;String text=clipboard.getPrimaryClip().getItemAt(0).coerceToText(this).toString();
-            new Thread(()->{try{
-                Profile profile=com.parvaz.tunnel.config.FullConfig.parse(text);
-                runOnUiThread(()->{if(isFinishing()||isDestroyed())return;ProfileStore store=ProfileStore.f(this);store.a(new java.util.ArrayList<>(java.util.Collections.singletonList(profile)),"");store.setPrimarySubscription(ProfileStore.MANUAL_GROUP);reload();});
-            }catch(Exception error){runOnUiThread(()->Snackbar.make(findViewById(android.R.id.content),R.string.full_config_invalid,Snackbar.LENGTH_SHORT).show());}},"parvaz-full-import").start();
-          }).setNegativeButton(R.string.cancel,null).show();
+            if(clipboard==null||!clipboard.hasPrimaryClip())return;
+            importFullText(clipboard.getPrimaryClip().getItemAt(0).coerceToText(this).toString());
+          }).setNeutralButton(R.string.import_file,(d,w)->fullDocumentPicker.launch(new String[]{"text/*","application/json","application/yaml","application/x-yaml","application/octet-stream"}))
+          .setNegativeButton(R.string.cancel,null).show();
+    }
+    private void importFullText(String text){
+        if(importing||manualRefreshing||readingSharedInput){Snackbar.make(connectButton,R.string.import_busy,Snackbar.LENGTH_SHORT).show();return;}
+        importing=true;
+        new Thread(()->{try{
+            Profile profile=com.parvaz.tunnel.config.FullConfig.parse(text);
+            ProfileStore store=ProfileStore.f(this);store.a(new java.util.ArrayList<>(java.util.Collections.singletonList(profile)),"");
+            Profile saved=store.b(profile);store.setPrimarySubscription(ProfileStore.MANUAL_GROUP);
+            if(saved!=null)L.f343a.edit().putString("selected_profile",saved.id).commit();
+            runOnUiThread(()->{importing=false;if(isFinishing()||isDestroyed())return;query="";favOnly=false;searchInput.setText("");renderFavFilter();reload();});
+        }catch(Exception error){runOnUiThread(()->{importing=false;if(!isFinishing()&&!isDestroyed())Snackbar.make(connectButton,R.string.full_config_invalid,Snackbar.LENGTH_SHORT).show();});}},"parvaz-full-import").start();
     }
 
     private boolean readingSharedInput;
-    private androidx.activity.result.ActivityResultLauncher<String[]> sharedDocumentPicker;
+    private androidx.activity.result.ActivityResultLauncher<String[]> sharedDocumentPicker,fullDocumentPicker;
     public final void handleIntent(Intent intent) {
         if(intent==null||intent.getData()==null&&!Intent.ACTION_SEND.equals(intent.getAction()))return;
         if(readingSharedInput||importing||manualRefreshing){Snackbar.make(findViewById(android.R.id.content),R.string.import_busy,Snackbar.LENGTH_SHORT).show();return;}
@@ -2381,6 +2390,10 @@ public class MainActivity extends AppCompatActivity {
             this.F.launch("android.permission.POST_NOTIFICATIONS");
         }
         sharedDocumentPicker=registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),uri->{if(uri!=null)handleIntent(new Intent(Intent.ACTION_VIEW,uri));});
+        fullDocumentPicker=registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),uri->{if(uri!=null)new Thread(()->{
+            String text="";try{text=com.parvaz.tunnel.core.SharedInput.content(getApplicationContext(),uri);}catch(Exception ignored){}final String input=text;
+            runOnUiThread(()->{if(!isFinishing()&&!isDestroyed())importFullText(input);});
+        },"parvaz-full-file").start();});
         handleIntent(getIntent());
         this.connectButton.postDelayed(new A(), 4000L);
         try {

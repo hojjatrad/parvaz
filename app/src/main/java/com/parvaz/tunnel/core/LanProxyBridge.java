@@ -58,9 +58,10 @@ public final class LanProxyBridge implements AutoCloseable {
             target.setSoTimeout(120000);client.setSoTimeout(120000);
             target.getOutputStream().write(clean.append("\r\n").toString().getBytes(StandardCharsets.ISO_8859_1));
             final Socket upstream=target;reply=reverse.submit(()->pipe(upstream,client));pipe(client,target);
+            try{reply.get(125,TimeUnit.SECONDS);}catch(InterruptedException interrupted){Thread.currentThread().interrupt();}catch(ExecutionException|TimeoutException ignored){}
         }catch(IOException|RejectedExecutionException ignored){}finally{drop(client);drop(target);if(reply!=null)reply.cancel(true);slots.release();}
     }
-    private void pipe(Socket src,Socket dst){try{byte[] buffer=new byte[16384];int n;while(running.get()&&(n=src.getInputStream().read(buffer))!=-1){dst.getOutputStream().write(buffer,0,n);dst.getOutputStream().flush();}}catch(IOException ignored){}finally{drop(src);drop(dst);}}
+    private void pipe(Socket src,Socket dst){try{byte[] buffer=new byte[16384];int n;while(running.get()&&(n=src.getInputStream().read(buffer))!=-1){dst.getOutputStream().write(buffer,0,n);dst.getOutputStream().flush();}}catch(IOException ignored){drop(src);drop(dst);}finally{try{dst.shutdownOutput();}catch(IOException ignored){}}}
     private void drop(Socket s){if(s!=null){sockets.remove(s);try{s.close();}catch(IOException ignored){}}}
     @Override public void close(){if(!running.getAndSet(false))return;try{listener.close();}catch(IOException ignored){}for(Socket s:sockets)drop(s);workers.shutdownNow();reverse.shutdownNow();Arrays.fill(expected,(byte)0);}
 }

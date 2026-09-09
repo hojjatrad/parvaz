@@ -14,9 +14,11 @@ android {
         applicationId "com.parvaz.tunnel"
         minSdk 24
         targetSdk 34
+        resourceConfigurations += ['en', 'fa'] // The two languages actually offered by Settings.
         versionCode 27
         versionName "1.26"
         resValue "string", "bundled_core_version", new groovy.json.JsonSlurper().parse(rootProject.file('tools/release/core-lock.json')).tag
+        resValue "string", "bundled_native_versions", new groovy.json.JsonSlurper().parse(rootProject.file('tools/native/engines-lock.json')).collect { it.name + ' ' + it.tag }.join(' • ')
         vectorDrawables.useSupportLibrary = true
 
         // libv2ray.aar also ships x86/x86_64 builds of libgojni. No Iranian Android

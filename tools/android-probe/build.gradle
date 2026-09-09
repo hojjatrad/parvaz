@@ -17,34 +17,25 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
 }
 
-// Compile only this production helper, not the full native VPN application.
-def copyArchiveHelper = tasks.register('copyArchiveHelper', Copy) {
-    from '../../app/src/main/java/com/parvaz/tunnel/core/ArchiveSignatures.java'
-    into layout.buildDirectory.dir('generated/probeJava/com/parvaz/tunnel/core')
-}
-tasks.named('preBuild').configure { dependsOn copyArchiveHelper }
-
-def copyStoreCipher = tasks.register('copyStoreCipher', Copy) {
-    from '../../app/src/main/java/com/parvaz/tunnel/store/StoreCipher.java'
-    into layout.buildDirectory.dir('generated/probeJava/com/parvaz/tunnel/store')
-}
-tasks.named('preBuild').configure { dependsOn copyStoreCipher }
-
-// Native tests are opt-in so archive/Keystore-only checks remain small.
-if(project.hasProperty('nativeProbe')) {
-    android.sourceSets.main.jniLibs.srcDirs = ['../../.cache/native-probe']
-    android.packagingOptions.jniLibs.useLegacyPackaging = true
-    def copyNativeHelpers = tasks.register('copyNativeHelpers', Copy) {
-        from('../../app/src/main/java') {
+// Isolated helper application, not the full production VPN app.
+def prepareProbeSources=tasks.register('prepareProbeSources',Sync){
+    from('../../app/src/main/java'){
+        include 'com/parvaz/tunnel/core/ArchiveSignatures.java'
+        include 'com/parvaz/tunnel/store/StoreCipher.java'
+        if(project.hasProperty('nativeProbe')){
             include 'com/parvaz/tunnel/core/ExternalCore.java'
             include 'com/parvaz/tunnel/config/EngineConfig.java'
             include 'com/parvaz/tunnel/config/ProtocolNames.java'
             include 'com/parvaz/tunnel/model/Profile.java'
         }
-        into layout.buildDirectory.dir('generated/probeJava')
     }
-    tasks.named('preBuild').configure { dependsOn copyNativeHelpers }
-} else {
+    into layout.buildDirectory.dir('generated/probeJava')
+}
+tasks.named('preBuild').configure { dependsOn prepareProbeSources }
+if(project.hasProperty('nativeProbe')){
+    android.sourceSets.main.jniLibs.srcDirs=['../../.cache/native-probe']
+    android.packagingOptions.jniLibs.useLegacyPackaging=true
+}else{
     android.sourceSets.main.java.exclude 'com/parvaz/tunnel/config/FullConfig.java'
     android.sourceSets.androidTest.java.exclude '**/NativeEngineTest.java'
 }

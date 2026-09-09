@@ -24,7 +24,7 @@ public final class EngineConfig {
    root.put("dns",dns);return root;
   }
   root.put("log",new JSONObject().put("disabled",true));root.remove("experimental");root.remove("services");
-  String inboundTag="parvaz";JSONArray original=root.optJSONArray("inbounds");if(original!=null&&original.length()>0&&original.optJSONObject(0)!=null)inboundTag=original.getJSONObject(0).optString("tag","parvaz");
+  String inboundTag=FullConfig.isFull(protocol)?FullConfig.inboundTag(root):"parvaz";
   root.put("inbounds",new JSONArray().put(new JSONObject().put("type","socks").put("tag",inboundTag).put("listen","127.0.0.1").put("listen_port",port).put("users",new JSONArray().put(new JSONObject().put("username",user).put("password",password)))));
   if(!protocol.equals("full-singbox")){
    JSONObject outbound=new JSONObject().put("type",protocol).put("tag","proxy").put("server",profile.address).put("server_port",profile.port);

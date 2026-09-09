@@ -64,3 +64,5 @@ jobs:
         run: |
           python3 tools/release/verify_apk.py
           python3 tools/native/verify_packaging.py
+      - name: Verify corresponding source bundle before publication
+        run: python3 tools/native/source_bundle.py

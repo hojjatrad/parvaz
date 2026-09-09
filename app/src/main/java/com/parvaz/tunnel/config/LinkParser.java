@@ -325,9 +325,9 @@ public final class LinkParser {
             i = 443;
         }
         F.port = i;
-        String userInfo = parse.getUserInfo();
+        String userInfo = parse.getEncodedUserInfo();
         if (userInfo != null) {
-            str5 = urlDecode(userInfo);
+            str5 = Uri.decode(userInfo);
         }
         F.uuid = str5;
         String fragment = parse.getFragment();
@@ -510,11 +510,11 @@ public final class LinkParser {
             i = 443;
         }
         F.port = i;
-        String userInfo = parse.getUserInfo();
+        String userInfo = parse.getEncodedUserInfo();
         if (userInfo == null) {
             Z = "";
         } else {
-            Z = urlDecode(userInfo);
+            Z = Uri.decode(userInfo);
         }
         F.uuid = Z;
         F.security = "tls";
@@ -564,10 +564,10 @@ public final class LinkParser {
             i = 443;
         }
         F.port = i;
-        if (parse.getUserInfo() == null) {
+        if (parse.getEncodedUserInfo() == null) {
             Z = "";
         } else {
-            Z = urlDecode(parse.getUserInfo());
+            Z = Uri.decode(parse.getEncodedUserInfo());
         }
         int indexOf = Z.indexOf(58);
         boolean z = false;
@@ -625,9 +625,9 @@ public final class LinkParser {
         F.network = "tcp";
         F.encryption = "none";
         F.security = "";
-        String userInfo = parse.getUserInfo();
+        String userInfo = parse.getEncodedUserInfo();
         if (userInfo != null && !userInfo.isEmpty()) {
-            String Z = urlDecode(userInfo);
+            String Z = Uri.decode(userInfo);
             String Y = tryBase64(Z);
             if (Y != null && Y.indexOf(58) > 0) {
                 Z = Y;
@@ -673,11 +673,11 @@ public final class LinkParser {
             i = 51820;
         }
         F.port = i;
-        String userInfo = parse.getUserInfo();
+        String userInfo = parse.getEncodedUserInfo();
         if (userInfo == null) {
             Z = "";
         } else {
-            Z = urlDecode(userInfo);
+            Z = Uri.decode(userInfo);
         }
         F.uuid = Z;
         String fragment = parse.getFragment();

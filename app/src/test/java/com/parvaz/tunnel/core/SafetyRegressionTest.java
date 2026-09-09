@@ -45,6 +45,10 @@ public class SafetyRegressionTest {
   try{StoreCipher.open(context,raw);fail("Cross-key substitution accepted");}catch(IllegalStateException expected){}
   assertEquals(raw.getString("subs",""),raw.getString("profiles",""));
  }
+ @Test public void encryptedStoreCannotSilentlyDowngradeToPlaintext(){
+  SharedPreferences raw=context.getSharedPreferences("parvaz_store",0);raw.edit().putString("profiles","[]").putString("subs","[]").commit();StoreCipher.open(context,raw);
+  raw.edit().putString("profiles","[]").commit();try{StoreCipher.open(context,raw);fail();}catch(IllegalStateException expected){}assertEquals("[]",raw.getString("profiles",""));
+ }
  private String legacy(String kdf)throws Exception {
   byte[] salt=new byte[16],iv=new byte[12];SecretKey key=new SecretKeySpec(SecretKeyFactory.getInstance(kdf).generateSecret(new PBEKeySpec("test".toCharArray(),salt,120000,256)).getEncoded(),"AES");
   Cipher c=Cipher.getInstance("AES/GCM/NoPadding");c.init(Cipher.ENCRYPT_MODE,key,new GCMParameterSpec(128,iv));

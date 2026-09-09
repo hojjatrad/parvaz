@@ -21,6 +21,11 @@ public class EngineConfigTest {
   JSONObject t=EngineConfig.build(tuic,10810,10811,"local","local-secret").getJSONArray("outbounds").getJSONObject(0);
   assertEquals("11111111-1111-4111-8111-111111111111",t.getString("uuid"));assertEquals("server-password",t.getString("password"));assertTrue(ProtocolSupport.isSupported(tuic));
  }
+ @Test public void uriPasswordsKeepLiteralPlusAndPercentEscapes()throws Exception {
+  assertEquals("secret%2F+",LinkParser.parseMany("hy2://secret%252F%2B@server.invalid:443").get(0).uuid);
+  assertEquals("secret%2F+",LinkParser.parseMany("tuic://11111111-1111-4111-8111-111111111111:secret%252F%2B@server.invalid:443").get(0).quicKey);
+  assertEquals("secret%2F+",LinkParser.parseMany("trojan://secret%252F%2B@server.invalid:443").get(0).uuid);
+ }
  @Test public void fullClashKeepsRulesGroupsAndScalarPasswordsWithoutPublicListeners()throws Exception {
   String yaml="mixed-port: 7890\nallow-lan: true\nexternal-controller: 0.0.0.0:9090\nproxies:\n - name: node\n   type: trojan\n   server: example.invalid\n   port: 443\n   password: yes\nproxy-groups:\n - name: group\n   type: select\n   proxies: [node]\nrules: [\"MATCH,group\"]\n";
   Profile p=FullConfig.parse(yaml);JSONObject original=new JSONObject(p.rawJson);assertEquals("yes",original.getJSONArray("proxies").getJSONObject(0).getString("password"));

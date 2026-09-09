@@ -149,6 +149,7 @@ public final class CoreManager {
 
     /* renamed from: d */
     public final synchronized void stop() {
+        HotspotProxyManager.stop();
         this.running = false;
         if(external!=null){external.close();external=null;}
         CoreController coreController = this.controller;

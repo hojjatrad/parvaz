@@ -9,7 +9,9 @@ public final class ManagedConfig {
  public static String xray(Profile original,Profile relay,Prefs prefs,int dnsPort,boolean inbounds,boolean tun)throws JSONException {
   JSONObject template=new JSONObject(XrayConfigBuilder.b(relay,prefs,null,inbounds,tun));
   if(original.protocol.equals("full-xray")){
-   JSONObject root=FullConfig.root(original);root.put("inbounds",template.optJSONArray("inbounds")==null?new JSONArray():template.getJSONArray("inbounds"));root.remove("api");root.remove("reverse");root.remove("metrics");root.remove("observatory");root.remove("burstObservatory");
+   JSONObject root=FullConfig.root(original);
+   JSONObject routing=root.optJSONObject("routing");if(routing!=null){JSONArray rules=routing.optJSONArray("rules");if(rules!=null)for(int i=0;i<rules.length();i++){JSONObject rule=rules.optJSONObject(i);if(rule!=null&&rule.has("inboundTag"))rule.put("inboundTag",new JSONArray().put("tun").put("socks").put("http"));}}
+   root.put("inbounds",template.optJSONArray("inbounds")==null?new JSONArray():template.getJSONArray("inbounds"));root.remove("api");root.remove("reverse");root.remove("metrics");root.remove("observatory");root.remove("burstObservatory");
    root.put("log",new JSONObject().put("loglevel","warning")).put("stats",new JSONObject()).put("policy",template.getJSONObject("policy"));return root.toString();
   }
   JSONArray outbounds=template.getJSONArray("outbounds");JSONObject proxy=null;
