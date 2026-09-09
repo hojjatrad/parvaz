@@ -870,7 +870,7 @@ public class SettingsActivity extends AppCompatActivity {
         linearLayout.setVisibility(i2);
         switchCompat6.setOnCheckedChangeListener(new d(linearLayout));
         Spinner spinner4 = (Spinner) findViewById(R.id.sub_auto);
-        String valueOf = String.valueOf(this.C.f343a.getInt("sub_auto_hours", 0));
+        String valueOf = String.valueOf(this.C.f343a.getInt("sub_auto_hours", 1));
         String[] strArr4 = new String[4];
         int i3 = 0;
         while (true) {

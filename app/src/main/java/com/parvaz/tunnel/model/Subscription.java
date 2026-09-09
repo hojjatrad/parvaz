@@ -22,6 +22,7 @@ public class Subscription {
     public long quotaDownload = -1;
     public long quotaTotal = -1;
     public long quotaExpire = -1;
+    public long quotaUpdatedAt = 0;
 
     public static Subscription fromJson(JSONObject jSONObject) {
         Subscription subscription = new Subscription();
@@ -35,7 +36,14 @@ public class Subscription {
         subscription.quotaDownload = jSONObject.optLong("quotaDownload", -1L);
         subscription.quotaTotal = jSONObject.optLong("quotaTotal", -1L);
         subscription.quotaExpire = jSONObject.optLong("quotaExpire", -1L);
+        subscription.quotaUpdatedAt = jSONObject.optLong("quotaUpdatedAt", 0L);
         return subscription;
+    }
+
+    public void replaceUserinfo(String text,long now) {
+        quotaUpload=quotaDownload=quotaTotal=quotaExpire=-1;quotaUpdatedAt=0;
+        applyUserinfo(text);
+        if(quotaTotal>=0 && quotaUpload>=0 && quotaDownload>=0)quotaUpdatedAt=now;
     }
 
     public void applyUserinfo(String str) {
@@ -51,7 +59,7 @@ public class Subscription {
                 long tot = json.optLong("data_limit", json.optLong("total", -1L));
                 long used = json.optLong("used_traffic", json.optLong("used", -1L));
                 long exp = json.optLong("expire", -1L);
-                if (tot > 0) this.quotaTotal = tot;
+                if (tot >= 0) this.quotaTotal = tot;
                 if (used >= 0) {
                     this.quotaDownload = used;
                     this.quotaUpload = 0;
@@ -70,7 +78,9 @@ public class Subscription {
                 String val = part.substring(indexOf + 1).trim();
                 if (!val.isEmpty()) {
                     try {
-                        long num = (long) Double.parseDouble(val);
+                        double parsed=Double.parseDouble(val);
+                        if(!Double.isFinite(parsed)||parsed<0||parsed>Long.MAX_VALUE)continue;
+                        long num = (long) parsed;
                         if ("expire".equals(key)) {
                             this.quotaExpire = num;
                         } else if ("upload".equals(key)) {
@@ -185,7 +195,7 @@ public class Subscription {
         if (quotaUsed >= j) {
             return 100;
         }
-        return (int) ((quotaUsed * 100) / j);
+        return (int) Math.min(100d,100d*quotaUsed/j);
     }
 
     public long quotaRemaining() {
@@ -196,7 +206,8 @@ public class Subscription {
     }
 
     public long quotaUsed() {
-        return Math.max(0L, this.quotaUpload) + Math.max(0L, this.quotaDownload);
+        long a=Math.max(0L,quotaUpload),b=Math.max(0L,quotaDownload);
+        return a>Long.MAX_VALUE-b?Long.MAX_VALUE:a+b;
     }
 
     public int getDaysRemaining() {
@@ -223,6 +234,7 @@ public class Subscription {
         jSONObject.put("quotaDownload", this.quotaDownload);
         jSONObject.put("quotaTotal", this.quotaTotal);
         jSONObject.put("quotaExpire", this.quotaExpire);
+        jSONObject.put("quotaUpdatedAt", this.quotaUpdatedAt);
         return jSONObject;
     }
 }

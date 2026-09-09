@@ -80,6 +80,28 @@ public final class LinkParser {
                     JSONArray links = root.optJSONArray("links");
                     if (links == null) { result.fail("INVALID_PANEL_LINKS"); return; }
                     parseInto(links.toString(), result, depth + 1);
+                } else if(!root.has("outbounds") && (root.has("configs")||root.has("data"))) {
+                    Object payload=root.has("configs")?root.opt("configs"):root.opt("data");
+                    if(payload instanceof JSONObject||payload instanceof JSONArray||payload instanceof String) {
+                        parseInto(payload.toString(),result,depth+1);result.warn("PANEL_ENVELOPE_EXTRACTION",0);
+                    } else result.reject("INVALID_PANEL_PAYLOAD",0);
+                } else if(root.optJSONArray("outbounds")!=null) {
+                    JSONArray outbounds=root.optJSONArray("outbounds");
+                    if(outbounds.length()>MAX_PROFILES)throw new IllegalArgumentException("Too many outbounds");
+                    for(int i=0;i<outbounds.length();i++) {
+                        JSONObject outbound=outbounds.optJSONObject(i);
+                        if(outbound==null){result.reject("INVALID_OUTBOUND",i+1);continue;}
+                        String protocol=outbound.optString("protocol","");
+                        if(protocol.equals("freedom")||protocol.equals("blackhole")||protocol.equals("dns"))continue;
+                        try {
+                            JSONObject wrapper=new JSONObject();wrapper.put("outbounds",new JSONArray().put(outbound));
+                            wrapper.put("remarks",firstNonEmpty(outbound.optString("tag"),root.optString("remarks")));
+                            Profile profile=parseRawJson(wrapper.toString());
+                            if(profile!=null&&valid(profile))result.add(profile);else result.reject("UNSUPPORTED_OUTBOUND",i+1);
+                        }catch(JSONException e){result.reject("INVALID_OUTBOUND",i+1);}
+                    }
+                    result.warn("RAW_OUTBOUND_EXTRACTION_ONLY",0);
+                    if(result.profiles.isEmpty())result.reject("NO_PROXY_OUTBOUNDS",0);
                 } else {
                     try {
                         Profile profile = parseRawJson(text);

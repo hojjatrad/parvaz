@@ -1,0 +1,78 @@
+package com.parvaz.tunnel.core;
+import com.parvaz.tunnel.config.*;
+import com.parvaz.tunnel.model.*;
+import com.parvaz.tunnel.store.*;
+import java.util.*;
+import org.json.*;
+
+public class SmartImportAudit {
+    static int count;
+    static void check(String message,boolean ok){if(!ok)throw new AssertionError(message);count++;System.out.println("PASS SMART: "+message);}
+    static String raw(String host)throws Exception{return new JSONObject().put("outbounds",new JSONArray().put(new JSONObject().put("protocol","vless").put("tag",host).put("settings",new JSONObject().put("vnext",new JSONArray().put(new JSONObject().put("address",host).put("port",443).put("users",new JSONArray().put(new JSONObject().put("id","11111111-1111-4111-8111-111111111111").put("encryption","none")))))))).toString();}
+    public static void main(String[] args)throws Exception {
+        String a=raw("a.example.invalid"),b=raw("b.example.invalid"),both="["+a+","+b+"]";
+        check("HTTP clipboard reference recognized",ImportInput.parse("https://panel.example.invalid/sub/token").subscriptions.size()==1);
+        check("Token case/escapes preserved",SubscriptionUrl.normalize("HTTPS://Panel.Example.Invalid:443/sub/AbC%2F?token=a+b%2F#label with spaces").equals("https://panel.example.invalid/sub/AbC%2F?token=a+b%2F"));
+        check("Different query tokens not merged",!SubscriptionUrl.normalize("https://p.invalid/s?t=A").equals(SubscriptionUrl.normalize("https://p.invalid/s?t=a")));
+        check("Repeated URL aliases collapse",ImportInput.parse("https://p.invalid/s#one\nHTTPS://P.INVALID:443/s#two").subscriptions.size()==1);
+        check("Hiddify wrapper recognized",ImportInput.parse("hiddify://import/https://p.invalid/s#name").subscriptions.contains("https://p.invalid/s"));
+        check("v2rayNG wrapper recognized",ImportInput.parse("v2rayng://install-config?url=https%3A%2F%2Fp.invalid%2Fs").subscriptions.contains("https://p.invalid/s"));
+        check("Base64 URL recognized",ImportInput.parse(java.util.Base64.getEncoder().encodeToString("https://p.invalid/s".getBytes("UTF-8"))).subscriptions.size()==1);
+        check("Raw JSON is local, not fetched",ImportInput.parse(a).subscriptions.isEmpty());
+        check("Credentials in URL refused",!SubscriptionUrl.valid("https://user:password@p.invalid/s"));
+        check("Non-network URL refused",!SubscriptionUrl.valid("file:///data/private"));
+        check("Bad port refused",!SubscriptionUrl.valid("https://p.invalid:99999/s"));
+        JSONObject many=new JSONObject(a);many.getJSONArray("outbounds").put(new JSONObject(b).getJSONArray("outbounds").get(0));
+        check("All Xray proxy outbounds imported",LinkParser.parseDetailed(many.toString()).profiles.size()==2);
+        check("Explicit data envelope imported",LinkParser.parseDetailed(new JSONObject().put("data",new JSONArray(both)).toString()).profiles.size()==2);
+        PanelRefreshTest.Setup s=new PanelRefreshTest.Setup();
+        SubscriptionRefresh.Fetcher fetch=url->new SubscriptionUpdater.b(both,"upload=10; download=20; total=1000");
+        SmartImport.Result first=SmartImport.run(s.store,s.prefs,"https://p.invalid/s",()->false,fetch);
+        check("Smart subscription fetch loads all servers",s.store.e().size()==2&&first.failed==0&&first.subscriptions==1);
+        String selected=((Profile)s.store.e().get(0)).id;s.prefs.edit().putString("selected_profile",selected).apply();s.store.i(selected,42);
+        SmartImport.run(s.store,s.prefs,"HTTPS://P.INVALID:443/s#another name",()->false,fetch);
+        check("Pasting subscription again creates no source or connection duplicate",s.store.f().size()==1&&s.store.e().size()==2);
+        check("Refresh preserves selected ID and ping",s.store.getById(selected)!=null&&s.store.getById(selected).ping==42);
+        Subscription sub=(Subscription)s.store.f().get(0);
+        check("Quota comes from latest server header",sub.quotaUsed()==30&&sub.quotaTotal==1000&&sub.quotaUpdatedAt>0);
+        check("No selected source means no unrelated quota",QuotaState.source(null,s.store.f())==null);
+        Profile manual=ProfileIdentity.copy((Profile)s.store.e().get(0));manual.subscriptionId="";
+        check("Manual server cannot inherit subscription quota",QuotaState.source(manual,s.store.f())==null);
+        check("Applicable quota selected",QuotaState.known(QuotaState.source(s.store.getById(selected),s.store.f())));
+        Subscription invalid=Subscription.fromJson(sub.toJson());invalid.url="";
+        check("Removed URL hides saved quota",QuotaState.source(s.store.getById(selected),Arrays.asList(invalid))==null);
+        invalid.url=sub.url;invalid.enabled=false;
+        check("Disabled subscription hides quota",QuotaState.source(s.store.getById(selected),Arrays.asList(invalid))==null);
+        SmartImport.run(s.store,s.prefs,"https://p.invalid/s",()->false,url->new SubscriptionUpdater.b(both,null));
+        check("Missing metadata clears stale quota",!QuotaState.known((Subscription)s.store.f().get(0))&&((Subscription)s.store.f().get(0)).quotaTotal==-1);
+        SmartImport.run(s.store,s.prefs,"https://p.invalid/s",()->false,url->{throw new java.io.IOException("private-token");});
+        check("Offline refresh preserves servers",s.store.e().size()==2);
+        String newRaw=raw("new.example.invalid");
+        SmartImport.Result partial=SmartImport.run(s.store,s.prefs,"https://p.invalid/s",()->false,url->new SubscriptionUpdater.b("["+newRaw+",\"broken\"]",null));
+        check("Partial response adds valid new server without erasing old servers",partial.failed==1&&s.store.e().size()==3&&s.store.getById(selected)!=null);
+        Profile duplicate=ProfileIdentity.copy(s.store.getById(selected));duplicate.id="duplicate-id";duplicate.remark="renamed";
+        s.store.f346b.add(duplicate);s.store.h();
+        s.prefs.edit().putString("favorites",duplicate.id).apply();
+        check("Cleanup removes exact duplicate",s.store.removeDuplicates(s.prefs)==1);
+        check("Cleanup preserves selected server",s.store.getById(selected)!=null);
+        check("Cleanup retains favorite via surviving ID",s.prefs.getString("favorites","").contains(selected));
+        Subscription duplicateSub=Subscription.fromJson(((Subscription)s.store.f().get(0)).toJson());duplicateSub.id="duplicate-sub";
+        s.store.f347c.add(duplicateSub);Profile other=ProfileIdentity.copy(s.store.getById(selected));other.id="other-copy";other.subscriptionId=duplicateSub.id;s.store.f346b.add(other);s.store.h();
+        s.store.removeDuplicates(s.prefs);
+        check("Legacy repeated subscription records coalesced",s.store.f().size()==1&&s.store.e().size()==3);
+        SmartImport.run(s.store,s.prefs,"https://independent.invalid/s",()->false,url->new SubscriptionUpdater.b(a,null));
+        int records=s.store.e().size();
+        check("Independent sources kept under single visible connection",records==4&&ProfileDuplicates.visible(s.store.e(),selected,new HashSet<>()).size()==3);
+        check("View keeps selected representative",ProfileDuplicates.visible(s.store.e(),selected,new HashSet<>()).stream().anyMatch(p->((Profile)p).id.equals(selected)));
+        Profile different=ProfileIdentity.copy(s.store.getById(selected));different.rawJson=raw("different.example.invalid");different.id="different";s.store.a(new ArrayList<>(Arrays.asList(different)),"");
+        check("Different server not collapsed",ProfileDuplicates.visible(s.store.e(),selected,new HashSet<>()).size()==4);
+        check("Percentage overflow guarded",QuotaState.percent(Long.MAX_VALUE,Long.MAX_VALUE)==100);
+        Subscription q=new Subscription();q.replaceUserinfo("upload=NaN; download=Infinity; total=1000",1000);
+        check("Nonfinite quota rejected",!QuotaState.known(q));
+        q.replaceUserinfo("upload=0; download=25; total=0",1000);
+        check("Unlimited plan still carries actual usage",QuotaState.known(q)&&q.quotaUsed()==25&&QuotaState.percent(q.quotaUsed(),q.quotaTotal)==0);
+        ProfileStore reload=new ProfileStore(s.context);
+        check("Cleanup survives reload",reload.e().size()==s.store.e().size()&&reload.f().size()==s.store.f().size());
+        System.out.println("SMART IMPORT TOTAL: "+count+" assertions passed.");
+    }
+}

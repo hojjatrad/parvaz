@@ -386,4 +386,13 @@
     <string name="import_result_title">گزارش ورود کانفیگ</string>
     <string name="import_result_summary">شناخته‌شده: %1$d؛ ردشده: %2$d؛ هشدار: %3$d. فقط پروفایل‌های شناخته‌شده وارد می‌شوند. گزینه‌های پشتیبانی‌نشده بی‌صدا حذف نمی‌شوند.</string>
     <string name="subscription_refresh_summary">اشتراک به‌روز: %1$d؛ ناموفق: %2$d؛ پروفایل: %3$d؛ هشدار: %4$d</string>
+
+    <string name="remove_duplicates">پاک‌سازی کانکشن‌های تکراری</string>
+    <string name="remove_duplicates_confirm">تکراری‌های کاملاً یکسان در هر منبع و ساب‌های تکراری پاک‌سازی می‌شوند. هر اتصال یکسان یک‌بار نمایش داده می‌شود؛ وابستگی به ساب‌های مستقل برای آپدیت محفوظ می‌ماند. رمز یا تنظیمات اتصال متفاوت حذف نمی‌شود.</string>
+    <string name="duplicates_removed">%1$d رکورد تکراری پاک‌سازی شد. اتصال‌های یکسان یک‌بار نمایش داده می‌شوند.</string>
+    <string name="import_busy">در حال دریافت کانکشن‌ها هستیم؛ کمی صبر کنید.</string>
+    <string name="import_detecting">در حال تشخیص ساب یا کانفیگ و دریافت سرورها…</string>
+    <string name="import_smart_result">فهرست: %1$d اتصال یکتا؛ ساب به‌روز: %2$d؛ ناموفق: %3$d</string>
+    <string name="quota_no_metadata">۰ — اطلاعات حجم معتبر برای این اتصال دریافت نشده است؛ مصرف دستگاه به‌جای حجم سرویس نمایش داده نمی‌شود.</string>
+    <string name="quota_unlimited">حجم نامحدود (اعلام‌شده توسط سرور)</string>
 </resources>

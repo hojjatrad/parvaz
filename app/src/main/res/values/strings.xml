@@ -405,4 +405,13 @@ Tap + to paste a config link or add a subscription."</string>
     <string name="import_result_title">Configuration import report</string>
     <string name="import_result_summary">Recognized: %1$d; rejected: %2$d; warnings: %3$d. Only recognized profiles are imported. Unsupported options are not silently removed.</string>
     <string name="subscription_refresh_summary">Subscriptions updated: %1$d; failed: %2$d; profiles: %3$d; warnings: %4$d</string>
+
+    <string name="remove_duplicates">Clean duplicate connections</string>
+    <string name="remove_duplicates_confirm">Remove exact duplicates within each source and merge repeated subscription URLs. Identical connections appear once; independent subscription ownership is retained for safe updates. Different credentials or transport settings are never merged.</string>
+    <string name="duplicates_removed">Cleaned %1$d duplicate records. Identical connections are shown once.</string>
+    <string name="import_busy">An import is already running.</string>
+    <string name="import_detecting">Detecting subscription or configuration and loading servers…</string>
+    <string name="import_smart_result">List: %1$d unique connections; subscriptions updated: %2$d; failures: %3$d</string>
+    <string name="quota_no_metadata">0 — No applicable subscription traffic metadata. Values are not estimated from device traffic.</string>
+    <string name="quota_unlimited">Unlimited plan (reported by server)</string>
 </resources>

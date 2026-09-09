@@ -31,6 +31,8 @@ public final class UpdateChecker {
     private static final String RELEASES_API =
             "https://api.github.com/repos/hojjatrad/parvaz/releases/latest";
 
+    static final String SIGNING_SHA256 = "d1383b8f34da5d3299b13634de421487289d82c1bb47ec3bc7f20ae8d02fe500";
+    private static final long MAX_APK_BYTES=128L*1024*1024;
     private static final String PREFS = "parvaz_update";
     private static final String KEY_LAST_CHECK = "last_check";
     private static final String KEY_SKIPPED = "skipped_version";
@@ -47,9 +49,12 @@ public final class UpdateChecker {
         public String notes = "";
         public String downloadUrl = "";
         public long size = 0;
+        public String sha256 = "";
 
         public boolean valid() {
-            return !version.isEmpty() && !downloadUrl.isEmpty();
+            return version.matches("[0-9]+(\\.[0-9]+){1,3}") && size>0 && size<=MAX_APK_BYTES
+                    && sha256.matches("[0-9a-f]{64}")
+                    && downloadUrl.startsWith("https://github.com/hojjatrad/parvaz/releases/download/v"+version+"/");
         }
     }
 
@@ -67,6 +72,8 @@ public final class UpdateChecker {
         HttpURLConnection conn = null;
         try {
             conn = (HttpURLConnection) new URL(RELEASES_API).openConnection();
+            conn.setUseCaches(false);
+            conn.setRequestProperty("Cache-Control","no-cache");
             conn.setConnectTimeout(15000);
             conn.setReadTimeout(15000);
             conn.setRequestProperty("Accept", "application/vnd.github+json");
@@ -86,6 +93,7 @@ public final class UpdateChecker {
                     if (read <= 0) {
                         break;
                     }
+                    if(body.length()+read>2*1024*1024)throw new IllegalStateException("UPDATE_METADATA_TOO_LARGE");
                     body.append(buf, 0, read);
                 }
             } finally {
@@ -94,6 +102,7 @@ public final class UpdateChecker {
 
             JSONObject json = new JSONObject(body.toString());
 
+            if(json.optBoolean("draft",false)||json.optBoolean("prerelease",false))return null;
             Release release = new Release();
             release.version = normalizeVersion(json.optString("tag_name", ""));
             release.notes = json.optString("body", "");
@@ -101,6 +110,7 @@ public final class UpdateChecker {
             JSONArray assets = json.optJSONArray("assets");
             String universal = "";
             long universalSize = 0;
+            String universalDigest="",arm64Digest="";
             String arm64 = "";
             long arm64Size = 0;
             if (assets != null) {
@@ -112,25 +122,27 @@ public final class UpdateChecker {
                     String name = asset.optString("name", "").toLowerCase(Locale.US);
                     String url = asset.optString("browser_download_url", "");
                     long size = asset.optLong("size", 0);
+                    String digest=asset.optString("digest","");
+                    digest=digest.startsWith("sha256:")?digest.substring(7).toLowerCase(Locale.ROOT):"";
                     if (!name.endsWith(".apk") || url.isEmpty()) {
                         continue;
                     }
                     if (name.contains("arm64")) {
                         arm64 = url;
-                        arm64Size = size;
+                        arm64Size = size;arm64Digest=digest;
                     } else if (name.contains("universal") || universal.isEmpty()) {
                         universal = url;
-                        universalSize = size;
+                        universalSize = size;universalDigest=digest;
                     }
                 }
             }
 
             if (is64Bit() && !arm64.isEmpty()) {
                 release.downloadUrl = arm64;
-                release.size = arm64Size;
+                release.size = arm64Size;release.sha256=arm64Digest;
             } else {
                 release.downloadUrl = universal;
-                release.size = universalSize;
+                release.size = universalSize;release.sha256=universalDigest;
             }
 
             markChecked(context);
@@ -154,8 +166,9 @@ public final class UpdateChecker {
      * Downloads the APK into external cache so a FileProvider can hand it to the
      * package installer. Blocking.
      */
-    public static File download(Context context, Release release, DownloadProgress progress)
+    public static synchronized File download(Context context, Release release, DownloadProgress progress)
             throws Exception {
+        if(!release.valid())throw new IllegalArgumentException("INVALID_UPDATE_METADATA");
         File dir = context.getExternalCacheDir();
         if (dir == null) {
             dir = context.getCacheDir();
@@ -167,17 +180,16 @@ public final class UpdateChecker {
         InputStream in = null;
         FileOutputStream out = null;
         try {
-            conn = (HttpURLConnection) new URL(release.downloadUrl).openConnection();
-            conn.setConnectTimeout(20000);
-            conn.setReadTimeout(60000);
-            conn.setInstanceFollowRedirects(true);
-            conn.setRequestProperty("User-Agent", "Parvaz");
+            conn = openApk(release.downloadUrl);
 
             if (conn.getResponseCode() != 200) {
                 throw new IllegalStateException("HTTP " + conn.getResponseCode());
             }
 
-            long total = release.size > 0 ? release.size : conn.getContentLength();
+            long total = release.size;
+            if(conn.getContentLengthLong()>MAX_APK_BYTES)throw new IllegalStateException("UPDATE_TOO_LARGE");
+            java.security.MessageDigest digest=java.security.MessageDigest.getInstance("SHA-256");
+            long deadline=System.nanoTime()+300L*1000000000L;
             in = conn.getInputStream();
             out = new FileOutputStream(temp);
 
@@ -189,8 +201,10 @@ public final class UpdateChecker {
                 if (read <= 0) {
                     break;
                 }
-                out.write(buf, 0, read);
                 done += read;
+                if(done>MAX_APK_BYTES||done>release.size||System.nanoTime()>deadline)throw new IllegalStateException("UPDATE_SIZE_OR_TIME_LIMIT");
+                digest.update(buf,0,read);
+                out.write(buf, 0, read);
                 if (progress != null && total > 0) {
                     int percent = (int) ((done * 100) / total);
                     if (percent != lastPercent) {
@@ -203,12 +217,16 @@ public final class UpdateChecker {
             out.close();
             out = null;
 
+            if(done!=release.size||!hex(digest.digest()).equals(release.sha256))throw new IllegalStateException("UPDATE_CHECKSUM_MISMATCH");
+            verifyArchive(context,temp,release);
             if (target.exists()) {
                 target.delete();
             }
             if (!temp.renameTo(target)) {
                 throw new IllegalStateException("could not finalise download");
             }
+            File[] old=dir.listFiles();
+            if(old!=null)for(File file:old)if(!file.equals(target)&&file.getName().matches("parvaz-[0-9.]+\\.apk(\\.part)?"))file.delete();
             return target;
         } catch (Exception e) {
             temp.delete();
@@ -224,6 +242,46 @@ public final class UpdateChecker {
                 }
             }
         }
+    }
+
+    private static HttpURLConnection openApk(String value) throws Exception {
+        URL url=new URL(value);
+        for(int i=0;i<=5;i++) {
+            String host=url.getHost().toLowerCase(Locale.ROOT);
+            if(!url.getProtocol().equals("https")||url.getUserInfo()!=null||
+                    !(host.equals("github.com")||host.endsWith(".githubusercontent.com")))throw new IllegalStateException("UNTRUSTED_UPDATE_URL");
+            HttpURLConnection connection=(HttpURLConnection)url.openConnection();
+            connection.setConnectTimeout(20000);connection.setReadTimeout(60000);connection.setInstanceFollowRedirects(false);
+            connection.setRequestProperty("User-Agent","Parvaz");
+            int status;
+            try{status=connection.getResponseCode();}catch(Exception e){connection.disconnect();throw e;}
+            if(status==301||status==302||status==303||status==307||status==308) {
+                String location=connection.getHeaderField("Location");connection.disconnect();
+                if(location==null)throw new IllegalStateException("INVALID_UPDATE_REDIRECT");
+                url=new URL(url,location);continue;
+            }
+            return connection;
+        }
+        throw new IllegalStateException("UPDATE_REDIRECT_LIMIT");
+    }
+    static String hex(byte[] bytes) {
+        StringBuilder result=new StringBuilder();for(byte b:bytes)result.append(String.format(Locale.ROOT,"%02x",b&255));return result.toString();
+    }
+    private static void verifyArchive(Context context,File file,Release release) throws Exception {
+        android.content.pm.PackageManager pm=context.getPackageManager();
+        int flags=Build.VERSION.SDK_INT>=28?android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES:android.content.pm.PackageManager.GET_SIGNATURES;
+        android.content.pm.PackageInfo archive=pm.getPackageArchiveInfo(file.getAbsolutePath(),flags);
+        android.content.pm.PackageInfo installed=pm.getPackageInfo(context.getPackageName(),flags);
+        if(archive==null||!context.getPackageName().equals(archive.packageName)||!release.version.equals(archive.versionName))throw new IllegalStateException("WRONG_UPDATE_PACKAGE");
+        long next=Build.VERSION.SDK_INT>=28?archive.getLongVersionCode():archive.versionCode;
+        long current=Build.VERSION.SDK_INT>=28?installed.getLongVersionCode():installed.versionCode;
+        if(next<=current)throw new IllegalStateException("UPDATE_NOT_NEWER");
+        android.content.pm.Signature[] signers=Build.VERSION.SDK_INT>=28?(archive.signingInfo==null?null:archive.signingInfo.getApkContentsSigners()):archive.signatures;
+        android.content.pm.Signature[] own=Build.VERSION.SDK_INT>=28?(installed.signingInfo==null?null:installed.signingInfo.getApkContentsSigners()):installed.signatures;
+        if(signers==null||signers.length!=1||own==null||own.length!=1||!signers[0].equals(own[0])||
+                !SIGNING_SHA256.equals(hex(java.security.MessageDigest.getInstance("SHA-256").digest(signers[0].toByteArray()))))
+            throw new IllegalStateException("UPDATE_SIGNATURE_MISMATCH");
+        // The Android package installer performs the final cryptographic/install checks.
     }
 
     /** True when an automatic background check is due. */

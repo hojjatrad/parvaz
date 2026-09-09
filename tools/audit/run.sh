@@ -14,9 +14,9 @@ echo 'ef779af5d29a9dde8cc70ce0341f5c6f7735e23edff9685ceaa9d35359b7bb7f  .cache/a
 javac -encoding UTF-8 -cp .cache/audit/json.jar:.cache/audit/snakeyaml.jar -d .cache/audit/classes \
  $(find tools/audit/stubs -name '*.java') \
  app/src/main/java/com/parvaz/tunnel/model/{Profile,Subscription}.java \
- app/src/main/java/com/parvaz/tunnel/config/{LinkParser,ClashParser,SingBoxParser,ProtocolNames,CustomOutbound,XrayConfigBuilder,ConfigFields,ImportResult,JsonInput}.java \
- app/src/main/java/com/parvaz/tunnel/store/{ProfileStore,ProfileIdentity,SubscriptionReconciler}.java \
- app/src/main/java/com/parvaz/tunnel/core/{ProtocolSupport,SubscriptionHttpClient,SubscriptionRefresh,SubscriptionUpdater,SubscriptionUpdater_4,SubscriptionUpdater_5,SubscriptionWorker}.java tools/audit/ParserAudit.java tools/audit/SubscriptionHttpClientTest.java tools/audit/PanelRefreshTest.java
+ app/src/main/java/com/parvaz/tunnel/config/{LinkParser,ClashParser,SingBoxParser,ProtocolNames,CustomOutbound,XrayConfigBuilder,ConfigFields,ImportResult,JsonInput,SubscriptionUrl,ImportInput}.java \
+ app/src/main/java/com/parvaz/tunnel/store/{ProfileStore,ProfileIdentity,SubscriptionReconciler,ProfileDuplicates}.java \
+ app/src/main/java/com/parvaz/tunnel/core/{ProtocolSupport,SubscriptionHttpClient,SmartImport,QuotaState,SubscriptionRefresh,SubscriptionUpdater,SubscriptionUpdater_4,SubscriptionUpdater_5,SubscriptionWorker}.java tools/audit/ParserAudit.java tools/audit/SubscriptionHttpClientTest.java tools/audit/PanelRefreshTest.java tools/audit/SmartImportAudit.java
 java -cp .cache/audit/classes:.cache/audit/json.jar:.cache/audit/snakeyaml.jar ParserAudit
 # Ephemeral loopback-only TEST certificate, never a release/app signing key.
 rm -f .cache/audit/localhost.p12
@@ -30,3 +30,5 @@ fi
 java -cp .cache/audit/classes:.cache/audit/json.jar:.cache/audit/snakeyaml.jar com.parvaz.tunnel.core.SubscriptionHttpClientTest .cache/audit/localhost.p12
 
 java -cp .cache/audit/classes:.cache/audit/json.jar:.cache/audit/snakeyaml.jar com.parvaz.tunnel.core.PanelRefreshTest
+
+java -cp .cache/audit/classes:.cache/audit/json.jar:.cache/audit/snakeyaml.jar com.parvaz.tunnel.core.SmartImportAudit

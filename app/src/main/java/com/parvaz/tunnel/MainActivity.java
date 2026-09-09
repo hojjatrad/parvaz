@@ -301,6 +301,7 @@ public class MainActivity extends AppCompatActivity {
             String string;
             MainActivity mainActivity = MainActivity.this;
             mainActivity.getClass();
+            if(i==7){mainActivity.removeDuplicateConnections();return;}
             String str = "";
             if (i == 0) {
                 try {
@@ -319,25 +320,12 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
             if (i == 1) {
-                ClipboardManager clipboardManager = (ClipboardManager) mainActivity.getSystemService("clipboard");
-                if (clipboardManager != null && clipboardManager.getPrimaryClip() != null && clipboardManager.getPrimaryClip().getItemCount() != 0) {
-                    CharSequence coerceToText = clipboardManager.getPrimaryClip().getItemAt(0).coerceToText(mainActivity);
-                    if (coerceToText != null) {
-                        str = coerceToText.toString();
-                    }
-                    int importText = mainActivity.importText(str);
-                    View view = mainActivity.connectButton;
-                    if (importText > 0) {
-                        string = mainActivity.getString(R.string.imported_n, Integer.valueOf(importText));
-                    } else {
-                        string = mainActivity.getString(R.string.import_failed);
-                    }
-                    make = Snackbar.make(view, string, 0);
-                } else {
-                    make = Snackbar.make(mainActivity.connectButton, R.string.clipboard_empty, 0);
+                ClipboardManager clipboard=(ClipboardManager)mainActivity.getSystemService("clipboard");
+                if(clipboard==null||clipboard.getPrimaryClip()==null||clipboard.getPrimaryClip().getItemCount()==0) {
+                    Snackbar.make(mainActivity.connectButton,R.string.clipboard_empty,0).show();return;
                 }
-                make.show();
-                return;
+                CharSequence text=clipboard.getPrimaryClip().getItemAt(0).coerceToText(mainActivity);
+                mainActivity.importText(text==null?"":text.toString());return;
             }
             if (i == 2) {
                 View inflate = mainActivity.getLayoutInflater().inflate(R.layout.dialog_input, (ViewGroup) null);
@@ -408,14 +396,7 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 obj = textInputEditText.getText().toString();
             }
-            int importText = mainActivity.importText(obj);
-            View view = mainActivity.connectButton;
-            if (importText > 0) {
-                string = mainActivity.getString(R.string.imported_n, Integer.valueOf(importText));
-            } else {
-                string = mainActivity.getString(R.string.import_failed);
-            }
-            Snackbar.make(view, string, 0).show();
+            mainActivity.importText(obj);
         }
     }
 
@@ -460,21 +441,7 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 trim = textInputEditText.getText().toString().trim();
             }
-            if (!TextUtils.isEmpty(trim)) {
-                Subscription subscription = new Subscription();
-                subscription.id = UUID.randomUUID().toString();
-                subscription.url = trim;
-                if (Uri.parse(trim).getHost() != null) {
-                    trim = Uri.parse(trim).getHost();
-                }
-                subscription.name = trim;
-                ProfileStore profileStore = mainActivity.b0;
-                synchronized (profileStore) {
-                    profileStore.f347c.add(subscription);
-                    profileStore.h();
-                }
-                mainActivity.updateSubscriptions();
-            }
+            mainActivity.importText(trim);
         }
     }
 
@@ -486,9 +453,10 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onComplete(com.parvaz.tunnel.core.SubscriptionRefresh.Result result) {
+            if(isFinishing()||isDestroyed())return;
             MainActivity.this.refresh.setRefreshing(false);
             MainActivity.this.reload();
-            String summary=getString(R.string.subscription_refresh_summary,result.updated,result.failed,result.serverCount,result.warnings);
+            String summary=getString(R.string.subscription_refresh_summary,result.updated,result.failed,com.parvaz.tunnel.store.ProfileDuplicates.visible(b0.e(),L.f343a.getString("selected_profile",""),L.getFavorites()).size(),result.warnings);
             if(result.failed>0) summary += "\n" + result.errorSummary();
             Snackbar.make(MainActivity.this.connectButton,summary,0).show();
         }
@@ -543,14 +511,7 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 obj = textInputEditText.getText().toString();
             }
-            int importText = mainActivity.importText(obj);
-            View view = mainActivity.connectButton;
-            if (importText > 0) {
-                string = mainActivity.getString(R.string.imported_n, Integer.valueOf(importText));
-            } else {
-                string = mainActivity.getString(R.string.import_failed);
-            }
-            Snackbar.make(view, string, 0).show();
+            mainActivity.importText(obj);
         }
     }
 
@@ -714,16 +675,7 @@ public class MainActivity extends AppCompatActivity {
             } catch (Throwable unused) {
                 android.util.Log.w("Parvaz/MainActivity", "Throwable ignored", unused);
             }
-            int importText = mainActivity.importText(str);
-            View view = mainActivity.connectButton;
-            if (importText <= 0) {
-                string = mainActivity.getString(R.string.imported_n, Integer.valueOf(importText));
-            } else {
-                string = mainActivity.getString(R.string.import_failed);
-            }
-            Snackbar.make(view, string, 0).show();
-            mainActivity.importText(str);
-            Snackbar.make(mainActivity.connectButton, string, 0).show();
+            if(str!=null)mainActivity.importText(str);
         }
     }
 
@@ -1128,42 +1080,42 @@ public class MainActivity extends AppCompatActivity {
 
     /* renamed from: C */
     public final void handleIntent(Intent intent) {
-        Uri data;
-        int importText;
-        if (intent == null || (data = intent.getData()) == null || (importText = importText(data.toString())) <= 0) {
-            return;
-        }
-        Snackbar.make(this.connectButton, getString(R.string.imported_n, Integer.valueOf(importText)), 0).show();
+        if(intent!=null&&intent.getData()!=null)importText(intent.getData().toString());
     }
 
-    /* renamed from: D */
-    public final int importText(String str) {
-        try {
-            try {
-                com.parvaz.tunnel.config.ImportResult parsed=LinkParser.parseDetailed(str);
-                ArrayList H2 = parsed.profiles;
-                if (H2.isEmpty()) {
-                    showImportSummary(parsed);
-                    return 0;
-                }
-                int a = this.b0.a(H2, "");
-                // Every import path funnels through here, so warn once, centrally,
-                // when some of what we just saved can never actually connect.
-                if(parsed.rejected>0 || parsed.warnings>0) showImportSummary(parsed);
-                else warnUnsupported(H2);
-                if (TextUtils.isEmpty(this.L.f343a.getString("selected_profile", "")) && !this.b0.e().isEmpty()) {
-                    Prefs prefs = this.L;
-                    RulesActivity__ExternalSyntheticOutline0.j(prefs.f343a, "selected_profile", ((Profile) this.b0.e().get(0)).id);
-                }
-                reload();
-                return a;
-            } catch (Throwable unused) {
-                reload();
-                return -1;
-            }
-        } catch (Throwable unused2) {
-            return -1;
-        }
+    private boolean importing;
+    public final void importText(String text) {
+        if(importing){Snackbar.make(connectButton,R.string.import_busy,0).show();return;}
+        if(text==null||text.trim().isEmpty()){Snackbar.make(connectButton,R.string.clipboard_empty,0).show();return;}
+        importing=true;refresh.setRefreshing(true);
+        Snackbar.make(connectButton,R.string.import_detecting,0).show();
+        new Thread(()->{
+            com.parvaz.tunnel.core.SmartImport.Result result=com.parvaz.tunnel.core.SmartImport.run(getApplicationContext(),text,()->Thread.currentThread().isInterrupted());
+            runOnUiThread(()->{
+                importing=false;
+                if(isFinishing()||isDestroyed())return;
+                refresh.setRefreshing(false);
+                if(b0.getById(L.f343a.getString("selected_profile",""))==null&&!b0.e().isEmpty())
+                    L.f343a.edit().putString("selected_profile",((Profile)b0.e().get(0)).id).apply();
+                query="";favOnly=false;searchInput.setText("");renderFavFilter();reload();
+                int count=com.parvaz.tunnel.store.ProfileDuplicates.visible(b0.e(),L.f343a.getString("selected_profile",""),L.getFavorites()).size();
+                String summary=getString(R.string.import_smart_result,count,result.subscriptions,result.failed);
+                if(!result.codes.isEmpty())summary+="\n"+String.join(", ",result.codes.subList(0,Math.min(8,result.codes.size())));
+                Snackbar.make(connectButton,summary,Snackbar.LENGTH_LONG).show();
+                showImportSummary(result.parsed);
+            });
+        },"parvaz-smart-import").start();
+    }
+
+    private void removeDuplicateConnections() {
+        new MaterialAlertDialogBuilder(this).setTitle(R.string.remove_duplicates)
+            .setMessage(R.string.remove_duplicates_confirm).setNegativeButton(R.string.cancel,null)
+            .setPositiveButton(R.string.ok,(dialog,which)->{
+                try {
+                    int count=b0.removeDuplicates(L.f343a);reload();
+                    Snackbar.make(connectButton,getString(R.string.duplicates_removed,count),Snackbar.LENGTH_LONG).show();
+                }catch(Exception e){Snackbar.make(connectButton,R.string.import_failed,Snackbar.LENGTH_LONG).show();}
+            }).show();
     }
 
     private void showImportSummary(com.parvaz.tunnel.config.ImportResult result) {
@@ -1352,30 +1304,11 @@ public class MainActivity extends AppCompatActivity {
     /* renamed from: H */
     public final void reload() {
         int i;
-        ArrayList e = this.b0.e();
-        ArrayList arrayList = new ArrayList();
-        Iterator it = e.iterator();
-        while (it.hasNext()) {
-            Profile profile = (Profile) it.next();
-            if (this.favOnly) {
-                this.L.getFavorites().contains(profile.id);
-            }
-            if (!this.query.isEmpty()) {
-                String str = this.query;
-                String str2 = profile.remark;
-                if (str2 != null) {
-                    if (str2.toLowerCase(Locale.getDefault()).contains(str)) {
-                    }
-                }
-                String str3 = profile.address;
-                if (str3 != null) {
-                    if (str3.toLowerCase(Locale.US).contains(str)) {
-                    }
-                }
-                String str4 = profile.protocol;
-                if (str4 != null && str4.toLowerCase(Locale.US).contains(str)) {
-                }
-            }
+        ArrayList<Profile> e=com.parvaz.tunnel.store.ProfileDuplicates.visible(this.b0.e(),this.L.f343a.getString("selected_profile",""),this.L.getFavorites());
+        ArrayList<Profile> arrayList=new ArrayList<>();
+        for(Profile profile:e) {
+            if(favOnly&&!L.getFavorites().contains(profile.id))continue;
+            if(!query.isEmpty()&&!profile.remark.toLowerCase(Locale.ROOT).contains(query)&&!profile.address.toLowerCase(Locale.ROOT).contains(query)&&!profile.protocol.toLowerCase(Locale.ROOT).contains(query))continue;
             arrayList.add(profile);
         }
         Collections.sort(arrayList, new E());
@@ -1419,50 +1352,12 @@ public class MainActivity extends AppCompatActivity {
         if (this.quotaUsedText == null) {
             return;
         }
-        Profile currentProfile = ProfileStore.f(this).getById(this.L.f343a.getString("selected_profile", ""));
-        Subscription subscription = null;
-        if (currentProfile != null && currentProfile.subscriptionId != null && !currentProfile.subscriptionId.isEmpty()) {
-            for (Object obj : ProfileStore.f(this).f()) {
-                Subscription sub = (Subscription) obj;
-                if (sub.id.equals(currentProfile.subscriptionId)) {
-                    subscription = sub;
-                    break;
-                }
-            }
-        }
-        if (subscription == null) {
-            for (Object obj : ProfileStore.f(this).f()) {
-                Subscription sub = (Subscription) obj;
-                if (sub.hasQuota() && (subscription == null || sub.quotaTotal > subscription.quotaTotal)) {
-                    subscription = sub;
-                }
-            }
-        }
-
-        long totalBytes = -1L;
-        long usedBytes = 0L;
-        long expireSec = -1L;
-        boolean fromServer = false;
-
-        long liveSessionBytes = this.L.f343a.getLong("data_up", 0L) + this.L.f343a.getLong("data_down", 0L);
-
-        if (subscription != null && subscription.hasQuota()) {
-            totalBytes = subscription.quotaTotal;
-            usedBytes = subscription.quotaUsed() + (TunnelVpnService.serviceRunning ? liveSessionBytes : 0L);
-            expireSec = subscription.quotaExpire;
-            fromServer = true;
-        } else {
-            float manualGb = this.L.f343a.getFloat("manual_service_total_gb", this.L.f343a.getFloat("data_limit_gb", 0.0f));
-            if (manualGb > 0.0f) {
-                totalBytes = (long) (manualGb * 1024L * 1024L * 1024L);
-                usedBytes = liveSessionBytes;
-                int manualDays = this.L.f343a.getInt("manual_service_duration_days", 30);
-                long since = this.L.f343a.getLong("manual_service_start_time", System.currentTimeMillis());
-                expireSec = (since / 1000L) + (manualDays * 86400L);
-            } else {
-                usedBytes = liveSessionBytes;
-            }
-        }
+        Profile currentProfile=b0.getById(L.f343a.getString("selected_profile",""));
+        Subscription subscription=com.parvaz.tunnel.core.QuotaState.source(currentProfile,b0.f());
+        boolean fromServer=com.parvaz.tunnel.core.QuotaState.known(subscription);
+        long totalBytes=fromServer?subscription.quotaTotal:0L;
+        long usedBytes=fromServer?subscription.quotaUsed():0L;
+        long expireSec=fromServer?subscription.quotaExpire:-1L;
 
         boolean fa = "fa".equals(this.L.f343a.getString("lang", "fa")) || "fa".equals(Locale.getDefault().getLanguage());
 
@@ -1470,17 +1365,17 @@ public class MainActivity extends AppCompatActivity {
             if (this.serviceTitleText != null) {
                 this.serviceTitleText.setText(R.string.service_status_title);
             }
-            this.quotaUsedText.setText((fa ? "حجم کل: " : "Total: ") + (fa ? "تعیین‌نشده" : "Not set"));
-            this.quotaLeftText.setText(R.string.service_not_set);
+            this.quotaUsedText.setText((fa ? "حجم کل: " : "Total: ") + fmtBytes(0L));
+            this.quotaLeftText.setText(fromServer?R.string.quota_unlimited:R.string.quota_no_metadata);
             if (this.quotaConsumedText != null) {
                 this.quotaConsumedText.setText((fa ? "مصرف‌شده: " : "Used: ") + fmtBytes(usedBytes));
             }
             if (this.quotaExpireDateText != null) {
-                this.quotaExpireDateText.setText(R.string.service_unlimited_duration);
+                this.quotaExpireDateText.setText(fromServer?R.string.service_unlimited_duration:R.string.quota_no_metadata);
             }
-            this.quotaPercentText.setText("");
+            this.quotaPercentText.setText("0%");
             this.quotaBar.setProgress(0);
-            this.quotaBar.setVisibility(View.GONE);
+            this.quotaBar.setVisibility(View.VISIBLE);
             if (this.quotaWarningText != null) {
                 this.quotaWarningText.setVisibility(View.GONE);
             }
@@ -1488,13 +1383,13 @@ public class MainActivity extends AppCompatActivity {
         }
 
         long remaining = Math.max(0L, totalBytes - usedBytes);
-        int percent = (int) Math.min(100L, (usedBytes * 100) / totalBytes);
+        int percent = com.parvaz.tunnel.core.QuotaState.percent(usedBytes,totalBytes);
 
         if (this.serviceTitleText != null) {
             String title = fromServer
                     ? (getString(R.string.service_status_title) + (fa ? " (سرور)" : " (Server)"))
                     : getString(R.string.service_status_title);
-            this.serviceTitleText.setText(title);
+            this.serviceTitleText.setText(title+" · "+new java.text.SimpleDateFormat("MM-dd HH:mm",Locale.getDefault()).format(new java.util.Date(subscription.quotaUpdatedAt)));
         }
 
         this.quotaUsedText.setText((fa ? "حجم کل: " : "Total: ") + fmtBytes(totalBytes));
@@ -1546,30 +1441,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public final void showQuotaDetailsDialog() {
-        Profile currentProfile = ProfileStore.f(this).getById(this.L.f343a.getString("selected_profile", ""));
-        Subscription subscription = null;
-        if (currentProfile != null && currentProfile.subscriptionId != null && !currentProfile.subscriptionId.isEmpty()) {
-            for (Object obj : ProfileStore.f(this).f()) {
-                Subscription sub = (Subscription) obj;
-                if (sub.id.equals(currentProfile.subscriptionId)) {
-                    subscription = sub;
-                    break;
-                }
-            }
-        }
-        if (subscription == null) {
-            Iterator it = ProfileStore.f(this).f().iterator();
-            while (it.hasNext()) {
-                Subscription s = (Subscription) it.next();
-                if (s.hasQuota() && (subscription == null || s.quotaTotal > subscription.quotaTotal)) {
-                    subscription = s;
-                }
-            }
-        }
-
+        Profile currentProfile=b0.getById(L.f343a.getString("selected_profile",""));
+        Subscription subscription=com.parvaz.tunnel.core.QuotaState.source(currentProfile,b0.f());
         boolean fa = "fa".equals(this.L.f343a.getString("lang", "fa")) || "fa".equals(Locale.getDefault().getLanguage());
 
-        if (subscription != null && subscription.hasQuota()) {
+        if (com.parvaz.tunnel.core.QuotaState.known(subscription) && subscription.hasQuota()) {
             StringBuilder sb = new StringBuilder();
             sb.append(getString(R.string.add_subscription)).append(": ").append(subscription.name).append("\n\n");
             long total = subscription.quotaTotal;
@@ -1577,7 +1453,7 @@ public class MainActivity extends AppCompatActivity {
             long download = Math.max(0L, subscription.quotaDownload);
             long used = upload + download;
             long left = Math.max(0L, total - used);
-            int pct = (int) Math.min(100L, (used * 100) / total);
+            int pct = com.parvaz.tunnel.core.QuotaState.percent(used,total);
 
             sb.append(getString(R.string.quota_total)).append(": ").append(fmtBytes(total)).append("\n");
             sb.append(getString(R.string.quota_upload)).append(": ").append(fmtBytes(upload)).append("\n");
@@ -1610,7 +1486,8 @@ public class MainActivity extends AppCompatActivity {
                     .setNegativeButton(R.string.dismiss, null)
                     .show();
         } else {
-            showSetManualServiceDialog();
+            new MaterialAlertDialogBuilder(this).setTitle(R.string.quota_details_title).setMessage(R.string.quota_no_metadata)
+                .setPositiveButton(R.string.quota_refresh,(dialog,which)->updateSubscriptions()).setNegativeButton(R.string.dismiss,null).show();
         }
     }
 
@@ -1802,7 +1679,7 @@ public class MainActivity extends AppCompatActivity {
 
     /* renamed from: N */
     public final void showAddDialog() {
-        String[] strArr = {getString(R.string.scan_qr), getString(R.string.add_from_clipboard), getString(R.string.add_manual_link), getString(R.string.add_raw_json), getString(R.string.add_subscription), getString(R.string.update_subscriptions), getString(R.string.backup_restore)};
+        String[] strArr = {getString(R.string.scan_qr), getString(R.string.add_from_clipboard), getString(R.string.add_manual_link), getString(R.string.add_raw_json), getString(R.string.add_subscription), getString(R.string.update_subscriptions), getString(R.string.backup_restore), getString(R.string.remove_duplicates)};
         MaterialAlertDialogBuilder materialAlertDialogBuilder = new MaterialAlertDialogBuilder(this);
         materialAlertDialogBuilder.setTitle(R.string.add_server);
         materialAlertDialogBuilder.setItems(strArr, new F());
@@ -1941,6 +1818,18 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /* renamed from: Q */
+    private final Handler quotaRefreshHandler=new Handler(Looper.getMainLooper());
+    private final Runnable quotaRefreshTick=new Runnable(){public void run(){
+        if(isFinishing()||isDestroyed())return;
+        long now=System.currentTimeMillis();
+        long last=L.f343a.getLong("quota_refresh_attempt",0);
+        if(!importing&&!b0.f().isEmpty()&&(now-last>=300000L||now<last)) {
+            L.f343a.edit().putLong("quota_refresh_attempt",now).apply();
+            new Thread(new SubscriptionUpdater_4(new SubscriptionUpdater(MainActivity.this),new J()),"parvaz-quota-refresh").start();
+        }
+        quotaRefreshHandler.postDelayed(this,300000L);
+    }};
+
     public final void updateSubscriptions() {
         if (this.b0.f().isEmpty()) {
             Snackbar.make(this.connectButton, R.string.no_subscriptions, 0).show();
@@ -2412,6 +2301,7 @@ public class MainActivity extends AppCompatActivity {
     @Override // androidx.fragment.app.FragmentActivity, android.app.Activity
     public final void onPause() {
         super.onPause();
+        quotaRefreshHandler.removeCallbacks(quotaRefreshTick);
         try {
             unregisterReceiver(this.p0);
         } catch (Exception unused) {
@@ -2484,8 +2374,7 @@ public class MainActivity extends AppCompatActivity {
             this.state = 0;
         }
         reload();
-        if (!this.b0.f().isEmpty()) {
-            new Thread(new SubscriptionUpdater_4(new SubscriptionUpdater(this), new J())).start();
-        }
+        quotaRefreshHandler.removeCallbacks(quotaRefreshTick);
+        quotaRefreshHandler.post(quotaRefreshTick);
     }
 }

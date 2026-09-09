@@ -130,6 +130,88 @@ public final class ProfileStore {
         return null;
     }
 
+    public synchronized Subscription addOrGetSubscription(String input) {
+        String url=com.parvaz.tunnel.config.SubscriptionUrl.normalize(input);
+        for(Object o:f347c) {
+            Subscription sub=(Subscription)o;
+            try {if(url.equals(com.parvaz.tunnel.config.SubscriptionUrl.normalize(sub.url))) {
+                if(!sub.enabled){sub.enabled=true;h();}
+                return Subscription.fromJson(sub.toJson());
+            }} catch(org.json.JSONException e){throw new IllegalStateException("Subscription copy failed");}
+              catch(IllegalArgumentException ignored){}
+        }
+        Subscription sub=new Subscription();sub.id=java.util.UUID.randomUUID().toString();sub.url=url;
+        try{sub.name=new java.net.URI(url).getHost();}catch(Exception ignored){sub.name="Subscription";}
+        f347c.add(sub);h();
+        try{return Subscription.fromJson(sub.toJson());}catch(org.json.JSONException e){throw new IllegalStateException("Subscription copy failed");}
+    }
+
+    /** Remove legacy same-source duplicates and coalesce repeated URLs. Independent sources
+     * remain separate underneath the single-row UI, so future refreshes cannot erase them. */
+    public synchronized int removeDuplicates(SharedPreferences prefs) {
+        String selected=prefs.getString("selected_profile","");
+        java.util.Set<String> favorites=new java.util.LinkedHashSet<>(java.util.Arrays.asList(prefs.getString("favorites","").split("\\n")));
+        java.util.Map<String,String> owners=new java.util.HashMap<>();
+        java.util.Map<String,Subscription> urls=new java.util.LinkedHashMap<>();
+        ArrayList<Subscription> subs=new ArrayList<>();
+        for(Object o:f347c) {
+            Subscription sub=(Subscription)o;String url;
+            try{url=com.parvaz.tunnel.config.SubscriptionUrl.normalize(sub.url);}catch(IllegalArgumentException e){subs.add(sub);continue;}
+            // Disabled subscriptions are not silently re-enabled by cleanup.
+            String key=url+"\n"+sub.enabled;
+            Subscription existing=urls.get(key);
+            if(existing==null){urls.put(key,sub);subs.add(sub);owners.put(sub.id,sub.id);}
+            else owners.put(sub.id,existing.id);
+        }
+        java.util.LinkedHashMap<String,Profile> unique=new java.util.LinkedHashMap<>();
+        java.util.Map<String,String> aliases=new java.util.HashMap<>();
+        ArrayList<Profile> copies=new ArrayList<>();
+        for(Object o:f346b){
+            Profile p=ProfileIdentity.copy((Profile)o);p.subscriptionId=owners.getOrDefault(p.subscriptionId,p.subscriptionId);copies.add(p);
+            String key=p.subscriptionId+":"+ProfileIdentity.fingerprint(p);Profile old=unique.get(key);
+            if(old==null||ProfileDuplicates.preferred(p,old,selected,favorites))unique.put(key,p);
+        }
+        for(Profile p:copies){Profile winner=unique.get(p.subscriptionId+":"+ProfileIdentity.fingerprint(p));aliases.put(p.id,winner.id);}
+        int removed=f346b.size()-unique.size();
+        if(removed==0&&subs.size()==f347c.size())return 0;
+        // Keep old favorite IDs too: adding a surviving alias is harmless if a subsequent store write fails.
+        for(String id:new java.util.ArrayList<>(favorites)){String target=aliases.get(id);if(target!=null)favorites.add(target);}
+        prefs.edit().putString("favorites",String.join("\n",favorites)).apply();
+        try {
+            JSONArray pj=new JSONArray(),sj=new JSONArray();JSONObject pings=new JSONObject();
+            for(Profile p:unique.values()){pj.put(p.toJson());if(p.ping>0)pings.put(p.id,p.ping);}
+            for(Subscription sub:subs){Subscription c=Subscription.fromJson(sub.toJson());c.count=0;for(Profile p:unique.values())if(p.subscriptionId.equals(c.id))c.count++;sj.put(c.toJson());}
+            f345a.edit().putString("profiles",pj.toString()).putString("subs",sj.toString()).putString("pings",pings.toString()).apply();
+            f346b.clear();f346b.addAll(unique.values());f347c.clear();
+            for(int i=0;i<sj.length();i++)f347c.add(Subscription.fromJson(sj.getJSONObject(i)));
+            revision++;return removed;
+        }catch(org.json.JSONException e){throw new IllegalStateException("Cleanup serialization failed");}
+    }
+
+    public synchronized void updateQuota(Snapshot snapshot,String userinfo,long now) {
+        if(snapshot==null||snapshot.revision!=revision)throw new StaleRefresh();
+        try {
+            ArrayList<Subscription> subs=f();boolean found=false;
+            for(Subscription sub:subs)if(sub.id.equals(snapshot.subscription.id)&&sub.enabled&&sub.url.equals(snapshot.subscription.url)) {
+                sub.replaceUserinfo(userinfo,now);found=true;break;
+            }
+            if(!found)throw new StaleRefresh();
+            JSONArray json=new JSONArray();for(Subscription sub:subs)json.put(sub.toJson());
+            f345a.edit().putString("subs",json.toString()).apply();
+            f347c.clear();f347c.addAll(subs);revision++;
+        }catch(org.json.JSONException e){throw new IllegalStateException("Quota serialization failed");}
+    }
+
+    public synchronized SubscriptionReconciler.Plan mergeSubscription(Snapshot snapshot,
+            com.parvaz.tunnel.config.ImportResult parsed,String userinfo,long now,String selectedId) {
+        if(parsed.fatal||parsed.profiles.isEmpty())throw new IllegalArgumentException("No valid partial import");
+        com.parvaz.tunnel.config.ImportResult union=new com.parvaz.tunnel.config.ImportResult();
+        java.util.Set<String> incoming=new java.util.HashSet<>();
+        for(Profile p:parsed.profiles){union.add(p);incoming.add(ProfileIdentity.fingerprint(p));}
+        for(Object o:f346b){Profile p=(Profile)o;if(snapshot.subscription.id.equals(p.subscriptionId)&&!incoming.contains(ProfileIdentity.fingerprint(p)))union.add(p);}
+        return replaceSubscription(snapshot,union,userinfo,now,selectedId);
+    }
+
     /** Capture detached metadata and a generation BEFORE starting a download. */
     public synchronized Snapshot beginRefresh(String id) {
         for(Object o:f347c) {
@@ -159,7 +241,7 @@ public final class ProfileStore {
         SubscriptionReconciler.Plan plan=SubscriptionReconciler.plan(new ArrayList<Profile>(f346b),parsed.profiles,snapshot.subscription.id,selectedId);
         try {
             Subscription updated=Subscription.fromJson(((Subscription)f347c.get(index)).toJson());
-            updated.applyUserinfo(userinfo);updated.lastUpdate=now;updated.count=plan.count;
+            updated.replaceUserinfo(userinfo,now);updated.lastUpdate=now;updated.count=plan.count;
             ArrayList<Subscription> subscriptions=new ArrayList<>(f347c);subscriptions.set(index,updated);
             JSONArray profilesJson=new JSONArray(),subsJson=new JSONArray();JSONObject pings=new JSONObject();
             for(Profile p:plan.all){profilesJson.put(p.toJson());if(p.ping>0)pings.put(p.id,p.ping);}

@@ -35,7 +35,7 @@ public class SubscriptionWorker extends Worker {
 
             int hours = context.getApplicationContext()
                     .getSharedPreferences("parvaz_prefs", Context.MODE_PRIVATE)
-                    .getInt("sub_auto_hours", 0);
+                    .getInt("sub_auto_hours", 1);
 
             if (hours <= 0) {
                 wm.cancelUniqueWork(WORK_NAME);

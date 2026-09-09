@@ -58,7 +58,7 @@ public class ParvazWidget extends AppWidgetProvider {
                 string2 = byId.remark;
                 for (Object subObj : ProfileStore.f(context).f()) {
                     com.parvaz.tunnel.model.Subscription sub = (com.parvaz.tunnel.model.Subscription) subObj;
-                    if (sub.hasQuota() && (sub.id.equals(byId.subscriptionId) || byId.subscriptionId.isEmpty())) {
+                    if (QuotaState.known(sub) && sub.enabled && com.parvaz.tunnel.config.SubscriptionUrl.valid(sub.url) && sub.hasQuota() && sub.id.equals(byId.subscriptionId)) {
                         string2 += " (" + MainActivity.fmtBytes(sub.quotaRemaining()) + ")";
                         break;
                     }

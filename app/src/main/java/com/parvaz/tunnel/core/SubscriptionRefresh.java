@@ -12,7 +12,7 @@ import java.util.function.BooleanSupplier;
 
 /** Shared synchronous refresh engine for UI and WorkManager. No fire-and-forget child threads. */
 public final class SubscriptionRefresh {
-    private static final AtomicBoolean ACTIVE=new AtomicBoolean();
+    private static final java.util.concurrent.locks.ReentrantLock LOCK=new java.util.concurrent.locks.ReentrantLock();
     private SubscriptionRefresh() {}
     interface Fetcher { SubscriptionUpdater.b fetch(String url) throws IOException; }
     public static final class Result {
@@ -31,12 +31,20 @@ public final class SubscriptionRefresh {
         return run(ProfileStore.f(context),context.getApplicationContext().getSharedPreferences("parvaz_prefs",0),cancelled,SubscriptionUpdater::a);
     }
     static Result run(ProfileStore store,SharedPreferences prefs,BooleanSupplier cancelled,Fetcher fetcher) {
+        return runOne(store,prefs,cancelled,fetcher,null);
+    }
+    static Result runOne(ProfileStore store,SharedPreferences prefs,BooleanSupplier cancelled,Fetcher fetcher,String targetId) {
         Result result=new Result();
-        if(!ACTIVE.compareAndSet(false,true)){result.fail("REFRESH_ALREADY_RUNNING",true);return result;}
+        boolean acquired;
+        try {acquired=targetId==null?LOCK.tryLock():LOCK.tryLock(120,java.util.concurrent.TimeUnit.SECONDS);}
+        catch(InterruptedException e){Thread.currentThread().interrupt();result.cancelled=true;result.fail("CANCELLED",true);return result;}
+        if(!acquired){result.fail("REFRESH_ALREADY_RUNNING",true);return result;}
         try {
+            store.removeDuplicates(prefs);
             for(Object o:store.f()) {
                 if(stop(cancelled,result))break;
                 Subscription listed=(Subscription)o;
+                if(targetId!=null&&!targetId.equals(listed.id))continue;
                 ProfileStore.Snapshot snapshot=store.beginRefresh(listed.id);
                 if(snapshot==null){result.skipped++;continue;}
                 try {
@@ -45,7 +53,17 @@ public final class SubscriptionRefresh {
                     ImportResult parsed=LinkParser.parseDetailed(response.f6300a);
                     result.warnings+=parsed.warnings;
                     if(!parsed.safeToReplace()) {
-                        result.fail(parsed.profiles.isEmpty()?"NO_VALID_CONFIGURATIONS":"PARTIAL_IMPORT_OLD_LIST_KEPT",false);
+                        if(!parsed.fatal&&!parsed.profiles.isEmpty()) {
+                            if(stop(cancelled,result))break;
+                            SubscriptionReconciler.Plan partial=store.mergeSubscription(snapshot,parsed,response.f6301b,
+                                    System.currentTimeMillis(),prefs.getString("selected_profile",""));
+                            result.serverCount+=partial.count;result.added+=partial.added;result.retained+=partial.retained;
+                        } else {
+                            if(stop(cancelled,result))break;
+                            store.updateQuota(snapshot,response.f6301b,System.currentTimeMillis());
+                        }
+                        result.warnings+=parsed.rejected;
+                        result.fail(parsed.profiles.isEmpty()?"NO_VALID_CONFIGURATIONS":"PARTIAL_IMPORT_VALID_ADDED_OLD_KEPT",false);
                         continue;
                     }
                     if(stop(cancelled,result))break;
@@ -59,7 +77,7 @@ public final class SubscriptionRefresh {
                  catch(Exception e){result.fail("REFRESH_FAILED",true);}
             }
         }catch(Exception e){result.fail("REFRESH_FAILED",true);}
-        finally{ACTIVE.set(false);}
+        finally{LOCK.unlock();}
         return result;
     }
     private static boolean stop(BooleanSupplier cancelled,Result result) {

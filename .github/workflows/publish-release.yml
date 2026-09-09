@@ -1,4 +1,4 @@
-name: Build and publish signed prerelease
+name: Build and publish signed release
 on:
   push:
     tags: ['v*']
@@ -9,7 +9,7 @@ concurrency:
   group: signed-release-${{ github.ref }}
   cancel-in-progress: false
 jobs:
-  signed-prerelease:
+  signed-release:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -73,11 +73,11 @@ jobs:
         run: python3 tools/release/build_signed.py
       - name: Verify APK signatures, package, version and file hashes
         run: python3 tools/release/verify_apk.py
-      - name: Publish prerelease only after all checks pass
+      - name: Publish updater-visible release only after all checks pass
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$RELEASE_TAG" release-artifacts/*.apk release-artifacts/SHA256SUMS.txt \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-            --title "Parvaz $RELEASE_VERSION (testing)" \
-            --notes-file "docs/releases/$RELEASE_TAG.md" --prerelease
+            --title "Parvaz $RELEASE_VERSION" \
+            --notes-file "docs/releases/$RELEASE_TAG.md" --latest

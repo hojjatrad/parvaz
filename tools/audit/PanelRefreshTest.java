@@ -142,7 +142,10 @@ public class PanelRefreshTest {
         check("Engine errors redact secrets",!mixed.errorSummary().contains("secret-token"));
         String engineDisk=engine.disk.getString("profiles","");
         SubscriptionRefresh.Result bad=SubscriptionRefresh.run(engine.store,engine.prefs,()->false,url->new SubscriptionUpdater.b(vmess+"\nbroken",null));
-        check("Partial import refuses entire automatic replacement",bad.updated==0&&bad.failed==2&&!bad.retryable&&engine.disk.getString("profiles","").equals(engineDisk));
+        boolean oldKept=true;JSONArray beforePartial=new JSONArray(engineDisk);
+        for(int i=0;i<beforePartial.length();i++)oldKept &= engine.store.getById(beforePartial.getJSONObject(i).getString("id"))!=null;
+        check("Partial import adds valid nodes without deleting old records",bad.updated==0&&bad.failed==2&&!bad.retryable&&oldKept);
+        engineDisk=engine.disk.getString("profiles","");
         AtomicBoolean cancel=new AtomicBoolean();SubscriptionRefresh.Result cancelled=SubscriptionRefresh.run(engine.store,engine.prefs,cancel::get,url->{cancel.set(true);return new SubscriptionUpdater.b(raw1,null);});
         check("Cancellation after download prevents persistence",cancelled.cancelled&&cancelled.updated==0&&engine.disk.getString("profiles","").equals(engineDisk));
         CountDownLatch entered=new CountDownLatch(1),release=new CountDownLatch(1);AtomicReference<Throwable> threadFailure=new AtomicReference<>();
