@@ -304,6 +304,7 @@ public class MainActivity extends AppCompatActivity {
             if(i==7){mainActivity.removeDuplicateConnections();return;}
             if(i==8){mainActivity.showLastImportReport();return;}
             if(i==9){mainActivity.showStoredReport("last_refresh_report",R.string.last_refresh_report,R.string.refresh_report_help);return;}
+            if(i==11){mainActivity.showPrimarySubscriptionPicker(false);return;}
             if(i==10){mainActivity.showStoredReport("last_duplicate_report",R.string.last_duplicate_report,R.string.duplicate_report_help);return;}
             String str = "";
             if (i == 0) {
@@ -1102,10 +1103,10 @@ public class MainActivity extends AppCompatActivity {
                 importing=false;
                 if(isFinishing()||isDestroyed())return;
                 refresh.setRefreshing(false);
-                if(b0.getById(L.f343a.getString("selected_profile",""))==null&&!b0.e().isEmpty())
-                    L.f343a.edit().putString("selected_profile",((Profile)b0.e().get(0)).id).apply();
+                if(b0.getActiveById(L.f343a.getString("selected_profile",""))==null&&!b0.activeProfiles().isEmpty())
+                    L.f343a.edit().putString("selected_profile",((Profile)b0.activeProfiles().get(0)).id).apply();
                 query="";favOnly=false;searchInput.setText("");renderFavFilter();reload();
-                int count=com.parvaz.tunnel.store.ProfileDuplicates.visible(b0.e(),L.f343a.getString("selected_profile",""),L.getFavorites()).size();
+                int count=com.parvaz.tunnel.store.ProfileDuplicates.visible(b0.activeProfiles(),L.f343a.getString("selected_profile",""),L.getFavorites()).size();
                 String summary=getString(R.string.import_smart_result,count,result.subscriptions,result.failed);
                 String report=com.parvaz.tunnel.core.SmartImport.safeReport(result,com.parvaz.tunnel.core.UpdateChecker.currentVersion(this))
                     +"\nSDK_"+android.os.Build.VERSION.SDK_INT+"; PARVAZ_RUNNING_"+com.parvaz.tunnel.core.TunnelVpnService.serviceRunning;
@@ -1128,6 +1129,40 @@ public class MainActivity extends AppCompatActivity {
             }).show();
     }
 
+    public final void showPrimarySubscriptionPicker(boolean refreshAfter) {
+        if(importing||manualRefreshing){Snackbar.make(findViewById(android.R.id.content),R.string.refresh_busy,Snackbar.LENGTH_LONG).show();return;}
+        if(TunnelVpnService.serviceRunning||state==1){new MaterialAlertDialogBuilder(this).setMessage(R.string.primary_disconnect).setPositiveButton(R.string.ok,null).show();return;}
+        java.util.ArrayList<Subscription> subs=b0.f();String[] names=new String[subs.size()];
+        for(int i=0;i<subs.size();i++){Subscription sub=subs.get(i);names[i]=(i+1)+". "+sub.name+" — "+sub.count+" "+getString(R.string.primary_count);}
+        new MaterialAlertDialogBuilder(this).setTitle(R.string.primary_subscription).setItems(names,(dialog,which)->{
+            Subscription sub=subs.get(which);
+            new MaterialAlertDialogBuilder(this).setTitle(sub.name).setMessage(R.string.primary_explanation)
+                .setNegativeButton(R.string.cancel,null).setPositiveButton(R.string.ok,(d,w)->applyPrimarySubscription(sub.id,refreshAfter)).show();
+        }).setNegativeButton(R.string.cancel,null)
+          .setPositiveButton(R.string.primary_all,(d,w)->applyPrimarySubscription("",refreshAfter))
+          .setNeutralButton(R.string.primary_clipboard,(d,w)->{
+              ClipboardManager clipboard=(ClipboardManager)getSystemService("clipboard");
+              try{
+                  if(clipboard==null||!clipboard.hasPrimaryClip())throw new IllegalArgumentException();
+                  String text=clipboard.getPrimaryClip().getItemAt(0).coerceToText(this).toString();
+                  com.parvaz.tunnel.config.ImportInput input=com.parvaz.tunnel.config.ImportInput.parse(text);
+                  if(input.subscriptions.size()!=1||!input.configs.trim().isEmpty())throw new IllegalArgumentException();
+                  final String url=input.subscriptions.get(0);
+                  new MaterialAlertDialogBuilder(this).setTitle(R.string.primary_subscription).setMessage(R.string.primary_explanation)
+                      .setNegativeButton(R.string.cancel,null).setPositiveButton(R.string.ok,(confirm,button)->{
+                          try{Subscription sub=b0.addOrGetSubscription(url);applyPrimarySubscription(sub.id,true);}
+                          catch(Exception error){Snackbar.make(findViewById(android.R.id.content),R.string.primary_invalid,Snackbar.LENGTH_LONG).show();}
+                      }).show();
+              }catch(Exception error){Snackbar.make(findViewById(android.R.id.content),R.string.primary_invalid,Snackbar.LENGTH_LONG).show();}
+          }).show();
+    }
+    public final void applyPrimarySubscription(String id,boolean refreshAfter) {
+        if(importing||manualRefreshing||TunnelVpnService.serviceRunning||state==1)return;
+        b0.setPrimarySubscription(id);query="";favOnly=false;searchInput.setText("");renderFavFilter();reload();
+        if(refreshAfter)updateSubscriptions();
+        else Snackbar.make(findViewById(android.R.id.content),R.string.primary_saved,Snackbar.LENGTH_LONG).show();
+    }
+
     public final void showStoredReport(String key,int title,int help) {
         String report=L.f343a.getString(key,getString(R.string.import_report_empty));
         new MaterialAlertDialogBuilder(this).setTitle(title).setMessage(getString(help)+"\n\n"+report)
@@ -1138,6 +1173,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void removeDuplicateConnections() {
+        if(!b0.scopeConfigured()&&b0.f().size()>1){showPrimarySubscriptionPicker(false);return;}
         if(importing||manualRefreshing){Snackbar.make(findViewById(android.R.id.content),R.string.refresh_busy,Snackbar.LENGTH_LONG).show();return;}
         new MaterialAlertDialogBuilder(this).setTitle(R.string.remove_duplicates)
             .setMessage(R.string.remove_duplicates_confirm).setNegativeButton(R.string.cancel,null)
@@ -1145,10 +1181,14 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     int count=b0.removeDuplicates(L.f343a);reload();
                     String report="Parvaz "+com.parvaz.tunnel.core.UpdateChecker.currentVersion(this)+"\n"
-                        +com.parvaz.tunnel.store.DuplicateReport.safe(b0.e(),count);
+                        +com.parvaz.tunnel.store.DuplicateReport.safe(b0.activeProfiles(),count)
+                        +"\nscope="+(b0.primarySubscription().isEmpty()?"ALL":"PRIMARY")+"; total_stored_records="+b0.e().size()+"; archived_records="+(b0.e().size()-b0.activeProfiles().size());
                     L.f343a.edit().putString("last_duplicate_report",report).apply();
                     showStoredReport("last_duplicate_report",R.string.last_duplicate_report,R.string.duplicate_report_help);
-                }catch(Exception e){Snackbar.make(connectButton,R.string.import_failed,Snackbar.LENGTH_LONG).show();}
+                }catch(Exception e){
+                    L.f343a.edit().putString("last_duplicate_report","OPERATION_DUPLICATES\nstatus=FAILED\nDUPLICATE_CLEANUP_FAILED").apply();
+                    showStoredReport("last_duplicate_report",R.string.last_duplicate_report,R.string.duplicate_report_help);
+                }
             }).show();
     }
 
@@ -1165,7 +1205,7 @@ public class MainActivity extends AppCompatActivity {
      * scrolling the main screen. Reconnects if the tunnel is already up.
      */
     public final void showQuickSwitch() {
-        final ArrayList servers = this.b0.e();
+        final ArrayList servers = this.b0.activeProfiles();
         String currentId = this.L.f343a.getString("selected_profile", "");
         final ArrayList<Profile> others = new ArrayList<>();
         for (Object o : servers) {
@@ -1307,7 +1347,7 @@ public class MainActivity extends AppCompatActivity {
 
     /* renamed from: G */
     public final void pingAll() {
-        ArrayList e = this.b0.e();
+        ArrayList e = this.b0.activeProfiles();
         if (e.isEmpty()) {
             this.refresh.setRefreshing(false);
             setPingAllBusy(false);
@@ -1338,7 +1378,11 @@ public class MainActivity extends AppCompatActivity {
     /* renamed from: H */
     public final void reload() {
         int i;
-        com.parvaz.tunnel.store.ProfileDuplicates.Grouped group=com.parvaz.tunnel.store.ProfileDuplicates.group(this.b0.e(),this.L.f343a.getString("selected_profile",""),this.L.getFavorites());
+        if(b0.getActiveById(L.f343a.getString("selected_profile",""))==null){
+            java.util.List<Profile> active=b0.activeProfiles();
+            L.f343a.edit().putString("selected_profile",active.isEmpty()?"":active.get(0).id).apply();
+        }
+        com.parvaz.tunnel.store.ProfileDuplicates.Grouped group=com.parvaz.tunnel.store.ProfileDuplicates.group(this.b0.activeProfiles(),this.L.f343a.getString("selected_profile",""),this.L.getFavorites());
         ArrayList<Profile> e=group.profiles;this.z.visibleFavorites=group.favoriteIds;
         ArrayList<Profile> arrayList=new ArrayList<>();
         for(Profile profile:e) {
@@ -1387,8 +1431,8 @@ public class MainActivity extends AppCompatActivity {
         if (this.quotaUsedText == null) {
             return;
         }
-        Profile currentProfile=b0.getById(L.f343a.getString("selected_profile",""));
-        Subscription subscription=com.parvaz.tunnel.core.QuotaState.source(currentProfile,b0.f(),b0.e());
+        Profile currentProfile=b0.getActiveById(L.f343a.getString("selected_profile",""));
+        Subscription subscription=com.parvaz.tunnel.core.QuotaState.source(currentProfile,b0.f(),b0.activeProfiles());
         boolean fromServer=com.parvaz.tunnel.core.QuotaState.known(subscription);
         long totalBytes=fromServer?subscription.quotaTotal:0L;
         long usedBytes=fromServer?subscription.quotaUsed():0L;
@@ -1476,8 +1520,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public final void showQuotaDetailsDialog() {
-        Profile currentProfile=b0.getById(L.f343a.getString("selected_profile",""));
-        Subscription subscription=com.parvaz.tunnel.core.QuotaState.source(currentProfile,b0.f(),b0.e());
+        Profile currentProfile=b0.getActiveById(L.f343a.getString("selected_profile",""));
+        Subscription subscription=com.parvaz.tunnel.core.QuotaState.source(currentProfile,b0.f(),b0.activeProfiles());
         boolean fa = "fa".equals(this.L.f343a.getString("lang", "fa")) || "fa".equals(Locale.getDefault().getLanguage());
 
         if (com.parvaz.tunnel.core.QuotaState.known(subscription) && subscription.hasQuota()) {
@@ -1588,7 +1632,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Show which server the toggle would use (or is using).
         if (this.serverText != null) {
-            Profile selected = this.b0.getById(this.L.f343a.getString("selected_profile", ""));
+            Profile selected = this.b0.getActiveById(this.L.f343a.getString("selected_profile", ""));
             this.serverText.setText(selected != null ? selected.remark
                                                      : getString(R.string.no_server_selected));
         }
@@ -1714,7 +1758,7 @@ public class MainActivity extends AppCompatActivity {
 
     /* renamed from: N */
     public final void showAddDialog() {
-        String[] strArr = {getString(R.string.scan_qr), getString(R.string.add_from_clipboard), getString(R.string.add_manual_link), getString(R.string.add_raw_json), getString(R.string.add_subscription), getString(R.string.update_subscriptions), getString(R.string.backup_restore), getString(R.string.remove_duplicates),getString(R.string.last_import_report),getString(R.string.last_refresh_report),getString(R.string.last_duplicate_report)};
+        String[] strArr = {getString(R.string.scan_qr), getString(R.string.add_from_clipboard), getString(R.string.add_manual_link), getString(R.string.add_raw_json), getString(R.string.add_subscription), getString(R.string.update_subscriptions), getString(R.string.backup_restore), getString(R.string.remove_duplicates),getString(R.string.last_import_report),getString(R.string.last_refresh_report),getString(R.string.last_duplicate_report),getString(R.string.primary_subscription)};
         MaterialAlertDialogBuilder materialAlertDialogBuilder = new MaterialAlertDialogBuilder(this);
         materialAlertDialogBuilder.setTitle(R.string.add_server);
         materialAlertDialogBuilder.setItems(strArr, new F());
@@ -1778,7 +1822,7 @@ public class MainActivity extends AppCompatActivity {
      */
     public void shakeToNextServer() {
         try {
-            ArrayList all = this.b0.e();
+            ArrayList all = this.b0.activeProfiles();
             if (all.size() < 2) {
                 Snackbar.make(this.connectButton, R.string.shake_need_servers, -1).show();
                 return;
@@ -1818,8 +1862,8 @@ public class MainActivity extends AppCompatActivity {
         int i = this.state;
         if (i != 2 && i != 1) {
             String str = "";
-            if (this.b0.getById(this.L.f343a.getString("selected_profile", "")) == null) {
-                ArrayList e = this.b0.e();
+            if (this.b0.getActiveById(this.L.f343a.getString("selected_profile", "")) == null) {
+                ArrayList e = this.b0.activeProfiles();
                 if (e.isEmpty()) {
                     Snackbar.make(this.connectButton, R.string.err_no_server, 0).show();
                     showAddDialog();
@@ -1871,6 +1915,7 @@ public class MainActivity extends AppCompatActivity {
     }};
 
     public final void updateSubscriptions() {
+        if(!b0.scopeConfigured()&&b0.f().size()>1){refresh.setRefreshing(false);showPrimarySubscriptionPicker(true);return;}
         if(importing||manualRefreshing) {
             if(!manualRefreshing)refresh.setRefreshing(false);
             Snackbar.make(findViewById(android.R.id.content),R.string.refresh_busy,Snackbar.LENGTH_LONG).show();return;
@@ -1925,7 +1970,7 @@ public class MainActivity extends AppCompatActivity {
         PingManager pingManager = this.K;
         ExecutorService executorService = pingManager.f6271b;
         if (executorService == null || executorService.isTerminated() || pingManager.f6271b.isShutdown()) {
-            if (this.b0.e().isEmpty()) {
+            if (this.b0.activeProfiles().isEmpty()) {
                 Snackbar.make(view, R.string.no_servers_yet, -1).show();
                 return;
             } else {
@@ -2006,7 +2051,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void runRealBypassTest() {
-        final ArrayList<Profile> all = this.b0.e();
+        final ArrayList<Profile> all = this.b0.activeProfiles();
         if (all.isEmpty()) {
             Snackbar.make(this.connectButton, R.string.no_servers_yet, -1).show();
             return;
@@ -2153,7 +2198,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void lambda$onCreate$9(View view) {
-        Iterator it = this.b0.e().iterator();
+        Iterator it = this.b0.activeProfiles().iterator();
         Profile profile = null;
         int i = Integer.MAX_VALUE;
         while (it.hasNext()) {

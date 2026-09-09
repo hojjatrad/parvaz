@@ -103,6 +103,29 @@ public class ClipboardHttpRegressionTest {
         String report=refreshAndWait(activity);assertTrue(report.contains("failed=1"));assertTrue(report.contains("NO_VALID_CONFIGURATIONS"));
         assertEquals(1,activity.z.getItemCount());assertFalse(report.contains("private-body"));
     }
+    @Test public void primaryClipboardReplacesOnlyOneSourceAndRefreshesFourteenRows()throws Exception {
+        ProfileStore store=ProfileStore.f(context);
+        for(int i=0;i<2;i++){
+            com.parvaz.tunnel.model.Subscription sub=store.addOrGetSubscription("https://archived"+i+".invalid/private-token");
+            store.a(com.parvaz.tunnel.config.LinkParser.parseMany("vless://11111111-1111-4111-8111-111111111111@old"+i+".invalid:443#old"),sub.id);
+        }
+        StringBuilder body=new StringBuilder();for(int repeat=0;repeat<2;repeat++)for(int i=0;i<14;i++)body.append("vless://22222222-2222-4222-8222-222222222222@new").append(i).append(".invalid:443#new\n");
+        startServer(body.toString());controller=Robolectric.buildActivity(MainActivity.class).create();MainActivity activity=controller.get();
+        ClipboardManager clipboard=(ClipboardManager)activity.getSystemService(Context.CLIPBOARD_SERVICE);
+        clipboard.setPrimaryClip(ClipData.newPlainText("main","http://127.0.0.1:"+server.getLocalPort()+"/secret-token"));
+        activity.new F().onClick(null,11);
+        ((androidx.appcompat.app.AlertDialog)org.robolectric.shadows.ShadowDialog.getLatestDialog()).getButton(DialogInterface.BUTTON_NEUTRAL).performClick();
+        Shadows.shadowOf(Looper.getMainLooper()).idle();
+        ((androidx.appcompat.app.AlertDialog)org.robolectric.shadows.ShadowDialog.getLatestDialog()).getButton(DialogInterface.BUTTON_POSITIVE).performClick();
+        long deadline=System.currentTimeMillis()+15000;
+        while(activity.L.f343a.getString("last_refresh_report","").isEmpty()&&System.currentTimeMillis()<deadline){Shadows.shadowOf(Looper.getMainLooper()).idle();Thread.sleep(20);}
+        Shadows.shadowOf(Looper.getMainLooper()).idle();
+        String report=activity.L.f343a.getString("last_refresh_report","");assertTrue(report,report.contains("requested=1"));assertTrue(report,report.contains("updated=1"));
+        assertEquals(14,activity.z.getItemCount());assertEquals(16,store.e().size());
+        assertEquals(14,new ProfileStore(context).activeProfiles().size());
+        String again=refreshAndWait(activity,true);assertTrue(again.contains("archived_records=2"));assertEquals(14,activity.z.getItemCount());
+        assertFalse(again.contains("secret-token"));assertFalse(again.contains(".invalid"));
+    }
     @Test public void zeroResultShowsPersistentSafeFailureReport()throws Exception{
         MainActivity activity=paste("not-a-config-private-body");String report=activity.L.f343a.getString("last_import_report","");
         assertEquals(0,activity.z.getItemCount());assertTrue(report.contains("failed=1"));assertTrue(report.contains("NO_VALID_CONFIGURATIONS"));

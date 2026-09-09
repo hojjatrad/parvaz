@@ -93,6 +93,28 @@ public class SmartImportRegressionTest {
             assertTrue(org.robolectric.shadows.ShadowDialog.getLatestDialog().isShowing());
         }finally{controller.destroy();ProfileStore.d=null;}
     }
+    @Test public void mainSourcePickerRestrictsRowsWithoutDeletingOtherAccounts()throws Exception {
+        for(int source=1;source<=7;source++){
+            Subscription sub=store.addOrGetSubscription("https://panel"+source+".invalid/private-token");
+            java.util.ArrayList<Profile> nodes=new java.util.ArrayList<>();
+            for(int i=0;i<14;i++)nodes.add(LinkParser.parseMany("vless://"+String.format("%08d",source)+"-1111-4111-8111-111111111111@server"+i+".invalid:443#server").get(0));
+            store.a(nodes,sub.id);
+        }
+        Profile archived=(Profile)store.e().get(0);prefs.edit().putString("selected_profile",archived.id).commit();ProfileStore.d=store;
+        org.robolectric.android.controller.ActivityController<com.parvaz.tunnel.MainActivity> controller=org.robolectric.Robolectric.buildActivity(com.parvaz.tunnel.MainActivity.class).create();
+        try {
+            com.parvaz.tunnel.MainActivity activity=controller.get();activity.reload();assertEquals(98,activity.z.getItemCount());
+            activity.new F().onClick(null,11);
+            androidx.appcompat.app.AlertDialog picker=(androidx.appcompat.app.AlertDialog)org.robolectric.shadows.ShadowDialog.getLatestDialog();
+            picker.getListView().performItemClick(null,1,1);org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
+            ((androidx.appcompat.app.AlertDialog)org.robolectric.shadows.ShadowDialog.getLatestDialog()).getButton(android.content.DialogInterface.BUTTON_POSITIVE).performClick();
+            org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
+            assertEquals(14,activity.z.getItemCount());assertEquals(98,store.e().size());assertNull(store.getActiveById(archived.id));
+            assertNotNull(store.getActiveById(prefs.getString("selected_profile","")));
+            assertEquals(14,new ProfileStore(context).activeProfiles().size());
+            activity.applyPrimarySubscription("",false);assertEquals(98,activity.z.getItemCount());
+        }finally{controller.destroy();ProfileStore.d=null;}
+    }
     @Test public void updateVersionAndMetadataGuards(){
         assertTrue(UpdateChecker.isNewer("v1.20","1.19.1"));assertFalse(UpdateChecker.isNewer("1.19.1","1.20"));
         UpdateChecker.Release r=new UpdateChecker.Release();r.version="1.20";r.size=1024;r.sha256=String.join("",Collections.nCopies(64,"a"));

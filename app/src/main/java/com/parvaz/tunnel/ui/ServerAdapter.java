@@ -86,7 +86,7 @@ public final class ServerAdapter extends RecyclerView.Adapter<ServerAdapter.b> {
         this.d = c0030l;
         this.f = new Prefs(context);
         arrayList.clear();
-        arrayList.addAll(ProfileStore.f(context).e());
+        arrayList.addAll(ProfileStore.f(context).activeProfiles());
         notifyDataSetChanged();
     }
 

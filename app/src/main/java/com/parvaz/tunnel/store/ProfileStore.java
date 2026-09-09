@@ -146,6 +146,29 @@ public final class ProfileStore {
         try{return Subscription.fromJson(sub.toJson());}catch(org.json.JSONException e){throw new IllegalStateException("Subscription copy failed");}
     }
 
+    /** All records remain in e() for backups; connection consumers use this scoped view. */
+    public synchronized String primarySubscription() { return f345a.getString("primary_subscription",""); }
+    public synchronized boolean scopeConfigured() { return "1".equals(f345a.getString("primary_choice","")); }
+    public synchronized boolean isRefreshSource(String id) { String primary=primarySubscription();return primary.isEmpty()||primary.equals(id); }
+    public synchronized ArrayList<Profile> activeProfiles() {
+        ArrayList<Profile> result=new ArrayList<>();String primary=primarySubscription();
+        for(Object o:f346b){Profile p=(Profile)o;if(primary.isEmpty()||primary.equals(p.subscriptionId))result.add(p);}
+        return result;
+    }
+    public synchronized Profile getActiveById(String id) {
+        Profile p=getById(id);return p!=null&&isRefreshSource(p.subscriptionId)?p:null;
+    }
+    public synchronized void setPrimarySubscription(String id) {
+        if(id==null)throw new IllegalArgumentException("Missing primary source");
+        try {
+            ArrayList<Subscription> subs=f();boolean found=id.isEmpty();JSONArray json=new JSONArray();
+            for(Subscription sub:subs){if(sub.id.equals(id)){found=true;sub.enabled=true;}json.put(sub.toJson());}
+            if(!found)throw new IllegalArgumentException("Unknown primary source");
+            f345a.edit().putString("primary_subscription",id).putString("primary_choice","1").putString("subs",json.toString()).apply();
+            f347c.clear();f347c.addAll(subs);revision++;
+        }catch(org.json.JSONException e){throw new IllegalStateException("Source selection failed");}
+    }
+
     /** Remove legacy same-source duplicates and coalesce repeated URLs. Independent sources
      * remain separate underneath the single-row UI, so future refreshes cannot erase them. */
     public synchronized int removeDuplicates(SharedPreferences prefs) {
@@ -181,7 +204,8 @@ public final class ProfileStore {
             JSONArray pj=new JSONArray(),sj=new JSONArray();JSONObject pings=new JSONObject();
             for(Profile p:unique.values()){pj.put(p.toJson());if(p.ping>0)pings.put(p.id,p.ping);}
             for(Subscription sub:subs){Subscription c=Subscription.fromJson(sub.toJson());c.count=0;for(Profile p:unique.values())if(p.subscriptionId.equals(c.id))c.count++;sj.put(c.toJson());}
-            f345a.edit().putString("profiles",pj.toString()).putString("subs",sj.toString()).putString("pings",pings.toString()).apply();
+            f345a.edit().putString("profiles",pj.toString()).putString("subs",sj.toString()).putString("pings",pings.toString())
+                .putString("primary_subscription",owners.getOrDefault(primarySubscription(),primarySubscription())).apply();
             f346b.clear();f346b.addAll(unique.values());f347c.clear();
             for(int i=0;i<sj.length();i++)f347c.add(Subscription.fromJson(sj.getJSONObject(i)));
             revision++;return removed;

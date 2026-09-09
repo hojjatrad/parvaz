@@ -282,7 +282,7 @@ public class TunnelVpnService extends VpnService {
             try {
                 Prefs prefs = new Prefs(tunnelVpnService);
                 tunnelVpnService.f = prefs;
-                Profile byId = ProfileStore.f(tunnelVpnService).getById(prefs.f343a.getString("selected_profile", ""));
+                Profile byId = ProfileStore.f(tunnelVpnService).getActiveById(prefs.f343a.getString("selected_profile", ""));
                 tunnelVpnService.profile = byId;
                 if (byId == null) {
                     string = tunnelVpnService.getString(R.string.err_no_server);
@@ -953,7 +953,7 @@ public class TunnelVpnService extends VpnService {
             new ServerMemory(this).recordFailure(this, currentId);
         }
 
-        ArrayList<Profile> all = ProfileStore.f(this).e();
+        ArrayList<Profile> all = ProfileStore.f(this).activeProfiles();
         long now = System.currentTimeMillis();
 
         ArrayList<Profile> candidates = new ArrayList<>();
@@ -1200,7 +1200,7 @@ public class TunnelVpnService extends VpnService {
 
     public final void switchNextServer() {
         if (this.switching) return;
-        ArrayList<Profile> all = ProfileStore.f(this).e();
+        ArrayList<Profile> all = ProfileStore.f(this).activeProfiles();
         if (all.size() < 2) return;
         String curId = this.profile != null ? this.profile.id : "";
         int idx = 0;

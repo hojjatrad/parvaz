@@ -10,6 +10,58 @@ public class RefreshDedupAudit {
     static void check(String text,boolean yes){if(!yes)throw new AssertionError(text);count++;System.out.println("PASS REFRESH/DEDUP: "+text);}
     static Profile profile(){return PanelRefreshTest.profile("one","name");}
     static String key(Profile p){return ProfileIdentity.fingerprint(p);}
+    static void primaryScenarios()throws Exception {
+        PanelRefreshTest.Setup s=new PanelRefreshTest.Setup();
+        for(int source=1;source<=7;source++){
+            s.sub("s"+source,"https://panel"+source+".invalid/private-token");
+            for(int i=0;i<14;i++){
+                String json=new JSONObject().put("proxies",new JSONArray().put(new JSONObject().put("type","vless").put("name","server "+i).put("server","server"+i+".invalid").put("port",443).put("uuid",String.format("%08d-1111-4111-8111-111111111111",source)))).toString();
+                Profile p=LinkParser.parseDetailed(json).profiles.get(0);p.subscriptionId="s"+source;s.add(p);
+            }
+        }
+        Profile chosen=(Profile)s.store.e().get(14),archived=(Profile)s.store.e().get(0);
+        s.prefs.edit().putString("selected_profile",chosen.id).putString("favorites",chosen.id).apply();
+        s.store.setPrimarySubscription("s2");
+        check("Seven independent 14-node sources become 14 active nodes",s.store.e().size()==98&&s.store.activeProfiles().size()==14);
+        check("Archived IDs cannot be used to connect",s.store.getActiveById(archived.id)==null&&s.store.getActiveById(chosen.id)!=null);
+        check("Choice survives a store reload",new ProfileStore(s.context).primarySubscription().equals("s2"));
+        JSONArray proxies=new JSONArray();
+        for(int repeat=0;repeat<2;repeat++)for(int i=0;i<14;i++)proxies.put(new JSONObject().put("type","vless").put("name","server").put("server","server"+i+".invalid").put("port",443).put("uuid","00000002-1111-4111-8111-111111111111"));
+        final String valid=new JSONObject().put("proxies",proxies).toString();int[] fetched={0};
+        SubscriptionRefresh.Result result=SubscriptionRefresh.run(s.store,s.prefs,()->false,url->{check("Only the primary source is fetched",url.contains("panel2.invalid"));fetched[0]++;return new SubscriptionUpdater.b(valid,null);});
+        check("One source refreshed and auto-deduplicated",fetched[0]==1&&result.updated==1&&s.store.activeProfiles().size()==14&&result.visibleConnections==14);
+        check("Archived ownership survives refresh",s.store.e().size()==98&&s.store.getById(archived.id)!=null);
+        check("Stable selected and favorite IDs survive refresh",s.store.getActiveById(chosen.id)!=null&&s.prefs.getString("favorites","").contains(chosen.id));
+        String safe=SubscriptionRefresh.safeReport(result);
+        check("Report distinguishes active and archived counts",safe.contains("scope=PRIMARY")&&safe.contains("archived_records=84")&&!safe.contains("private-token"));
+        SubscriptionRefresh.run(s.store,s.prefs,()->false,url->{throw new java.io.IOException();});
+        check("Fetch failure does not resurrect archived sources or clear primary",s.store.activeProfiles().size()==14&&s.store.primarySubscription().equals("s2"));
+        ImportResult incomplete=LinkParser.parseDetailed(valid);incomplete.reject("INVALID_NODE",1);
+        SubscriptionRefresh.run(s.store,s.prefs,()->false,url->new SubscriptionUpdater.b(valid,null,0,incomplete));
+        check("Partial response retains primary data safely",s.store.activeProfiles().size()==14);
+        String replacement=new JSONObject().put("proxies",new JSONArray().put(new JSONObject().put("type","vless").put("name","new").put("server","replacement.invalid").put("port",443).put("uuid","99999999-1111-4111-8111-111111111111"))).toString();
+        SubscriptionRefresh.run(s.store,s.prefs,()->false,url->new SubscriptionUpdater.b(replacement,null));
+        check("Complete response removes old primary nodes, not archived owners",s.store.activeProfiles().size()==1&&s.store.e().size()==85);
+        ProfileStore.Snapshot old=s.store.beginRefresh("s2");s.store.setPrimarySubscription("s3");
+        try{s.store.replaceSubscription(old,LinkParser.parseDetailed(replacement),null,1,"");throw new AssertionError("stale accepted");}catch(ProfileStore.StaleRefresh expected){check("Scope change rejects an in-flight stale commit",true);}
+        s.store.setPrimarySubscription("");check("All-source mode can restore archived records",s.store.activeProfiles().size()==85);
+        s.store.setPrimarySubscription("s3");
+        s.store.f347c.removeIf(o->((Subscription)o).id.equals("s3"));s.store.h();
+        SubscriptionRefresh.Result missing=SubscriptionRefresh.run(s.store,s.prefs,()->false,url->{throw new AssertionError("must not fall back to other sources");});
+        check("Missing primary fails closed without fetching other sources",missing.failed==1&&missing.requested==0);
+        PanelRefreshTest.Setup aliases=new PanelRefreshTest.Setup();aliases.sub("a","https://same.invalid/sub");aliases.sub("b","https://same.invalid/sub");aliases.add(PanelRefreshTest.profile("b","selected"));
+        aliases.store.setPrimarySubscription("b");aliases.store.removeDuplicates(aliases.prefs);
+        check("URL dedup remaps primary ownership",aliases.store.primarySubscription().equals("a")&&aliases.store.activeProfiles().size()==1);
+        PanelRefreshTest.Setup noisy=new PanelRefreshTest.Setup();
+        for(int i=1;i<=7;i++)noisy.sub("s"+i,"https://source"+i+".invalid/private-token");
+        final ImportResult parsed=LinkParser.parseDetailed(replacement);for(int i=0;i<80;i++)parsed.warn("RAW_OUTBOUND_EXTRACTION_ONLY",0);
+        SubscriptionRefresh.Result partial=SubscriptionRefresh.run(noisy.store,noisy.prefs,()->false,url->{if(url.contains("source7"))throw new java.io.IOException();return new SubscriptionUpdater.b(replacement,null,0,parsed);});
+        String report=SubscriptionRefresh.safeReport(partial);
+        check("Six successes cannot hide the seventh failure behind warnings",partial.updated==6&&partial.failed==1&&report.contains("ERROR NETWORK_FAILURE")&&report.contains("SOURCE_7: FAILED"));
+        check("Repeated warnings are aggregated",report.indexOf("RAW_OUTBOUND_EXTRACTION_ONLY")==report.lastIndexOf("RAW_OUTBOUND_EXTRACTION_ONLY")&&report.contains("occurrences=480"));
+        check("Failure is prioritized for existing import consumers",partial.codes.get(0).equals("NETWORK_FAILURE"));
+        check("Per-source report is credential and endpoint free",!report.contains("private-token")&&!report.contains(".invalid")&&!report.contains("99999999"));
+    }
     public static void main(String[] args)throws Exception {
         Profile a=profile(),b=ProfileIdentity.copy(a);b.id="two";b.remark="second";b.network="";b.security="none";b.encryption="";b.wgMtu=1280;
         check("Explicit defaults collapse across imported records",key(a).equals(key(b)));
@@ -54,6 +106,7 @@ public class RefreshDedupAudit {
             check("Queued refresh replaces old source data",store.store.e().size()==1&&((Profile)store.store.e().get(0)).address.equals("new.invalid"));
             String safe=SubscriptionRefresh.safeReport(done);check("Refresh report identifies operation and excludes source",safe.contains("OPERATION_REFRESH")&&!safe.contains("private-token")&&!safe.contains("one.invalid"));
         }finally{release.countDown();pool.shutdownNow();}
+        primaryScenarios();
         System.out.println("REFRESH/DEDUP TOTAL: "+count+" assertions passed.");
     }
 }

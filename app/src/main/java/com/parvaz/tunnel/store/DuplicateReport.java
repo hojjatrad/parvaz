@@ -21,7 +21,7 @@ public final class DuplicateReport {
                 }
             }catch(JSONException e){fields.add("unreadable_profile");}
         }
-        return "OPERATION_DUPLICATES\nremoved_records="+removed+"; stored_records="+records.size()+"; visible_connections="+identities.size()
+        return "OPERATION_DUPLICATES\nstatus=SUCCESS\nremoved_records="+removed+"; stored_records="+records.size()+"; visible_connections="+identities.size()
             +"; shared_source_copies="+(records.size()-identities.size())+"\nsame_endpoint_different_connections="+distinctGroups+"\ndiffering_fields="+String.join(",",fields);
     }
 }
