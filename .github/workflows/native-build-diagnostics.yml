@@ -1,4 +1,4 @@
-name: Read public native-build failure diagnostics
+name: Read unsigned lint diagnostics
 on:
   push:
     branches: ['ci/native-build-diagnostics']
@@ -19,9 +19,9 @@ jobs:
           headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json','User-Agent':'Parvaz-native-diagnostics'}
           def api(path):
               with urllib.request.urlopen(urllib.request.Request(base+path,headers=headers),timeout=30) as response:return json.load(response)
-          run=34353616632
+          run=34356968127
           info=api('/actions/runs/'+str(run))
-          assert info['path']=='.github/workflows/native-engines.yml'
+          assert info['path']=='.github/workflows/lint-validation.yml'
           jobs=api('/actions/runs/'+str(run)+'/jobs')['jobs']
           class NoRedirect(urllib.request.HTTPRedirectHandler):
               def redirect_request(self,*args,**kwargs):return None
@@ -36,6 +36,6 @@ jobs:
                   location=e.headers['Location'];assert location.startswith('https://')
                   with urllib.request.urlopen(location,timeout=30) as r:data=r.read()
               lines=data.decode(errors='replace').splitlines()
-              text='\n'.join(lines[-90:])[-18000:]
+              sections=['\n'.join(lines[i:i+18]) for i,line in enumerate(lines) if '* What went wrong:' in line];text='\n'.join(sections)[:3200] if sections else '\n'.join(lines[-22:])[-3000:]
               print('::notice title=NATIVE_BUILD_DIAGNOSTICS::'+text.replace('%','%25').replace('\r','%0D').replace('\n','%0A'))
           PY
