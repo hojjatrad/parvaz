@@ -1,0 +1,43 @@
+name: Read public platform probe results
+on:
+  push:
+    branches: ['ci/platform-probe-status']
+permissions:
+  actions: read
+  contents: read
+jobs:
+  read:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Summarize probe progress and public-APK-only test output
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import urllib.request,urllib.error,os,json,time
+          base='https://api.github.com/repos/hojjatrad/parvaz'
+          headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json','User-Agent':'Parvaz-probe-results'}
+          def api(path):
+              with urllib.request.urlopen(urllib.request.Request(base+path,headers=headers),timeout=30) as r:return json.load(r)
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self,*args,**kwargs):return None
+          for attempt in range(18):
+              data=api('/actions/runs/34325917804/jobs')
+              for job in data['jobs']:
+                  active=[s['name'] for s in job['steps'] if s['status']=='in_progress']
+                  print('::notice title=PROBE_PROGRESS::'+job['name']+' '+job['status']+' '+str(job['conclusion'])+' '+str(active))
+              if all(j['status']=='completed' for j in data['jobs']):break
+              time.sleep(60)
+          for job in data['jobs']:
+              if job['status']!='completed':continue
+              request=urllib.request.Request(base+'/actions/jobs/'+str(job['id'])+'/logs',headers=headers)
+              try:
+                  with urllib.request.build_opener(NoRedirect).open(request,timeout=30) as r:logs=r.read(8*1024*1024).decode(errors='replace')
+              except urllib.error.HTTPError as e:
+                  if e.code!=302:raise
+                  with urllib.request.urlopen(e.headers['Location'],timeout=30) as r:logs=r.read(8*1024*1024).decode(errors='replace')
+              for line in logs.splitlines():
+                  if any(x in line for x in ['ARCHIVE ','ParvazProbe','FAILURE:','What went wrong','Could not resolve','SDK location','error:','BUILD FAILED','BUILD SUCCESSFUL','Boot completed','Timeout waiting']):
+                      print('::notice title=PROBE_RESULT::'+line[:800].replace('%','%25').replace('\r','').replace('\n',''))
+          PY
