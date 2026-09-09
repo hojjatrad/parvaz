@@ -1,35 +1,30 @@
-name: Read validation status and stop superseded tests
+name: Read Android validation failures
 on:
   push:
     branches: ['ci/platform-probe-status']
 permissions:
-  actions: write
+  actions: read
   contents: read
 jobs:
   read:
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
-      - name: Inspect test stages; cancel only superseded test revisions
+      - name: Read test diagnostics only
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           python3 -u - <<'PY'
-          import urllib.request,urllib.error,os,json
+          import urllib.request,os,json
           base='https://api.github.com/repos/hojjatrad/parvaz'
           headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json','User-Agent':'Parvaz-test-status'}
-          def api(path):
-              with urllib.request.urlopen(urllib.request.Request(base+path,headers=headers),timeout=30) as r:return json.load(r)
-          for workflow in ['validate-signing-release.yml','platform-update-probe.yml']:
-              runs=api('/actions/workflows/'+workflow+'/runs?per_page=4')['workflow_runs']
-              for run in runs:
-                  jobs=api('/actions/runs/'+str(run['id'])+'/jobs')['jobs']
-                  detail=[j['name']+': '+str(j['conclusion'])+' '+','.join(s['name'] for s in j['steps'] if s['status']=='in_progress') for j in jobs]
-                  print('::notice title=VALIDATION_STATUS::'+str(run['id'])+' '+run['head_sha'][:7]+' '+run['status']+' '+str(run['conclusion'])+' '+' | '.join(detail))
-                  if workflow=='validate-signing-release.yml' and run['head_sha'].startswith(('faf68d2','122aa24')) and run['status']!='completed':
-                      request=urllib.request.Request(base+'/actions/runs/'+str(run['id'])+'/cancel',data=b'',headers=headers,method='POST')
-                      try:
-                          with urllib.request.urlopen(request,timeout=30) as r:print('::notice title=SUPERSEDED_TEST_STOPPED::'+str(run['id']))
-                      except urllib.error.HTTPError as e:
-                          if e.code!=409:raise
+          def fetch(path):
+              with urllib.request.urlopen(urllib.request.Request(base+path,headers=headers),timeout=30) as r:return r.read()
+          for run in [34331530822,34331816056]:
+              for job in json.loads(fetch('/actions/runs/'+str(run)+'/jobs'))['jobs']:
+                  print('::notice title=TEST_STATUS::'+str(run)+' '+str(job['conclusion']))
+                  if job['status']=='completed' and job['conclusion']=='failure':
+                      lines=fetch('/actions/jobs/'+str(job['id'])+'/logs').decode().splitlines()
+                      relevant=[line for line in lines if any(word in line for word in ['error:',' FAILED','What went wrong','Execution failed','AssertionError','tests completed','Compilation failed'])]
+                      for line in relevant[-20:]:print('::notice title=TEST_FAILURE::'+line.replace('%','%25').replace('\r','%0D').replace('\n','%0A'))
           PY
