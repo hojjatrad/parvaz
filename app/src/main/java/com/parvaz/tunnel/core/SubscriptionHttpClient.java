@@ -33,6 +33,9 @@ public final class SubscriptionHttpClient {
     public static final class FetchException extends IOException {
         public final Error error;
         public final int httpStatus;
+        public String stage="UNKNOWN",route="UNKNOWN";
+        public int elapsedSeconds;
+        public String diagnostic(){return "STAGE_"+stage+"; ROUTE_"+route+"; SECONDS_"+elapsedSeconds;}
         FetchException(Error error) { this(error, 0); }
         FetchException(Error error, int status) {
             super("Subscription: " + error.name() + (status == 0 ? "" : " (HTTP " + status + ")"));
@@ -53,41 +56,47 @@ public final class SubscriptionHttpClient {
     private SubscriptionHttpClient() {}
 
     public static Response fetch(String input) throws IOException {
-        return fetch(input, url -> (HttpURLConnection) url.openConnection());
+        return fetch(input,0);
     }
 
     static Response fetch(String input, ConnectionFactory factory) throws IOException {
         return fetch(input,factory,0);
     }
     public static Response fetch(String input,int format) throws IOException {
-        return fetch(input,url -> (HttpURLConnection)url.openConnection(),format);
+        AppNetwork.Route route=AppNetwork.capture();
+        return fetch(input,route::open,format,route.code);
     }
     static Response fetch(String input,ConnectionFactory factory,int format) throws IOException {
-        try {
-            return fetchInternal(input, factory,format);
-        } catch (FetchException e) {
-            throw e;
-        } catch (SSLException e) {
-            throw new FetchException(Error.TLS_FAILURE);
-        } catch (SocketTimeoutException e) {
-            throw new FetchException(Error.TIMEOUT);
-        } catch (IOException | IllegalArgumentException e) {
-            // Do not attach causes: network exceptions can contain subscription tokens.
-            throw new FetchException(Error.NETWORK_FAILURE);
+        return fetch(input,factory,format,"TEST");
+    }
+    private static final class Trace {String stage="OPEN";final long start=System.nanoTime();}
+    private static Response fetch(String input,ConnectionFactory factory,int format,String route)throws IOException {
+        Trace trace=new Trace();
+        try {return fetchInternal(input,factory,format,trace);}
+        catch(IOException|IllegalArgumentException e) {
+            FetchException failure;
+            if(e instanceof FetchException)failure=(FetchException)e;
+            else if(e instanceof SSLException)failure=new FetchException(Error.TLS_FAILURE);
+            else if(e instanceof SocketTimeoutException)failure=new FetchException(Error.TIMEOUT);
+            else failure=new FetchException(Error.NETWORK_FAILURE);
+            failure.stage=trace.stage;failure.route=route;
+            failure.elapsedSeconds=(int)((System.nanoTime()-trace.start)/1_000_000_000L);
+            throw failure;
         }
     }
 
-    private static Response fetchInternal(String input, ConnectionFactory factory,int format) throws IOException {
+    private static Response fetchInternal(String input, ConnectionFactory factory,int format,Trace trace) throws IOException {
         URL current = checkedUrl(input);
         long deadline = System.nanoTime() + BUDGET_NANOS;
         Set<String> visited = new HashSet<>();
         String userinfo = null;
         for (int hop = 0; ; hop++) {
             if (!visited.add(current.toExternalForm())) throw new FetchException(Error.REDIRECT_LOOP);
+            trace.stage="OPEN";
             HttpURLConnection conn = factory.open(current);
             try {
                 conn.setConnectTimeout(remaining(deadline, 15000));
-                conn.setReadTimeout(remaining(deadline, 20000));
+                conn.setReadTimeout(remaining(deadline, 45000));
                 conn.setInstanceFollowRedirects(false);
                 conn.setUseCaches(false);
                 // Same URL and token; never guess new endpoint paths or weaken TLS.
@@ -97,8 +106,9 @@ public final class SubscriptionHttpClient {
                 conn.setRequestProperty("User-Agent",agents[format]);
                 conn.setRequestProperty("Accept",accepts[format]);
                 conn.setRequestProperty("Accept-Encoding", "gzip");
+                trace.stage="CONNECT_OR_HEADERS";
                 int status = conn.getResponseCode();
-                remaining(deadline, 20000);
+                remaining(deadline, 45000);
                 if (isRedirect(status)) {
                     if (hop >= MAX_REDIRECTS) throw new FetchException(Error.REDIRECT_LIMIT);
                     String location = conn.getHeaderField("Location");
@@ -120,6 +130,7 @@ public final class SubscriptionHttpClient {
                 String encoding = conn.getContentEncoding();
                 if (encoding != null && !encoding.isEmpty() && !"identity".equalsIgnoreCase(encoding)
                         && !"gzip".equalsIgnoreCase(encoding)) throw new FetchException(Error.UNSUPPORTED_ENCODING);
+                trace.stage="BODY";
                 String body;
                 try (InputStream raw = new LimitedStream(conn.getInputStream());
                      InputStream decoded = "gzip".equalsIgnoreCase(encoding) ? new GZIPInputStream(raw) : raw;
@@ -127,13 +138,13 @@ public final class SubscriptionHttpClient {
                     byte[] buf = new byte[16384];
                     int count;
                     while (true) {
-                        conn.setReadTimeout(remaining(deadline, 20000));
+                        conn.setReadTimeout(remaining(deadline, 45000));
                         count = decoded.read(buf);
                         if (count < 0) break;
                         if (bytes.size() > MAX_BODY_BYTES - count) throw new FetchException(Error.TOO_LARGE);
                         bytes.write(buf, 0, count);
                     }
-                    remaining(deadline, 20000);
+                    remaining(deadline, 45000);
                     body = new String(bytes.toByteArray(), StandardCharsets.UTF_8).trim();
                 }
                 if (body.startsWith("\uFEFF")) body = body.substring(1).trim();

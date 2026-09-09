@@ -71,7 +71,7 @@ public final class UpdateChecker {
     public static Release check(Context context) throws Exception {
         HttpURLConnection conn = null;
         try {
-            conn = (HttpURLConnection) new URL(RELEASES_API).openConnection();
+            conn = AppNetwork.open(new URL(RELEASES_API));
             conn.setUseCaches(false);
             conn.setRequestProperty("Cache-Control","no-cache");
             conn.setConnectTimeout(15000);
@@ -169,12 +169,11 @@ public final class UpdateChecker {
     public static synchronized File download(Context context, Release release, DownloadProgress progress)
             throws Exception {
         if(!release.valid())throw new IllegalArgumentException("INVALID_UPDATE_METADATA");
-        File dir = context.getExternalCacheDir();
-        if (dir == null) {
-            dir = context.getCacheDir();
-        }
+        File dir = new File(context.getCacheDir(),"updates");
+        if(!dir.isDirectory()&&!dir.mkdirs())throw new IllegalStateException("UPDATE_STORAGE_UNAVAILABLE");
         File target = new File(dir, "parvaz-" + release.version + ".apk");
-        File temp = new File(dir, target.getName() + ".part");
+        // Keep a real APK suffix for platform/OEM package parsers; never expose an unverified file.
+        File temp = new File(dir, "pending-"+release.version+".apk");
 
         HttpURLConnection conn = null;
         InputStream in = null;
@@ -206,7 +205,7 @@ public final class UpdateChecker {
                 digest.update(buf,0,read);
                 out.write(buf, 0, read);
                 if (progress != null && total > 0) {
-                    int percent = (int) ((done * 100) / total);
+                    int percent = (int) Math.min(99,(done * 100) / total);
                     if (percent != lastPercent) {
                         lastPercent = percent;
                         progress.onProgress(percent);
@@ -227,6 +226,7 @@ public final class UpdateChecker {
             }
             File[] old=dir.listFiles();
             if(old!=null)for(File file:old)if(!file.equals(target)&&file.getName().matches("parvaz-[0-9.]+\\.apk(\\.part)?"))file.delete();
+            if(progress!=null)progress.onProgress(100);
             return target;
         } catch (Exception e) {
             temp.delete();
@@ -244,13 +244,29 @@ public final class UpdateChecker {
         }
     }
 
+    static String safeError(Exception error) {
+        String code=error.getMessage();
+        return code!=null&&code.matches("[A-Z][A-Z0-9_]{2,80}")?code:"UPDATE_IO_OR_PLATFORM_ERROR";
+    }
+    static void verifyReadyFile(Context context,File file,Release release)throws Exception {
+        if(!release.valid()||!file.isFile()||file.length()!=release.size||
+                !file.getCanonicalFile().getParentFile().equals(new File(context.getCacheDir(),"updates").getCanonicalFile()))
+            throw new IllegalStateException("INVALID_UPDATE_FILE");
+        java.security.MessageDigest digest=java.security.MessageDigest.getInstance("SHA-256");
+        try(InputStream in=new java.io.FileInputStream(file)) {
+            byte[] bytes=new byte[65536];int n;while((n=in.read(bytes))!=-1)digest.update(bytes,0,n);
+        }
+        if(!hex(digest.digest()).equals(release.sha256))throw new IllegalStateException("UPDATE_CHECKSUM_MISMATCH");
+        verifyArchive(context,file,release);
+    }
+
     private static HttpURLConnection openApk(String value) throws Exception {
         URL url=new URL(value);
         for(int i=0;i<=5;i++) {
             String host=url.getHost().toLowerCase(Locale.ROOT);
             if(!url.getProtocol().equals("https")||url.getUserInfo()!=null||
                     !(host.equals("github.com")||host.endsWith(".githubusercontent.com")))throw new IllegalStateException("UNTRUSTED_UPDATE_URL");
-            HttpURLConnection connection=(HttpURLConnection)url.openConnection();
+            HttpURLConnection connection=AppNetwork.open(url);
             connection.setConnectTimeout(20000);connection.setReadTimeout(60000);connection.setInstanceFollowRedirects(false);
             connection.setRequestProperty("User-Agent","Parvaz");
             int status;
@@ -267,12 +283,14 @@ public final class UpdateChecker {
     static String hex(byte[] bytes) {
         StringBuilder result=new StringBuilder();for(byte b:bytes)result.append(String.format(Locale.ROOT,"%02x",b&255));return result.toString();
     }
-    private static void verifyArchive(Context context,File file,Release release) throws Exception {
+    static void verifyArchive(Context context,File file,Release release) throws Exception {
         android.content.pm.PackageManager pm=context.getPackageManager();
         int flags=Build.VERSION.SDK_INT>=28?android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES:android.content.pm.PackageManager.GET_SIGNATURES;
         android.content.pm.PackageInfo archive=pm.getPackageArchiveInfo(file.getAbsolutePath(),flags);
         android.content.pm.PackageInfo installed=pm.getPackageInfo(context.getPackageName(),flags);
-        if(archive==null||!context.getPackageName().equals(archive.packageName)||!release.version.equals(archive.versionName))throw new IllegalStateException("WRONG_UPDATE_PACKAGE");
+        if(archive==null)throw new IllegalStateException("UPDATE_ARCHIVE_UNREADABLE");
+        if(!context.getPackageName().equals(archive.packageName))throw new IllegalStateException("UPDATE_PACKAGE_ID_MISMATCH");
+        if(!release.version.equals(archive.versionName))throw new IllegalStateException("UPDATE_VERSION_NAME_MISMATCH");
         long next=Build.VERSION.SDK_INT>=28?archive.getLongVersionCode():archive.versionCode;
         long current=Build.VERSION.SDK_INT>=28?installed.getLongVersionCode():installed.versionCode;
         if(next<=current)throw new IllegalStateException("UPDATE_NOT_NEWER");

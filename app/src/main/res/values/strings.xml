@@ -424,4 +424,9 @@ Tap + to paste a config link or add a subscription."</string>
     <string name="core_update_title">Xray core updates</string>
     <string name="core_update_check">Check app and core update</string>
     <string name="core_update_help">The Xray core is a native library inside the signed APK. The repository checks for newer official releases daily and publishes an app update only after automated build, test and signing checks. Install the app update to receive the core. Android still requires your approval; network failures or failed tests can delay an update.</string>
+
+    <string name="update_install_ready">The APK has downloaded. Android must approve installation. You can retry installation without downloading again.</string>
+    <string name="update_install_permission">Allow installation from Parvaz in Android settings, then return here. Installation will never bypass your approval.</string>
+    <string name="update_verifying">Verifying the APK hash, package, version and permanent signing certificate…</string>
+    <string name="update_install_not_completed">Android did not confirm completion. Read its installation message, then retry here if appropriate.</string>
 </resources>

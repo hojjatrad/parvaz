@@ -46,6 +46,7 @@
                 <data android:scheme="socks"/>
             </intent-filter>
         </activity>
+        <activity android:exported="false" android:name="com.parvaz.tunnel.core.UpdateInstallActivity"/>
         <activity android:configChanges="keyboardHidden|layoutDirection|locale|orientation|screenSize|uiMode" android:exported="false" android:name="com.parvaz.tunnel.SettingsActivity"/>
         <activity android:configChanges="keyboardHidden|layoutDirection|locale|orientation|screenSize|uiMode" android:exported="false" android:name="com.parvaz.tunnel.LogActivity"/>
         <activity android:configChanges="keyboardHidden|layoutDirection|locale|orientation|screenSize|uiMode" android:exported="false" android:name="com.parvaz.tunnel.AppPickerActivity"/>

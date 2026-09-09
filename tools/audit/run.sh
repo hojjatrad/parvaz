@@ -16,7 +16,7 @@ javac -encoding UTF-8 -cp .cache/audit/json.jar:.cache/audit/snakeyaml.jar -d .c
  app/src/main/java/com/parvaz/tunnel/model/{Profile,Subscription}.java \
  app/src/main/java/com/parvaz/tunnel/config/{LinkParser,ClashParser,SingBoxParser,ProtocolNames,CustomOutbound,XrayConfigBuilder,ConfigFields,ImportResult,JsonInput,SubscriptionUrl,ImportInput}.java \
  app/src/main/java/com/parvaz/tunnel/store/{ProfileStore,ProfileIdentity,SubscriptionReconciler,ProfileDuplicates}.java \
- app/src/main/java/com/parvaz/tunnel/core/{ProtocolSupport,SubscriptionHttpClient,SmartImport,QuotaState,SubscriptionRefresh,SubscriptionUpdater,SubscriptionUpdater_4,SubscriptionUpdater_5,SubscriptionWorker}.java tools/audit/ParserAudit.java tools/audit/SubscriptionHttpClientTest.java tools/audit/PanelRefreshTest.java tools/audit/SmartImportAudit.java tools/audit/SubscriptionFormatAudit.java
+ app/src/main/java/com/parvaz/tunnel/core/{AppNetwork,ProtocolSupport,SubscriptionHttpClient,SmartImport,QuotaState,SubscriptionRefresh,SubscriptionUpdater,SubscriptionUpdater_4,SubscriptionUpdater_5,SubscriptionWorker}.java tools/audit/ParserAudit.java tools/audit/SubscriptionHttpClientTest.java tools/audit/PanelRefreshTest.java tools/audit/SmartImportAudit.java tools/audit/SubscriptionFormatAudit.java tools/audit/AppNetworkAudit.java
 java -cp .cache/audit/classes:.cache/audit/json.jar:.cache/audit/snakeyaml.jar ParserAudit
 # Ephemeral loopback-only TEST certificate, never a release/app signing key.
 rm -f .cache/audit/localhost.p12
@@ -34,3 +34,5 @@ java -cp .cache/audit/classes:.cache/audit/json.jar:.cache/audit/snakeyaml.jar c
 java -cp .cache/audit/classes:.cache/audit/json.jar:.cache/audit/snakeyaml.jar com.parvaz.tunnel.core.SmartImportAudit
 
 java -cp .cache/audit/classes:.cache/audit/json.jar:.cache/audit/snakeyaml.jar com.parvaz.tunnel.core.SubscriptionFormatAudit
+
+java -cp .cache/audit/classes:.cache/audit/json.jar:.cache/audit/snakeyaml.jar com.parvaz.tunnel.core.AppNetworkAudit

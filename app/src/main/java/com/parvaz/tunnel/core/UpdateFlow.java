@@ -49,7 +49,7 @@ public final class UpdateFlow {
                 try {
                     release = UpdateChecker.check(activity);
                 } catch (Exception e) {
-                    error = String.valueOf(e.getMessage());
+                    error = UpdateChecker.safeError(e);
                 }
 
                 CHECKING.set(false);
@@ -148,7 +148,7 @@ public final class UpdateFlow {
                                 }
                             });
                 } catch (Exception e) {
-                    error = String.valueOf(e.getMessage());
+                    error = UpdateChecker.safeError(e);
                 }
 
                 DOWNLOADING.set(false);
@@ -164,7 +164,7 @@ public final class UpdateFlow {
                             showUpdateFailure(activity,String.valueOf(failure),()->downloadAndInstall(activity,release));
                             return;
                         }
-                        launchInstaller(activity, file);
+                        activity.startActivity(UpdateInstallActivity.intent(activity,file,release));
                     }
                 });
             }
@@ -173,27 +173,15 @@ public final class UpdateFlow {
 
     private static void showUpdateFailure(Activity activity,String failure,Runnable retry) {
         if(activity.isFinishing()||activity.isDestroyed())return;
+        String report="Parvaz "+UpdateChecker.currentVersion(activity)+"; SDK_"+android.os.Build.VERSION.SDK_INT+"; "+failure;
+        activity.getSharedPreferences("parvaz_update",0).edit().putString("last_error",report).apply();
         new MaterialAlertDialogBuilder(activity).setTitle(R.string.update_title)
-            .setMessage(activity.getString(R.string.update_failed,failure))
+            .setMessage(activity.getString(R.string.update_failed,report))
             .setPositiveButton(R.string.update_retry,(dialog,which)->retry.run())
             .setNeutralButton(R.string.update_official_page,(dialog,which)->{
                 try{activity.startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse("https://github.com/hojjatrad/parvaz/releases/latest")));}
                 catch(Exception e){toast(activity,activity.getString(R.string.update_failed,"NO_BROWSER"));}
             }).setNegativeButton(R.string.cancel,null).show();
-    }
-
-    private static void launchInstaller(Activity activity, File apk) {
-        try {
-            Uri uri = FileProvider.getUriForFile(
-                    activity, "com.parvaz.tunnel.fileprovider", apk);
-            Intent intent = new Intent(Intent.ACTION_VIEW);
-            intent.setDataAndType(uri, "application/vnd.android.package-archive");
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            activity.startActivity(intent);
-        } catch (Exception e) {
-            showUpdateFailure(activity,"INSTALLER_UNAVAILABLE",()->launchInstaller(activity,apk));
-        }
     }
 
     // ----------------------------------------------------------------- diagnosis

@@ -75,7 +75,7 @@ public final class SubscriptionRefresh {
                             System.currentTimeMillis(),prefs.getString("selected_profile",""));
                     result.updated++;result.serverCount+=plan.count;result.added+=plan.added;result.retained+=plan.retained;result.removed+=plan.removed;
                 }catch(ProfileStore.StaleRefresh e){result.fail("STALE_RESPONSE_IGNORED",true);}
-                 catch(SubscriptionHttpClient.FetchException e){result.fail(e.error.name()+(e.httpStatus>0?"_"+e.httpStatus:""),transientError(e));}
+                 catch(SubscriptionHttpClient.FetchException e){result.fail(e.error.name()+(e.httpStatus>0?"_"+e.httpStatus:""),transientError(e));if(result.codes.size()<10)result.codes.add(e.diagnostic());}
                  catch(IOException e){result.fail("NETWORK_FAILURE",true);}
                  catch(IllegalArgumentException e){result.fail("INVALID_SUBSCRIPTION",false);}
                  catch(Exception e){result.fail("REFRESH_FAILED",true);}

@@ -405,4 +405,9 @@
     <string name="core_update_title">به‌روزرسانی هستهٔ Xray</string>
     <string name="core_update_check">بررسی آپدیت برنامه و هسته</string>
     <string name="core_update_help">هستهٔ Xray یک کتابخانهٔ بومی داخل APK امضاشده است. مخزن هر روز نسخهٔ رسمی جدید را بررسی می‌کند و فقط پس از موفقیت ساخت، تست و بررسی امضا، آپدیت برنامه می‌سازد. با نصب آپدیت برنامه، هسته نیز به‌روز می‌شود. تأیید نصب Android لازم است؛ قطع شبکه یا شکست تست می‌تواند آپدیت را به تأخیر بیندازد.</string>
+
+    <string name="update_install_ready">فایل دانلود شده است. نصب باید در Android تأیید شود. برای تلاش مجدد نصب، نیازی به دانلود دوباره نیست.</string>
+    <string name="update_install_permission">در تنظیمات Android، اجازهٔ نصب از پرواز را فعال کنید و به این صفحه برگردید. نصب بدون تأیید شما انجام نمی‌شود.</string>
+    <string name="update_verifying">در حال بررسی سلامت فایل، بسته، نسخه و امضای دائمی…</string>
+    <string name="update_install_not_completed">Android تکمیل نصب را تأیید نکرد. پیام نصب‌کننده را بررسی کنید؛ در صورت نیاز از همین صفحه دوباره تلاش کنید.</string>
 </resources>
