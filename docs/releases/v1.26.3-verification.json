@@ -1,0 +1,50 @@
+{
+  "version": "1.26.3",
+  "version_code": 30,
+  "tag": "v1.26.3",
+  "public_latest_redirect_verified": true,
+  "checked_at_utc": "2026-09-09T18:45:03.057888+00:00",
+  "assets": [
+    {
+      "name": "Parvaz-1.26.3-arm64.apk",
+      "url": "https://github.com/hojjatrad/parvaz/releases/download/v1.26.3/Parvaz-1.26.3-arm64.apk",
+      "bytes": 45376476,
+      "sha256": "bb44d266520ca1bdc935a9c031522001ef232694b8235c52002eaaee30c7a087",
+      "fully_streamed": true,
+      "github_digest_verified": true
+    },
+    {
+      "name": "Parvaz-1.26.3.apk",
+      "url": "https://github.com/hojjatrad/parvaz/releases/download/v1.26.3/Parvaz-1.26.3.apk",
+      "bytes": 88655218,
+      "sha256": "0c34a63a8feca0559258d072bd5ec9dd2b1a5abac9ffac47a82533f90fb99a89",
+      "fully_streamed": true,
+      "github_digest_verified": true
+    },
+    {
+      "name": "Parvaz-1.26.3-source.tar.gz",
+      "url": "https://github.com/hojjatrad/parvaz/releases/download/v1.26.3/Parvaz-1.26.3-source.tar.gz",
+      "bytes": 477436338,
+      "sha256": "998411c5ade3554795b96a0401c625db762af72a9749b4e19f7cac18666d4dcd",
+      "fully_streamed": true,
+      "github_digest_verified": true
+    },
+    {
+      "name": "SHA256SUMS.txt",
+      "url": "https://github.com/hojjatrad/parvaz/releases/download/v1.26.3/SHA256SUMS.txt",
+      "bytes": 268,
+      "sha256": "1b3bad35f2657aa45c0d6d90f45655f75d94228b81810a4b132c97f1a9324176",
+      "fully_streamed": true,
+      "github_digest_verified": true
+    }
+  ],
+  "anonymous_latest_api_verified": true,
+  "future_order_guard_against_published_source_verified": true,
+  "publication_run": "34389235009",
+  "publication_url": "https://github.com/hojjatrad/parvaz/actions/runs/34389235009",
+  "tag_commit": "97835dc9e015ccb59d21701cacf78087196b3bcf",
+  "tested_executable": "ef771d5ea5e833ffeb57818f6d917937064158e8",
+  "android_gate": "34386833411",
+  "signing_gate": "34387461144",
+  "platform_gate": "34387461482"
+}
