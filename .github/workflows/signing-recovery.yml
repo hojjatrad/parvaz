@@ -1,0 +1,25 @@
+name: Read-only signing recovery assessment
+on:
+  push:
+    branches: ['release/signing-recovery']
+permissions:
+  contents: read
+jobs:
+  assess:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Check for recoverable content without disclosing or exporting it
+        env:
+          PARVAZ_KEYSTORE_BASE64: ${{ secrets.PARVAZ_KEYSTORE_BASE64 }}
+          PARVAZ_KEYSTORE_PASSWORD: ${{ secrets.PARVAZ_KEYSTORE_PASSWORD }}
+          PARVAZ_KEY_ALIAS: ${{ secrets.PARVAZ_KEY_ALIAS }}
+          PARVAZ_KEY_PASSWORD: ${{ secrets.PARVAZ_KEY_PASSWORD }}
+        run: python3 tools/release/diagnose_secret_recovery.py
