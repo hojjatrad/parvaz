@@ -1,0 +1,42 @@
+name: Generate reviewed legacy lint baseline
+on:
+  push:
+    branches: ['ci/generate-lint-baseline']
+permissions:
+  contents: write
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: f6d0b29
+          persist-credentials: false
+      - uses: actions/setup-java@v5
+        with: {distribution: temurin, java-version: '17'}
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '8.9', cache-disabled: true}
+      - name: Generate baseline from unmodified published application source
+        run: |
+          sdkmanager 'platforms;android-34' 'build-tools;34.0.0'
+          bash tools/release/fetch_core.sh
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('app/build.gradle');p.write_text(p.read_text().replace('lint {',"lint {\n        baseline file('lint-baseline.xml')"))
+          PY
+          gradle --no-daemon --max-workers=2 :app:updateLintBaseline
+          git restore app/build.gradle
+      - name: Preserve only baseline on isolated branch for review
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git switch -c ci/lint-baseline-v1.25
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/lint-baseline.xml
+          git commit -m 'ci: baseline only legacy lint findings from v1.25 source'
+          AUTH="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          echo "::add-mask::$AUTH"
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $AUTH" push origin HEAD:refs/heads/ci/lint-baseline-v1.25
