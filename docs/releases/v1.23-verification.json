@@ -1,0 +1,46 @@
+{
+  "version": "1.23",
+  "versionCode": 24,
+  "package": "com.parvaz.tunnel",
+  "source_commit": "1d33485a266fb849cf4dd678e76b373e0ef63d00",
+  "tag": "v1.23",
+  "release": "https://github.com/hojjatrad/parvaz/releases/tag/v1.23",
+  "normal_latest_verified": true,
+  "signing_certificate_sha256": "d1383b8f34da5d3299b13634de421487289d82c1bb47ec3bc7f20ae8d02fe500",
+  "core": "v26.9.9",
+  "assets": [
+    {
+      "name": "Parvaz-1.23-arm64.apk",
+      "size": 15867027,
+      "sha256": "354b134da62946edf30c06e6888efdedc603516b392b55b974ae927d4148496a",
+      "url": "https://github.com/hojjatrad/parvaz/releases/download/v1.23/Parvaz-1.23-arm64.apk"
+    },
+    {
+      "name": "Parvaz-1.23.apk",
+      "size": 28436776,
+      "sha256": "acba47b15220ea819c70273fdda3a979031aa74b6d80e2cf7283c4c901e432c6",
+      "url": "https://github.com/hojjatrad/parvaz/releases/download/v1.23/Parvaz-1.23.apk"
+    }
+  ],
+  "verification": {
+    "host_assertions": 272,
+    "python_guard_tests": 23,
+    "android_unit_suite": "passed; includes Robolectric SDK 29 and 34 menu/swipe HTTP refresh, failure retention and duplicate-cleanup UI regressions",
+    "signed_validation_run": "https://github.com/hojjatrad/parvaz/actions/runs/34332260736",
+    "signed_publication_run": "https://github.com/hojjatrad/parvaz/actions/runs/34332760435",
+    "latest_api_and_order_run": "https://github.com/hojjatrad/parvaz/actions/runs/34333302167",
+    "both_public_apks_streamed_and_sha256_verified": true
+  },
+  "scope_limits": [
+    "No private subscription URL or credentials received; exact user failure and duplicate equivalence remain unconfirmed.",
+    "SDK 29/34 UI regressions use Robolectric, not a physical phone or live v2rayNG session.",
+    "The prior v1.22 native archive-signature probe was not rerun; updater source is unchanged.",
+    "Same endpoint with different credentials/security remains distinct; independent subscription ownership is retained."
+  ],
+  "maintenance": {
+    "daily_core_workflow_preserved": true,
+    "temporary_status_helper_restored_to_read_only": "7087a53",
+    "free_gib_after_verification": 19.74,
+    "downloaded_apks_retained_locally": false
+  }
+}
