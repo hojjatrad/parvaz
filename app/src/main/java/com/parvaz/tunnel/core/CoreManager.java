@@ -24,6 +24,7 @@ public final class CoreManager {
     /* renamed from: b */
     public volatile boolean running = false;
     private ExternalCore external;
+    private final StartupWarmup startupWarmup=new StartupWarmup();
     private volatile long generation;
 
     /* JADX WARN: Can't change package for inner class: R1.a.a to com.parvaz.tunnel.core.CoreManager$1 */
@@ -150,6 +151,9 @@ public final class CoreManager {
             }else config=XrayConfigBuilder.b(profile,prefs,chain,true,true);
             controller=Libv2ray.newCoreController(new b(failure));controller.startLoop(config,tunFd);running=controller.getIsRunning()&&(external==null||external.isRunning());
             if(!running)throw new IllegalStateException("Core failed to start");
+            // Most proxy outbounds dial lazily. Prime the configured connectivity
+            // endpoint through the new local proxy without holding up user traffic.
+            startupWarmup.start(prefs.f343a.getString("ping_url","https://www.gstatic.com/generate_204"));
         }catch(Exception error){stop();throw new IllegalStateException("Core start failed: "+error.getMessage(),error);}
     }
 
@@ -161,6 +165,7 @@ public final class CoreManager {
 
     /* renamed from: d */
     public final synchronized void stop() {
+        startupWarmup.cancel();
         ++generation; // Invalidate callbacks before closing either core, including intentional restarts.
         HotspotProxyManager.stop();
         this.running = false;

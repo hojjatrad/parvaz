@@ -1,0 +1,426 @@
+{
+  "34383623096": {
+    "status": "Success",
+    "jobs": [
+      {
+        "id": 102574270080,
+        "conclusion": "success",
+        "annotations": [
+          {
+            "path": ".github",
+            "blob_href": "https://github.com/hojjatrad/parvaz/blob/0fd93d57aaa9e6a0ecd89f7fab49dd824b839c11/.github",
+            "start_line": 2,
+            "start_column": null,
+            "end_line": 2,
+            "end_column": null,
+            "annotation_level": "warning",
+            "title": "",
+            "message": "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/upload-artifact@v4, android-actions/setup-android@v3, gradle/actions/setup-gradle@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/",
+            "raw_details": ""
+          },
+          {
+            "path": ".github",
+            "blob_href": "https://github.com/hojjatrad/parvaz/blob/0fd93d57aaa9e6a0ecd89f7fab49dd824b839c11/.github",
+            "start_line": 37,
+            "start_column": null,
+            "end_line": 37,
+            "end_column": null,
+            "annotation_level": "notice",
+            "title": "UNIT_TEST_COUNTS",
+            "message": "com.parvaz.tunnel.core.SmartImportRegressionTest {'tests': '18', 'failures': '0', 'errors': '0', 'skipped': '0'}",
+            "raw_details": ""
+          },
+          {
+            "path": ".github",
+            "blob_href": "https://github.com/hojjatrad/parvaz/blob/0fd93d57aaa9e6a0ecd89f7fab49dd824b839c11/.github",
+            "start_line": 36,
+            "start_column": null,
+            "end_line": 36,
+            "end_column": null,
+            "annotation_level": "notice",
+            "title": "UNIT_TEST_COUNTS",
+            "message": "com.parvaz.tunnel.core.SafetyRegressionTest {'tests': '14', 'failures': '0', 'errors': '0', 'skipped': '0'}",
+            "raw_details": ""
+          },
+          {
+            "path": ".github",
+            "blob_href": "https://github.com/hojjatrad/parvaz/blob/0fd93d57aaa9e6a0ecd89f7fab49dd824b839c11/.github",
+            "start_line": 35,
+            "start_column": null,
+            "end_line": 35,
+            "end_column": null,
+            "annotation_level": "notice",
+            "title": "UNIT_TEST_COUNTS",
+            "message": "com.parvaz.tunnel.core.EngineConfigTest {'tests': '14', 'failures': '0', 'errors': '0', 'skipped': '0'}",
+            "raw_details": ""
+          },
+          {
+            "path": ".github",
+            "blob_href": "https://github.com/hojjatrad/parvaz/blob/0fd93d57aaa9e6a0ecd89f7fab49dd824b839c11/.github",
+            "start_line": 34,
+            "start_column": null,
+            "end_line": 34,
+            "end_column": null,
+            "annotation_level": "notice",
+            "title": "UNIT_TEST_COUNTS",
+            "message": "com.parvaz.tunnel.core.CoreManagerLifecycleTest {'tests': '2', 'failures': '0', 'errors': '0', 'skipped': '0'}",
+            "raw_details": ""
+          },
+          {
+            "path": ".github",
+            "blob_href": "https://github.com/hojjatrad/parvaz/blob/0fd93d57aaa9e6a0ecd89f7fab49dd824b839c11/.github",
+            "start_line": 33,
+            "start_column": null,
+            "end_line": 33,
+            "end_column": null,
+            "annotation_level": "notice",
+            "title": "UNIT_TEST_COUNTS",
+            "message": "com.parvaz.tunnel.core.ClipboardHttpRegressionTest {'tests': '12', 'failures': '0', 'errors': '0', 'skipped': '0'}",
+            "raw_details": ""
+          },
+          {
+            "path": ".github",
+            "blob_href": "https://github.com/hojjatrad/parvaz/blob/0fd93d57aaa9e6a0ecd89f7fab49dd824b839c11/.github",
+            "start_line": 32,
+            "start_column": null,
+            "end_line": 32,
+            "end_column": null,
+            "annotation_level": "notice",
+            "title": "UNIT_TEST_COUNTS",
+            "message": "com.parvaz.tunnel.core.BackupInputTest {'tests': '2', 'failures': '0', 'errors': '0', 'skipped': '0'}",
+            "raw_details": ""
+          },
+          {
+            "path": ".github",
+            "blob_href": "https://github.com/hojjatrad/parvaz/blob/0fd93d57aaa9e6a0ecd89f7fab49dd824b839c11/.github",
+            "start_line": 31,
+            "start_column": null,
+            "end_line": 31,
+            "end_column": null,
+            "annotation_level": "notice",
+            "title": "FIXTURE_ISOLATION",
+            "message": "V115_STALE_STORE_NAMESPACE=true",
+            "raw_details": ""
+          },
+          {
+            "path": ".github",
+            "blob_href": "https://github.com/hojjatrad/parvaz/blob/0fd93d57aaa9e6a0ecd89f7fab49dd824b839c11/.github",
+            "start_line": 30,
+            "start_column": null,
+            "end_line": 30,
+            "end_column": null,
+            "annotation_level": "notice",
+            "title": "UNIT_TEST_COUNTS",
+            "message": "com.parvaz.tunnel.V115RegressionTest {'tests': '15', 'failures': '0', 'errors': '0', 'skipped': '0'}",
+            "raw_details": ""
+          },
+          {
+            "path": ".github",
+            "blob_href": "https://github.com/hojjatrad/parvaz/blob/0fd93d57aaa9e6a0ecd89f7fab49dd824b839c11/.github",
+            "start_line": 29,
+            "start_column": null,
+            "end_line": 29,
+            "end_column": null,
+            "annotation_level": "notice",
+            "title": "UNIT_TEST_COUNTS",
+            "message": "com.parvaz.tunnel.V113RegressionTest {'tests': '13', 'failures': '0', 'errors': '0', 'skipped': '0'}",
+            "raw_details": ""
+          },
+          {
+            "path": ".github",
+            "blob_href": "https://github.com/hojjatrad/parvaz/blob/0fd93d57aaa9e6a0ecd89f7fab49dd824b839c11/.github",
+            "start_line": 28,
+            "start_column": null,
+            "end_line": 28,
+            "end_column": null,
+            "annotation_level": "notice",
+            "title": "UNIT_TEST_COUNTS",
+            "message": "com.parvaz.tunnel.GeoRoutingRegressionTest {'tests': '7', 'failures': '0', 'errors': '0', 'skipped': '0'}",
+            "raw_details": ""
+          }
+        ]
+      }
+    ]
+  },
+  "34383623040": {
+    "status": "Success",
+    "jobs": [
+      {
+        "id": 102574269892,
+        "conclusion": "success",
+        "annotations": [
+          {
+            "path": ".github",
+            "blob_href": "https://github.com/hojjatrad/parvaz/blob/0fd93d57aaa9e6a0ecd89f7fab49dd824b839c11/.github",
+            "start_line": 3,
+            "start_column": null,
+            "end_line": 3,
+            "end_column": null,
+            "annotation_level": "warning",
+            "title": "",
+            "message": "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/upload-artifact@v4, gradle/actions/setup-gradle@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/",
+            "raw_details": ""
+          },
+          {
+            "path": ".github",
+            "blob_href": "https://github.com/hojjatrad/parvaz/blob/0fd93d57aaa9e6a0ecd89f7fab49dd824b839c11/.github",
+            "start_line": 44,
+            "start_column": null,
+            "end_line": 44,
+            "end_column": null,
+            "annotation_level": "notice",
+            "title": "PLATFORM_TEST_COUNTS",
+            "message": "com.parvaz.probe.ArchiveProbeTest {'tests': '11', 'failures': '0', 'errors': '0', 'skipped': '0'}",
+            "raw_details": ""
+          },
+          {
+            "path": ".github",
+            "blob_href": "https://github.com/hojjatrad/parvaz/blob/0fd93d57aaa9e6a0ecd89f7fab49dd824b839c11/.github",
+            "start_line": 43,
+            "start_column": null,
+            "end_line": 43,
+            "end_column": null,
+            "annotation_level": "notice",
+            "title": "ANDROID_ARCHIVE_PROBE",
+            "message": "09-09 17:36:08.665  3557  3575 I ParvazProbe: cache parvaz-1.26.1.apk oldSigned=false; fixedPinned=true; com.parvaz.tunnel version=1.26.1 code=28 signed=true",
+            "raw_details": ""
+          },
+          {
+            "path": ".github",
+            "blob_href": "https://github.com/hojjatrad/parvaz/blob/0fd93d57aaa9e6a0ecd89f7fab49dd824b839c11/.github",
+            "start_line": 42,
+            "start_column": null,
+            "end_line": 42,
+            "end_column": null,
+            "annotation_level": "notice",
+            "title": "ANDROID_ARCHIVE_PROBE",
+            "message": "09-09 17:36:08.443  3557  3575 I ParvazProbe: cache parvaz-1.26.1.apk.part oldSigned=false; fixedPinned=true; com.parvaz.tunnel version=1.26.1 code=28 signed=true",
+            "raw_details": ""
+          },
+          {
+            "path": ".github",
+            "blob_href": "https://github.com/hojjatrad/parvaz/blob/0fd93d57aaa9e6a0ecd89f7fab49dd824b839c11/.github",
+            "start_line": 41,
+            "start_column": null,
+            "end_line": 41,
+            "end_column": null,
+            "annotation_level": "notice",
+            "title": "ANDROID_ARCHIVE_PROBE",
+            "message": "09-09 17:36:08.220  3557  3575 I ParvazProbe: cache parvaz-1.26.1.apk oldSigned=false; fixedPinned=true; com.parvaz.tunnel version=1.26.1 code=28 signed=true",
+            "raw_details": ""
+          },
+          {
+            "path": ".github",
+            "blob_href": "https://github.com/hojjatrad/parvaz/blob/0fd93d57aaa9e6a0ecd89f7fab49dd824b839c11/.github",
+            "start_line": 40,
+            "start_column": null,
+            "end_line": 40,
+            "end_column": null,
+            "annotation_level": "notice",
+            "title": "ANDROID_ARCHIVE_PROBE",
+            "message": "09-09 17:36:07.995  3557  3575 I ParvazProbe: cache parvaz-1.26.1.apk.part oldSigned=false; fixedPinned=true; com.parvaz.tunnel version=1.26.1 code=28 signed=true",
+            "raw_details": ""
+          },
+          {
+            "path": ".github",
+            "blob_href": "https://github.com/hojjatrad/parvaz/blob/0fd93d57aaa9e6a0ecd89f7fab49dd824b839c11/.github",
+            "start_line": 39,
+            "start_column": null,
+            "end_line": 39,
+            "end_column": null,
+            "annotation_level": "notice",
+            "title": "ANDROID_ARCHIVE_PROBE",
+            "message": "09-09 17:36:10.356  3557  3575 I ParvazProbe: BACKUP_ANDROID_V2_ROUNDTRIP_OK SDK=29",
+            "raw_details": ""
+          },
+          {
+            "path": ".github",
+            "blob_href": "https://github.com/hojjatrad/parvaz/blob/0fd93d57aaa9e6a0ecd89f7fab49dd824b839c11/.github",
+            "start_line": 38,
+            "start_column": null,
+            "end_line": 38,
+            "end_column": null,
+            "annotation_level": "notice",
+            "title": "ANDROID_ARCHIVE_PROBE",
+            "message": "09-09 17:36:18.637  3557  3575 I ParvazProbe: SECURE_RECORDS_OK SDK=29",
+            "raw_details": ""
+          },
+          {
+            "path": ".github",
+            "blob_href": "https://github.com/hojjatrad/parvaz/blob/0fd93d57aaa9e6a0ecd89f7fab49dd824b839c11/.github",
+            "start_line": 37,
+            "start_column": null,
+            "end_line": 37,
+            "end_column": null,
+            "annotation_level": "notice",
+            "title": "ANDROID_ARCHIVE_PROBE",
+            "message": "09-09 17:36:17.665  3557  3575 I ParvazProbe: BACKUP_ANDROID_AUTH_METADATA_REJECTION_OK SDK=29",
+            "raw_details": ""
+          },
+          {
+            "path": ".github",
+            "blob_href": "https://github.com/hojjatrad/parvaz/blob/0fd93d57aaa9e6a0ecd89f7fab49dd824b839c11/.github",
+            "start_line": 36,
+            "start_column": null,
+            "end_line": 36,
+            "end_column": null,
+            "annotation_level": "notice",
+            "title": "ANDROID_ARCHIVE_PROBE",
+            "message": "09-09 17:36:18.604  3557  3575 I ParvazProbe: ANDROID_RECORD_TAMPER_SWAP_DOWNGRADE_PRESERVED_OK SDK=29",
+            "raw_details": ""
+          },
+          {
+            "path": ".github",
+            "blob_href": "https://github.com/hojjatrad/parvaz/blob/0fd93d57aaa9e6a0ecd89f7fab49dd824b839c11/.github",
+            "start_line": 35,
+            "start_column": null,
+            "end_line": 35,
+            "end_column": null,
+            "annotation_level": "notice",
+            "title": "ANDROID_ARCHIVE_PROBE",
+            "message": "09-09 17:36:14.362  3557  3575 I ParvazProbe: BACKUP_ANDROID_LEGACY_AND_UTF8_OK SDK=29",
+            "raw_details": ""
+          }
+        ]
+      },
+      {
+        "id": 102574270380,
+        "conclusion": "success",
+        "annotations": [
+          {
+            "path": ".github",
+            "blob_href": "https://github.com/hojjatrad/parvaz/blob/0fd93d57aaa9e6a0ecd89f7fab49dd824b839c11/.github",
+            "start_line": 3,
+            "start_column": null,
+            "end_line": 3,
+            "end_column": null,
+            "annotation_level": "warning",
+            "title": "",
+            "message": "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/upload-artifact@v4, gradle/actions/setup-gradle@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/",
+            "raw_details": ""
+          },
+          {
+            "path": ".github",
+            "blob_href": "https://github.com/hojjatrad/parvaz/blob/0fd93d57aaa9e6a0ecd89f7fab49dd824b839c11/.github",
+            "start_line": 44,
+            "start_column": null,
+            "end_line": 44,
+            "end_column": null,
+            "annotation_level": "notice",
+            "title": "PLATFORM_TEST_COUNTS",
+            "message": "com.parvaz.probe.ArchiveProbeTest {'tests': '11', 'failures': '0', 'errors': '0', 'skipped': '0'}",
+            "raw_details": ""
+          },
+          {
+            "path": ".github",
+            "blob_href": "https://github.com/hojjatrad/parvaz/blob/0fd93d57aaa9e6a0ecd89f7fab49dd824b839c11/.github",
+            "start_line": 43,
+            "start_column": null,
+            "end_line": 43,
+            "end_column": null,
+            "annotation_level": "notice",
+            "title": "ANDROID_ARCHIVE_PROBE",
+            "message": "09-09 17:36:19.493  2360  2379 I ParvazProbe: cache parvaz-1.26.1.apk oldSigned=true; fixedPinned=true; com.parvaz.tunnel version=1.26.1 code=28 signed=true",
+            "raw_details": ""
+          },
+          {
+            "path": ".github",
+            "blob_href": "https://github.com/hojjatrad/parvaz/blob/0fd93d57aaa9e6a0ecd89f7fab49dd824b839c11/.github",
+            "start_line": 42,
+            "start_column": null,
+            "end_line": 42,
+            "end_column": null,
+            "annotation_level": "notice",
+            "title": "ANDROID_ARCHIVE_PROBE",
+            "message": "09-09 17:36:19.177  2360  2379 I ParvazProbe: cache parvaz-1.26.1.apk.part oldSigned=true; fixedPinned=true; com.parvaz.tunnel version=1.26.1 code=28 signed=true",
+            "raw_details": ""
+          },
+          {
+            "path": ".github",
+            "blob_href": "https://github.com/hojjatrad/parvaz/blob/0fd93d57aaa9e6a0ecd89f7fab49dd824b839c11/.github",
+            "start_line": 41,
+            "start_column": null,
+            "end_line": 41,
+            "end_column": null,
+            "annotation_level": "notice",
+            "title": "ANDROID_ARCHIVE_PROBE",
+            "message": "09-09 17:36:18.856  2360  2379 I ParvazProbe: cache parvaz-1.26.1.apk oldSigned=true; fixedPinned=true; com.parvaz.tunnel version=1.26.1 code=28 signed=true",
+            "raw_details": ""
+          },
+          {
+            "path": ".github",
+            "blob_href": "https://github.com/hojjatrad/parvaz/blob/0fd93d57aaa9e6a0ecd89f7fab49dd824b839c11/.github",
+            "start_line": 40,
+            "start_column": null,
+            "end_line": 40,
+            "end_column": null,
+            "annotation_level": "notice",
+            "title": "ANDROID_ARCHIVE_PROBE",
+            "message": "09-09 17:36:18.537  2360  2379 I ParvazProbe: cache parvaz-1.26.1.apk.part oldSigned=true; fixedPinned=true; com.parvaz.tunnel version=1.26.1 code=28 signed=true",
+            "raw_details": ""
+          },
+          {
+            "path": ".github",
+            "blob_href": "https://github.com/hojjatrad/parvaz/blob/0fd93d57aaa9e6a0ecd89f7fab49dd824b839c11/.github",
+            "start_line": 39,
+            "start_column": null,
+            "end_line": 39,
+            "end_column": null,
+            "annotation_level": "notice",
+            "title": "ANDROID_ARCHIVE_PROBE",
+            "message": "09-09 17:36:23.013  2360  2379 I ParvazProbe: BACKUP_ANDROID_V2_ROUNDTRIP_OK SDK=34",
+            "raw_details": ""
+          },
+          {
+            "path": ".github",
+            "blob_href": "https://github.com/hojjatrad/parvaz/blob/0fd93d57aaa9e6a0ecd89f7fab49dd824b839c11/.github",
+            "start_line": 38,
+            "start_column": null,
+            "end_line": 38,
+            "end_column": null,
+            "annotation_level": "notice",
+            "title": "ANDROID_ARCHIVE_PROBE",
+            "message": "09-09 17:36:34.132  2360  2379 I ParvazProbe: SECURE_RECORDS_OK SDK=34",
+            "raw_details": ""
+          },
+          {
+            "path": ".github",
+            "blob_href": "https://github.com/hojjatrad/parvaz/blob/0fd93d57aaa9e6a0ecd89f7fab49dd824b839c11/.github",
+            "start_line": 37,
+            "start_column": null,
+            "end_line": 37,
+            "end_column": null,
+            "annotation_level": "notice",
+            "title": "ANDROID_ARCHIVE_PROBE",
+            "message": "09-09 17:36:33.210  2360  2379 I ParvazProbe: BACKUP_ANDROID_AUTH_METADATA_REJECTION_OK SDK=34",
+            "raw_details": ""
+          },
+          {
+            "path": ".github",
+            "blob_href": "https://github.com/hojjatrad/parvaz/blob/0fd93d57aaa9e6a0ecd89f7fab49dd824b839c11/.github",
+            "start_line": 36,
+            "start_column": null,
+            "end_line": 36,
+            "end_column": null,
+            "annotation_level": "notice",
+            "title": "ANDROID_ARCHIVE_PROBE",
+            "message": "09-09 17:36:34.101  2360  2379 I ParvazProbe: ANDROID_RECORD_TAMPER_SWAP_DOWNGRADE_PRESERVED_OK SDK=34",
+            "raw_details": ""
+          },
+          {
+            "path": ".github",
+            "blob_href": "https://github.com/hojjatrad/parvaz/blob/0fd93d57aaa9e6a0ecd89f7fab49dd824b839c11/.github",
+            "start_line": 35,
+            "start_column": null,
+            "end_line": 35,
+            "end_column": null,
+            "annotation_level": "notice",
+            "title": "ANDROID_ARCHIVE_PROBE",
+            "message": "09-09 17:36:29.371  2360  2379 I ParvazProbe: BACKUP_ANDROID_LEGACY_AND_UTF8_OK SDK=34",
+            "raw_details": ""
+          }
+        ]
+      }
+    ]
+  }
+}

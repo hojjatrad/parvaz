@@ -57,7 +57,7 @@ public class TunnelVpnService extends VpnService {
     public static volatile int currentState = 0;
 
     /* renamed from: a */
-    public int dayFlushTick;
+    public long dayFlushAtElapsed;
     public m b;
     public NetworkMonitor c;
 
@@ -128,7 +128,7 @@ public class TunnelVpnService extends VpnService {
             tunnelVpnService.stopStatsTicker();
             i iVar = new i();
             tunnelVpnService.h = iVar;
-            tunnelVpnService.handler.postDelayed(iVar, 1000L);
+            tunnelVpnService.handler.postDelayed(iVar, TrafficSampling.FAST_INTERVAL_MS);
             tunnelVpnService.startHealthTicker();
         }
     }
@@ -205,7 +205,7 @@ public class TunnelVpnService extends VpnService {
                 tunnelVpnService.stopStatsTicker();
                 i iVar = new i();
                 tunnelVpnService.h = iVar;
-                tunnelVpnService.handler.postDelayed(iVar, 1000L);
+                tunnelVpnService.handler.postDelayed(iVar, TrafficSampling.FAST_INTERVAL_MS);
                 tunnelVpnService.startHealthTicker();
             }
         }
@@ -311,7 +311,7 @@ public class TunnelVpnService extends VpnService {
                         tunnelVpnService.stopStatsTicker();
                         i iVar = new i();
                         tunnelVpnService.h = iVar;
-                        tunnelVpnService.handler.postDelayed(iVar, 1000L);
+                        tunnelVpnService.handler.postDelayed(iVar, TrafficSampling.FAST_INTERVAL_MS);
                         tunnelVpnService.startHealthTicker();
                         return;
                     }
@@ -354,15 +354,18 @@ public class TunnelVpnService extends VpnService {
     /* renamed from: com.parvaz.tunnel.core.TunnelVpnService$i */
     /* loaded from: classes.dex */
     public class i implements Runnable {
-
+        private final TrafficSampling sampling;
         public i() {
+            long now=android.os.SystemClock.elapsedRealtime();
+            sampling=new TrafficSampling(now);
+            TunnelVpnService.this.dayFlushAtElapsed=now;
         }
 
         @Override // java.lang.Runnable
         public final void run() {
             TunnelVpnService svc = TunnelVpnService.this;
-            if (!serviceRunning) {
-                return;
+            if (!serviceRunning || svc.h!=this) {
+                return; // A queued tick from a replaced session must not reset its counters.
             }
 
             // libv2ray's QueryStats() ends with `counter.Set(0)`: it returns the bytes
@@ -418,6 +421,8 @@ public class TunnelVpnService extends VpnService {
                 dDown = 0;
             }
 
+            long sampleAt=android.os.SystemClock.elapsedRealtime();
+            TrafficSampling.Sample rates=sampling.sample(sampleAt,dUp,dDown);
             svc.sessionUp += dUp;
             svc.sessionDown += dDown;
             svc.pendingDayUp += dUp;
@@ -426,18 +431,17 @@ public class TunnelVpnService extends VpnService {
             Prefs prefs = svc.f;
             if (prefs != null) {
                 SharedPreferences sp = prefs.f343a;
-                sp.edit()
+                if(dUp>0||dDown>0)sp.edit()
                         .putLong("data_up", sp.getLong("data_up", 0L) + dUp)
                         .putLong("data_down", sp.getLong("data_down", 0L) + dDown)
                         .apply();
 
-                // Flush the daily ledger every 30 ticks instead of every second.
-                svc.dayFlushTick++;
-                if (svc.dayFlushTick >= 30) {
+                // Wall time, not tick count: startup samples arrive four times faster.
+                if (sampleAt-svc.dayFlushAtElapsed >= 30000L) {
                     prefs.addDailyUsage(svc.pendingDayUp, svc.pendingDayDown);
                     svc.pendingDayUp = 0L;
                     svc.pendingDayDown = 0L;
-                    svc.dayFlushTick = 0;
+                    svc.dayFlushAtElapsed = sampleAt;
                 }
             }
 
@@ -447,8 +451,9 @@ public class TunnelVpnService extends VpnService {
             Intent intent = new Intent("com.parvaz.tunnel.STATE");
             intent.setPackage(svc.getPackageName());
             intent.putExtra("state", 4);
-            intent.putExtra("uplink", dUp);
-            intent.putExtra("downlink", dDown);
+            intent.putExtra("uplink", rates.upPerSecond);
+            intent.putExtra("downlink", rates.downPerSecond);
+            intent.putExtra("refresh_quota", rates.updateNotification);
             intent.putExtra("duration", duration);
             Profile p = svc.profile;
             if (p != null) {
@@ -460,13 +465,13 @@ public class TunnelVpnService extends VpnService {
             // notification every second is what makes the ongoing notification show
             // "↓ 1.2 MB/s   ↑ 340 KB/s" the way earlier versions did. setOnlyAlertOnce
             // keeps it silent, and NotificationManager coalesces the updates.
-            if (p != null) {
+            if (p != null && rates.updateNotification) {
                 svc.updateNotification(
                         p.remark,
-                        "↓ " + fmtSpeed(dDown) + "    ↑ " + fmtSpeed(dUp));
+                        "↓ " + fmtSpeed(rates.downPerSecond) + "    ↑ " + fmtSpeed(rates.upPerSecond));
             }
 
-            svc.handler.postDelayed(this, 1000L);
+            if(serviceRunning&&svc.h==this)svc.handler.postDelayed(this, rates.nextDelayMs);
         }
     }
 
@@ -1134,7 +1139,7 @@ public class TunnelVpnService extends VpnService {
         }
         this.pendingDayUp = 0L;
         this.pendingDayDown = 0L;
-        this.dayFlushTick = 0;
+        this.dayFlushAtElapsed = 0L;
     }
 
     /* renamed from: m */

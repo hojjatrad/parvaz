@@ -702,7 +702,7 @@ public class MainActivity extends AppCompatActivity {
             int intExtra = intent.getIntExtra("state", 0);
             MainActivity mainActivity = MainActivity.this;
             if (intExtra == 4) {
-                // Two different senders use state 4: the 1 Hz stats ticker (carries
+                // Two different senders use state 4: the traffic ticker (carries
                 // uplink/downlink/duration) and the 15 s health probe (carries only
                 // "ping"). Reading the traffic extras unconditionally made the health
                 // probe blank the speed line and reset the timer to 00:00:00 every
@@ -717,7 +717,7 @@ public class MainActivity extends AppCompatActivity {
                         mainActivity.sparkline.push(longExtra2, longExtra);
                         mainActivity.sparkline.setVisibility(View.VISIBLE);
                     }
-                    mainActivity.renderQuota();
+                    if(intent.getBooleanExtra("refresh_quota",true))mainActivity.renderQuota();
                 }
                 int intExtra2 = intent.getIntExtra("ping", 0);
                 String stringExtra = intent.getStringExtra("profile_id");

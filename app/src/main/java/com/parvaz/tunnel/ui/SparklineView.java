@@ -23,7 +23,7 @@ import android.view.View;
  */
 public class SparklineView extends View {
 
-    /** Samples kept; at one tick per second this is the last minute. */
+    /** Last 60 samples; startup uses 250 ms spacing, then normal 1 s spacing. */
     private static final int CAPACITY = 60;
 
     /** Never scale below this (bytes/s) or idle jitter fills the graph. */
