@@ -50,5 +50,30 @@
     "source_archive_retained_locally": false
   },
   "future_order_guard_against_published_source_verified": true,
-  "publication_run": "https://github.com/hojjatrad/parvaz/actions/runs/34367420763"
+  "publication_run": "https://github.com/hojjatrad/parvaz/actions/runs/34367420763",
+  "post_release_native_cleanup_validation": {
+    "test_commit": "ecd757ec49de3253157cf689afa9854c19d971ef",
+    "native_run": "https://github.com/hojjatrad/parvaz/actions/runs/34370488628",
+    "android_build_run": "https://github.com/hojjatrad/parvaz/actions/runs/34370488688",
+    "sdk_29": {
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "sdk_34": {
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "unchanged_release_trees": {
+      "app": "899efe7b9f015691a9b2cab16be50296efa52dbe",
+      "tools/native": "90b05228a414797c2c619889fb3f9e21a481556b",
+      "tools/release": "94889b932b3215881dad4908551988bbb7223c7a"
+    },
+    "scope": "Helper APK only: closed-session late launch, interrupted queued launch, interrupted capacity wait without over-release, four start/stop cycles with child exit, private trust-directory removal, port reuse and capacity recovery. Includes prior strict TLS, TCP/UDP and lifecycle tests. Not full production TUN/device leak validation.",
+    "new_apk_published": false,
+    "published_asset_metadata_unchanged": true
+  }
 }
