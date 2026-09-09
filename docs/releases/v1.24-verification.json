@@ -1,0 +1,50 @@
+{
+  "version": "1.24",
+  "versionCode": 25,
+  "package": "com.parvaz.tunnel",
+  "tag": "v1.24",
+  "source_commit": "752138e75fb1dec2cefcdee1088584116ec608da",
+  "release": "https://github.com/hojjatrad/parvaz/releases/tag/v1.24",
+  "assets": [
+    {
+      "name": "Parvaz-1.24-arm64.apk",
+      "size": 15875275,
+      "sha256": "dc1798058fe8e05e40f9a053112c16c080950e2023c411df6fc4ff3f7a77f29e",
+      "url": "https://github.com/hojjatrad/parvaz/releases/download/v1.24/Parvaz-1.24-arm64.apk"
+    },
+    {
+      "name": "Parvaz-1.24.apk",
+      "size": 28445024,
+      "sha256": "36bbe2eed825494a6665a02044f53de428de8381ac7179e7f8dffdd96ed50287",
+      "url": "https://github.com/hojjatrad/parvaz/releases/download/v1.24/Parvaz-1.24.apk"
+    }
+  ],
+  "certificate_sha256": "d1383b8f34da5d3299b13634de421487289d82c1bb47ec3bc7f20ae8d02fe500",
+  "core": "v26.9.9",
+  "host_assertions": 291,
+  "python_guard_tests": 23,
+  "android_tests": "Passed Robolectric suite including SDK 29/34 primary source picker and clipboard HTTP refresh with 28 repeated input nodes becoming 14 visible rows; old records retained outside active scope.",
+  "validation_run": "https://github.com/hojjatrad/parvaz/actions/runs/34335364026",
+  "publication_run": "https://github.com/hojjatrad/parvaz/actions/runs/34335751588",
+  "independent_public_asset_stream_hashes_verified": true,
+  "test_scenarios": [
+    "Seven independent sources with 14 nodes each: 98 stored, 14 active, 84 archived.",
+    "Only primary source fetched; unchanged selection and favorites retained.",
+    "Complete response replaces primary records; partial and failed responses preserve data.",
+    "Source choice persists and rejects stale in-flight writes; duplicate-URL cleanup remaps primary ID.",
+    "Six successful sources emitting 480 repeated warnings do not hide the seventh network failure.",
+    "Archived profiles excluded from UI, ping, quick switch and native-service candidate selection; all-source mode reversible."
+  ],
+  "limitations": [
+    "No private panel URL or payload received; exact primary source contents and count unknown.",
+    "No arbitrary limit of 14 nodes; syntactic import success does not guarantee live VPN connectivity.",
+    "Android UI tests are Robolectric, not a physical-device/live-v2rayNG test.",
+    "Native archive-signature probe from v1.22 was not rerun; updater/signing checks retained."
+  ],
+  "workspace": {
+    "free_gib": 19.74,
+    "apks_retained_locally": false
+  },
+  "normal_latest_verified": true,
+  "latest_api_and_future_order_run": "https://github.com/hojjatrad/parvaz/actions/runs/34336248792"
+}
