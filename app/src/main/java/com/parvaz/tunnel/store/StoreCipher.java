@@ -13,14 +13,15 @@ public final class StoreCipher {
     private final SecretKey key;
     StoreCipher(SecretKey key){this.key=key;}
     public static synchronized StoreCipher open(Context context,SharedPreferences prefs){
-        boolean encrypted=false;for(String name:new String[]{"profiles","subs"})encrypted|=prefs.getString(name,"").startsWith(PREFIX);
+        boolean encrypted="1".equals(prefs.getString("secure_records_version",""));for(String name:new String[]{"profiles","subs"})encrypted|=prefs.getString(name,"").startsWith(PREFIX);
         try{
             StoreCipher cipher=new StoreCipher(loadKey(!encrypted));
-            SharedPreferences.Editor edit=prefs.edit();boolean migrate=false;
+            SharedPreferences.Editor edit=prefs.edit();boolean migrate=!"1".equals(prefs.getString("secure_records_version",""));
+            edit.putString("secure_records_version","1");
             for(String name:new String[]{"profiles","subs"}){
                 String value=prefs.getString(name,null);if(value==null)continue;
                 if(value.startsWith(PREFIX))cipher.decode(name,value); // Validate before any store may overwrite unreadable data.
-                else{edit.putString(name,cipher.encode(name,value));migrate=true;}
+                else{if(encrypted)throw new IllegalStateException("Encrypted record downgrade rejected");edit.putString(name,cipher.encode(name,value));migrate=true;}
             }
             if(migrate&&!edit.commit())throw new IllegalStateException("Record migration commit failed");
             return cipher;

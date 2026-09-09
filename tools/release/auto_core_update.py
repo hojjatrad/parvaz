@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Prepare a candidate only. CI must pass all gates before committing/publishing it."""
-import json,os,re,subprocess,urllib.request,urllib.error
+import json,os,re,subprocess,urllib.request,urllib.error,hashlib
 from pathlib import Path
 from fetch_core import ROOT,validate,fetch
 BASE='https://api.github.com'
@@ -17,6 +17,22 @@ def next_version(current):
 def emit(**values):
     with open(os.environ['GITHUB_OUTPUT'],'a') as f:
         for k,v in values.items():f.write(k+'='+str(v)+'\n')
+def pin_source(tag):
+    obj=api('/repos/2dust/AndroidLibXrayLite/git/ref/tags/'+tag)['object']
+    for _ in range(5):
+        if obj['type']=='commit':break
+        if obj['type']!='tag':raise ValueError('Invalid source ref')
+        obj=api('/repos/2dust/AndroidLibXrayLite/git/tags/'+obj['sha'])['object']
+    if obj['type']!='commit' or not re.fullmatch(r'[0-9a-f]{40}',obj['sha']):raise ValueError('Unresolved source commit')
+    source_url='https://codeload.github.com/2dust/AndroidLibXrayLite/tar.gz/'+obj['sha']
+    digest=hashlib.sha256();size=0
+    with urllib.request.urlopen(source_url,timeout=60) as response:
+        for block in iter(lambda:response.read(1024*1024),b''):
+            size+=len(block)
+            if size>64*1024*1024:raise ValueError('Source archive exceeds limit')
+            digest.update(block)
+    return dict(repository='2dust/AndroidLibXrayLite',tag=tag,commit=obj['sha'],url=source_url,sha256=digest.hexdigest())
+
 def prepare():
     lock=validate(json.loads((ROOT/'tools/release/core-lock.json').read_text()))
     latest=api('/repos/2dust/AndroidLibXrayLite/releases/latest')
@@ -49,6 +65,9 @@ def prepare():
     if not re.fullmatch(r'sha256:[0-9a-f]{64}',digest):raise ValueError('Upstream digest is required')
     candidate=validate({'repository':'2dust/AndroidLibXrayLite','tag':tag,'asset':'libv2ray.aar','url':a['browser_download_url'],'sha256':digest[7:]})
     fetch(candidate)
+    source=pin_source(tag)
+    source_path=ROOT/'tools/native/xray-source-lock.json';source_path.parent.mkdir(parents=True,exist_ok=True)
+    source_path.write_text(json.dumps(source,indent=2)+'\n')
     (ROOT/'tools/release/core-lock.json').write_text(json.dumps(candidate,indent=2)+'\n')
     version=next_version(current)
     text=re.sub(r'versionCode\s+\d+','versionCode '+str(code+1),text,count=1)

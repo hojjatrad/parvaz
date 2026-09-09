@@ -49,7 +49,7 @@ public final class LanProxyBridge implements AutoCloseable {
                 else clean.append(line).append("\r\n");
             }
             byte[] supplied=null;
-            try{if(auth!=null&&auth.regionMatches(true,0,"Basic ",0,6))supplied=Base64.getDecoder().decode(auth.substring(6).trim());}catch(IllegalArgumentException ignored){}
+            try{if(auth!=null&&auth.regionMatches(true,0,"Basic ",0,6))supplied=android.util.Base64.decode(auth.substring(6).trim(),android.util.Base64.DEFAULT);}catch(IllegalArgumentException ignored){}
             if(supplied==null||!MessageDigest.isEqual(expected,supplied)){
                 client.getOutputStream().write("HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"Parvaz LAN\"\r\nConnection: close\r\nContent-Length: 0\r\n\r\n".getBytes(StandardCharsets.US_ASCII));return;
             }

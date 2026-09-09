@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="no"?><manifest xmlns:android="http://schemas.android.com/apk/res/android" android:compileSdkVersion="34" android:compileSdkVersionCodename="14" package="com.parvaz.tunnel" platformBuildVersionCode="34" platformBuildVersionName="14">
+<?xml version="1.0" encoding="utf-8" standalone="no"?><manifest xmlns:android="http://schemas.android.com/apk/res/android" android:compileSdkVersion="34" android:compileSdkVersionCodename="14" platformBuildVersionCode="34" platformBuildVersionName="14">
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
@@ -45,11 +45,11 @@
                 <data android:scheme="tuic"/>
                 <data android:scheme="socks"/>
                 <data android:scheme="socks5"/><data android:scheme="wg"/><data android:scheme="wireguard"/>
-                <data android:scheme="v2rayng"/><data android:scheme="hiddify"/>
+                <data android:scheme="v2rayng"/><data android:scheme="v2ray"/><data android:scheme="clash"/><data android:scheme="clashmeta"/><data android:scheme="sing-box"/><data android:scheme="hiddify"/>
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.SEND"/><category android:name="android.intent.category.DEFAULT"/>
-                <data android:mimeType="text/*"/><data android:mimeType="application/json"/><data android:mimeType="application/yaml"/><data android:mimeType="application/octet-stream"/>
+                <data android:mimeType="text/*"/><data android:mimeType="application/json"/><data android:mimeType="application/yaml"/><data android:mimeType="application/x-yaml"/><data android:mimeType="application/vnd.yaml"/><data android:mimeType="application/octet-stream"/>
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/><category android:name="android.intent.category.DEFAULT"/>
@@ -153,21 +153,6 @@
             </intent-filter>
         </receiver>
         <activity android:clearTaskOnLaunch="true" android:name="com.journeyapps.barcodescanner.CaptureActivity" android:screenOrientation="sensorLandscape" android:stateNotNeeded="true" android:theme="@style/zxing_CaptureTheme" android:windowSoftInputMode="stateAlwaysHidden"/>
-        <receiver android:directBootAware="false" android:enabled="true" android:exported="true" android:name="androidx.profileinstaller.ProfileInstallReceiver" android:permission="android.permission.DUMP">
-            <intent-filter>
-                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE"/>
-            </intent-filter>
-            <intent-filter>
-                <action android:name="androidx.profileinstaller.action.SKIP_FILE"/>
-            </intent-filter>
-            <intent-filter>
-                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE"/>
-            </intent-filter>
-            <intent-filter>
-                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION"/>
-            </intent-filter>
-        </receiver>
-        <service android:directBootAware="true" android:exported="false" android:name="androidx.room.MultiInstanceInvalidationService"/>
         <provider android:authorities="com.parvaz.tunnel.fileprovider" android:exported="false" android:grantUriPermissions="true" android:name="androidx.core.content.FileProvider">
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/provider_paths"/>
         </provider>

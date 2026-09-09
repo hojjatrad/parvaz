@@ -74,7 +74,7 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add tools/release/core-lock.json tools/release/auto-core-release.json app/build.gradle "docs/releases/v$VERSION.md"
+          git add tools/native/xray-source-lock.json tools/release/core-lock.json tools/release/auto-core-release.json app/build.gradle "docs/releases/v$VERSION.md"
           git commit -m "core: verified Xray update for v$VERSION"
           git tag -a "v$VERSION" -m "Verified Xray core update v$VERSION; same permanent signing identity"
           AUTH="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"

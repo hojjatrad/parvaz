@@ -20,7 +20,7 @@ public final class HotspotProxyManager {
         String selected=context.getSharedPreferences("parvaz_prefs",0).getString("lan_bind_address","");
         if(!addresses().contains(selected))return false;
         byte[] random=new byte[24];new SecureRandom().nextBytes(random);
-        String secret=Base64.getUrlEncoder().withoutPadding().encodeToString(random);
+        String secret=android.util.Base64.encodeToString(random,android.util.Base64.URL_SAFE|android.util.Base64.NO_PADDING|android.util.Base64.NO_WRAP);
         try{LanProxyBridge candidate=new LanProxyBridge(InetAddress.getByName(selected),LAN_HTTP_PORT,10809,"parvaz",secret);
             bridge=candidate;password=secret;address=selected;return true;
         }catch(Exception error){stop();return false;}

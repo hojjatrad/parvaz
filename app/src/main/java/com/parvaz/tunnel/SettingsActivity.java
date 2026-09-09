@@ -823,7 +823,7 @@ public class SettingsActivity extends AppCompatActivity {
         } catch (Exception unused3) {
             appVersion = "1.8";
         }
-        textView.setText(getString(R.string.version_fmt, appVersion, str));
+        textView.setText(getString(R.string.version_fmt,appVersion,str)+"\nsing-box 1.14.0 • Mihomo 1.19.30\nGPLv3 / LGPLv3 — github.com/hojjatrad/parvaz");
         textView.setOnClickListener(v->new MaterialAlertDialogBuilder(this).setTitle(R.string.core_update_title)
             .setMessage(R.string.core_update_help).setPositiveButton(R.string.core_update_check,(dialog,which)->UpdateFlow.checkForUpdate(this,false))
             .setNegativeButton(R.string.cancel,null).show());

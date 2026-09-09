@@ -62,10 +62,20 @@ try:
      control.sendall(b'\5\3\0\1\0\0\0\0\0\0');relay=address(control);datagram.bind(('127.0.0.1',0));datagram.settimeout(5)
      frame=b'\0\0\0\1'+socket.inet_aton('127.0.0.1')+udp.getsockname()[1].to_bytes(2,'big')+b'PARVAZ-TUNNELED-UDP-OK';datagram.sendto(frame,('127.0.0.1',relay));assert datagram.recv(4096).endswith(b'PARVAZ-TUNNELED-UDP-OK')
     processes[0].terminate();processes[0].wait(timeout=5)
-    with auth(local) as s:
-     s.sendall(b'\5\1\0\1'+socket.inet_aton('127.0.0.1')+server.server_port.to_bytes(2,'big'))
-     try:reply=exact(s,2);assert reply!=b'\5\0','Unexpected direct fallback'
-     except (OSError,TimeoutError):pass
+    response=b''
+    try:
+     with auth(local) as s:
+      s.sendall(b'\5\1\0\1'+socket.inet_aton('127.0.0.1')+server.server_port.to_bytes(2,'big'));address(s)
+      # SOCKS CONNECT may be optimistically acknowledged before QUIC opens its stream.
+      # Only a completed HTTP response would demonstrate a forbidden direct fallback.
+      s.sendall(b'GET / HTTP/1.0\r\nHost: localhost\r\n\r\n')
+      while True:
+       try:chunk=s.recv(4096)
+       except (OSError,TimeoutError):break
+       if not chunk:break
+       response+=chunk
+    except (OSError,TimeoutError,AssertionError):pass
+    assert b'PARVAZ-TUNNELED-TCP-OK' not in response,'Unexpected direct fallback'
     print('::notice title=PROTOCOL_SMOKE_OK::'+protocol+' verified TLS + TCP + UDP + no direct fallback',flush=True)
    finally:
     for p in processes:

@@ -29,10 +29,26 @@ class CandidatePreparationTests(unittest.TestCase):
             (root/'app/build.gradle').write_text('versionName "1.21"\nversionCode 22\n')
             (root/'docs/signing/release-signing.json').write_text('unchanged-public-signing-pin')
             latest={'tag_name':'v26.9.9','draft':False,'prerelease':False,'assets':[{'name':'libv2ray.aar','browser_download_url':'https://github.com/2dust/AndroidLibXrayLite/releases/download/v26.9.9/libv2ray.aar','digest':'sha256:'+'b'*64}]}
-            with patch.object(updater,'ROOT',root),patch.object(updater,'api',return_value=latest),patch.object(updater,'fetch') as fetch,patch.dict(os.environ,{'GITHUB_OUTPUT':str(root/'outputs'),'CORE_CHECK_ONLY':'false'}):
+            with patch.object(updater,'ROOT',root),patch.object(updater,'api',return_value=latest),patch.object(updater,'pin_source',return_value={'tag':'v26.9.9','commit':'c'*40,'sha256':'d'*64}),patch.object(updater,'fetch') as fetch,patch.dict(os.environ,{'GITHUB_OUTPUT':str(root/'outputs'),'CORE_CHECK_ONLY':'false'}):
                 updater.prepare();fetch.assert_called_once()
             self.assertIn('versionCode 23',(root/'app/build.gradle').read_text())
             self.assertIn('versionName "1.21.1"',(root/'app/build.gradle').read_text())
             self.assertEqual((root/'docs/signing/release-signing.json').read_text(),'unchanged-public-signing-pin')
             self.assertIn('mode=new',(root/'outputs').read_text())
             self.assertTrue((root/'docs/releases/v1.21.1.md').is_file())
+
+class CorrespondingSourceTests(unittest.TestCase):
+    def test_source_tag_is_resolved_and_hash_is_pinned(self):
+        import io,hashlib
+        from unittest.mock import patch
+        import auto_core_update as updater
+        with patch.object(updater,'api',side_effect=[{'object':{'type':'tag','sha':'a'*40}},{'object':{'type':'commit','sha':'b'*40}}]),patch.object(updater.urllib.request,'urlopen',return_value=io.BytesIO(b'fixture-source')):
+            source=updater.pin_source('v26.9.9')
+        self.assertEqual(source['commit'],'b'*40)
+        self.assertEqual(source['sha256'],hashlib.sha256(b'fixture-source').hexdigest())
+        self.assertTrue(source['url'].startswith('https://codeload.github.com/2dust/AndroidLibXrayLite/'))
+    def test_invalid_source_ref_is_rejected(self):
+        from unittest.mock import patch
+        import auto_core_update as updater
+        with patch.object(updater,'api',return_value={'object':{'type':'tree','sha':'a'*40}}):
+            with self.assertRaises(ValueError):updater.pin_source('v26.9.9')

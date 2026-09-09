@@ -35,3 +35,7 @@ release-artifacts/
 
 # Legacy binary archives must not re-enter the source tree
 release/*.zip
+
+# Generated Python bytecode
+__pycache__/
+*.py[cod]
