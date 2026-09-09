@@ -1,0 +1,29 @@
+{
+  "version": "1.19.1",
+  "version_code": 20,
+  "application_id": "com.parvaz.tunnel",
+  "status": "published-prerelease",
+  "source_commit": "6e4c1f57a93ab96d743ef97d3ab47e84a978e9a1",
+  "certificate_sha256": "d1383b8f34da5d3299b13634de421487289d82c1bb47ec3bc7f20ae8d02fe500",
+  "android_debug_tests_and_release_r8_run": 34314502196,
+  "prepublication_signed_apk_validation_run": 34314877310,
+  "publication_run": 34315253198,
+  "owner_confirmed_private_backup_and_secret_update": true,
+  "device_tests_completed": false,
+  "release_url": "https://github.com/hojjatrad/parvaz/releases/tag/v1.19.1",
+  "release_id": 385249330,
+  "assets": [
+    {
+      "name": "Parvaz-1.19.1-arm64.apk",
+      "bytes": 15601067,
+      "sha256": "2a687e3b20afcddcbf8dbef04765bc4dd95cb065a31ff8e2245e25477695a21c",
+      "url": "https://github.com/hojjatrad/parvaz/releases/download/v1.19.1/Parvaz-1.19.1-arm64.apk"
+    },
+    {
+      "name": "Parvaz-1.19.1.apk",
+      "bytes": 27888108,
+      "sha256": "5064f923492a07e5d08023b27441b941d4cc18f289a9ed2b2b5855c6888d45d2",
+      "url": "https://github.com/hojjatrad/parvaz/releases/download/v1.19.1/Parvaz-1.19.1.apk"
+    }
+  ]
+}
