@@ -1,48 +1,35 @@
-name: Read public platform probe results
+name: Read validation status and stop superseded tests
 on:
   push:
     branches: ['ci/platform-probe-status']
 permissions:
-  actions: read
+  actions: write
   contents: read
 jobs:
   read:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 3
     steps:
-      - name: Summarize probe progress and public-APK-only test output
+      - name: Inspect test stages; cancel only superseded test revisions
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          python3 -u <<'PY'
-          import urllib.request,urllib.error,os,json,time
+          python3 -u - <<'PY'
+          import urllib.request,urllib.error,os,json
           base='https://api.github.com/repos/hojjatrad/parvaz'
-          headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json','User-Agent':'Parvaz-probe-results'}
+          headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json','User-Agent':'Parvaz-test-status'}
           def api(path):
               with urllib.request.urlopen(urllib.request.Request(base+path,headers=headers),timeout=30) as r:return json.load(r)
-          class NoRedirect(urllib.request.HTTPRedirectHandler):
-              def redirect_request(self,*args,**kwargs):return None
-          import io,zipfile,xml.etree.ElementTree as ET
-          artifacts=api('/actions/runs/34327073956/artifacts')['artifacts']
-          for artifact in artifacts:
-              if artifact['name']!='archive-probe-29':continue
-              request=urllib.request.Request(artifact['archive_download_url'],headers=headers)
-              try:
-                  with urllib.request.build_opener(NoRedirect).open(request,timeout=30) as r:blob=r.read(1024*1024)
-              except urllib.error.HTTPError as e:
-                  if e.code!=302:raise
-                  with urllib.request.urlopen(e.headers['Location'],timeout=30) as r:blob=r.read(1024*1024)
-              with zipfile.ZipFile(io.BytesIO(blob)) as z:
-                  for name in z.namelist():
-                      data=z.read(name)
-                      if 'logcat' in name.lower():
-                          lines=data.decode(errors='replace').splitlines()
-                          for line in lines:
-                              if 'ParvazProbe' in line or 'Failure to parse' in line or 'PackageParserException' in line or 'Caused by:' in line:
-                                  print('::notice title=PARSE_REASON::'+line[:1200])
-                      if not name.endswith('.xml'):continue
-                      root=ET.fromstring(z.read(name))
-                      for child in root.iter():
-                          if not child.tag.endswith('failure'):continue
-                          print('::notice title=PROBE_ASSERTION::'+artifact['name']+' '+(child.text or '')[:1600].replace('\n',' | ').replace('\r',''))
+          for workflow in ['validate-signing-release.yml','platform-update-probe.yml']:
+              runs=api('/actions/workflows/'+workflow+'/runs?per_page=4')['workflow_runs']
+              for run in runs:
+                  jobs=api('/actions/runs/'+str(run['id'])+'/jobs')['jobs']
+                  detail=[j['name']+': '+str(j['conclusion'])+' '+','.join(s['name'] for s in j['steps'] if s['status']=='in_progress') for j in jobs]
+                  print('::notice title=VALIDATION_STATUS::'+str(run['id'])+' '+run['head_sha'][:7]+' '+run['status']+' '+str(run['conclusion'])+' '+' | '.join(detail))
+                  if workflow=='validate-signing-release.yml' and run['head_sha'].startswith(('faf68d2','122aa24')) and run['status']!='completed':
+                      request=urllib.request.Request(base+'/actions/runs/'+str(run['id'])+'/cancel',data=b'',headers=headers,method='POST')
+                      try:
+                          with urllib.request.urlopen(request,timeout=30) as r:print('::notice title=SUPERSEDED_TEST_STOPPED::'+str(run['id']))
+                      except urllib.error.HTTPError as e:
+                          if e.code!=409:raise
           PY
