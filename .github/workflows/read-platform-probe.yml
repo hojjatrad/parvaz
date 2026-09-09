@@ -3,7 +3,7 @@ on:
   push:
     branches: ['ci/platform-probe-status']
 permissions:
-  actions: write
+  actions: read
   contents: read
 jobs:
   read:
@@ -23,7 +23,7 @@ jobs:
           class NoRedirect(urllib.request.HTTPRedirectHandler):
               def redirect_request(self,*args,**kwargs):return None
           for attempt in range(1):
-              data=api('/actions/runs/34325917804/jobs')
+              data=api('/actions/runs/34327073956/jobs')
               for job in data['jobs']:
                   active=[s['name']+': '+str(s['conclusion']) for s in job['steps'] if s['name'].startswith('Run reactivecircus') or s['status']=='in_progress']
                   print('::notice title=PROBE_PROGRESS::'+job['name']+' '+job['status']+' '+str(job['conclusion'])+' '+str(active))
@@ -38,11 +38,21 @@ jobs:
                   if e.code!=302:raise
                   with urllib.request.urlopen(e.headers['Location'],timeout=30) as r:logs=r.read(8*1024*1024).decode(errors='replace')
               for line in logs.splitlines():
-                  if any(x in line for x in ['ARCHIVE ','ParvazProbe','FAILURE:','What went wrong','Could not resolve','SDK location','error:','BUILD FAILED','BUILD SUCCESSFUL','Boot completed','Timeout waiting']):
+                  if any(x in line for x in ['ARCHIVE ','ParvazProbe','FAILURE:','What went wrong','Could not resolve','SDK location','error:','BUILD FAILED','BUILD SUCCESSFUL','Boot completed','Timeout waiting','AssertionError','Failure to parse','PackageParser','expected:']):
                       print('::notice title=PROBE_RESULT::'+line[:800].replace('%','%25').replace('\r','').replace('\n',''))
-          request=urllib.request.Request(base+'/actions/runs/34325917804/cancel',data=b'',headers=headers,method='POST')
-          try:
-              with urllib.request.urlopen(request,timeout=30) as r:print('::notice title=SUPERSEDED_PROBE_STOPPED::Stopped only run 34325917804, stuck in its adb report step after emulator shutdown. Corrected probe was pushed separately.')
-          except urllib.error.HTTPError as e:
-              if e.code!=409:raise
+          import io,zipfile,xml.etree.ElementTree as ET
+          artifacts=api('/actions/runs/34327073956/artifacts')['artifacts']
+          for artifact in artifacts:
+              request=urllib.request.Request(artifact['archive_download_url'],headers=headers)
+              try:
+                  with urllib.request.build_opener(NoRedirect).open(request,timeout=30) as r:blob=r.read(1024*1024)
+              except urllib.error.HTTPError as e:
+                  if e.code!=302:raise
+                  with urllib.request.urlopen(e.headers['Location'],timeout=30) as r:blob=r.read(1024*1024)
+              with zipfile.ZipFile(io.BytesIO(blob)) as z:
+                  for name in z.namelist():
+                      if not name.endswith('.xml'):continue
+                      root=ET.fromstring(z.read(name))
+                      for child in root.iter('failure'):
+                          print('::notice title=PROBE_ASSERTION::'+artifact['name']+' '+(child.text or '')[:1600].replace('\n',' | ').replace('\r',''))
           PY
