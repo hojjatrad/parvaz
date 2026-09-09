@@ -84,7 +84,9 @@ public class LeakTestActivity extends AppCompatActivity {
         summary.setText("");
         ipAfter.setText(R.string.ip_checking_now);
 
-        final String hint = new Prefs(this).f343a.getString("last_direct_ip", "");
+        final com.parvaz.tunnel.store.Prefs prefs=new Prefs(this);
+        long age=System.currentTimeMillis()-prefs.f343a.getLong("last_direct_ip_at",0);
+        final String hint=age>=0&&age<300000?prefs.f343a.getString("last_direct_ip",""):"";
 
         new Thread(new Runnable() {
             @Override
@@ -141,9 +143,11 @@ public class LeakTestActivity extends AppCompatActivity {
         }
 
         int failures = report.failures();
-        if (failures == 0) {
+        if(report.allPassed()) {
             summary.setText(R.string.leak_test_summary_ok);
             summary.setTextColor(0xFF2E7D32);
+        } else if(failures==0) {
+            summary.setText(R.string.leak_test_inconclusive);summary.setTextColor(0xFF996600);
         } else {
             summary.setText(getString(R.string.leak_test_summary_fail, failures));
             summary.setTextColor(0xFFC62828);
@@ -187,7 +191,7 @@ public class LeakTestActivity extends AppCompatActivity {
                 return getString(R.string.leak_test_ipv6_leak) + "\n" + check.detail;
             }
         }
-        return check.detail;
+        return getString(R.string.leak_test_inconclusive)+ (check.detail.isEmpty()?"":"\n"+check.detail);
     }
 
     @Override

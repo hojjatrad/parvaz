@@ -304,6 +304,7 @@ public class MainActivity extends AppCompatActivity {
             if(i==7){mainActivity.removeDuplicateConnections();return;}
             if(i==8){mainActivity.showLastImportReport();return;}
             if(i==9){mainActivity.showStoredReport("last_refresh_report",R.string.last_refresh_report,R.string.refresh_report_help);return;}
+            if(i==12){if(mainActivity.sharedDocumentPicker!=null)mainActivity.sharedDocumentPicker.launch(new String[]{"text/*","application/json","application/yaml","application/octet-stream"});return;}
             if(i==11){mainActivity.showPrimarySubscriptionPicker(false);return;}
             if(i==10){mainActivity.showStoredReport("last_duplicate_report",R.string.last_duplicate_report,R.string.duplicate_report_help);return;}
             String str = "";
@@ -1086,8 +1087,20 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /* renamed from: C */
+    private boolean readingSharedInput;
+    private androidx.activity.result.ActivityResultLauncher<String[]> sharedDocumentPicker;
     public final void handleIntent(Intent intent) {
-        if(intent!=null&&intent.getData()!=null)importText(intent.getData().toString());
+        if(intent==null||intent.getData()==null&&!Intent.ACTION_SEND.equals(intent.getAction()))return;
+        if(readingSharedInput||importing||manualRefreshing){Snackbar.make(findViewById(android.R.id.content),R.string.import_busy,Snackbar.LENGTH_SHORT).show();return;}
+        final Intent input=new Intent(intent);intent.setData(null);if(Intent.ACTION_SEND.equals(intent.getAction()))intent.setAction(null);intent.removeExtra(Intent.EXTRA_TEXT);intent.removeExtra(Intent.EXTRA_STREAM);intent.setClipData(null);
+        readingSharedInput=true;
+        new Thread(()->{
+            String text="";try{text=com.parvaz.tunnel.core.SharedInput.read(getApplicationContext(),input);}catch(Exception ignored){}
+            final String value=text;
+            runOnUiThread(()->{readingSharedInput=false;if(isFinishing()||isDestroyed())return;
+                if(value.isEmpty())Snackbar.make(findViewById(android.R.id.content),R.string.shared_input_failed,Snackbar.LENGTH_SHORT).show();else importText(value);
+            });
+        },"parvaz-share-file").start();
     }
 
     private boolean importing;
@@ -1758,7 +1771,7 @@ public class MainActivity extends AppCompatActivity {
 
     /* renamed from: N */
     public final void showAddDialog() {
-        String[] strArr = {getString(R.string.scan_qr), getString(R.string.add_from_clipboard), getString(R.string.add_manual_link), getString(R.string.add_raw_json), getString(R.string.add_subscription), getString(R.string.update_subscriptions), getString(R.string.backup_restore), getString(R.string.remove_duplicates),getString(R.string.last_import_report),getString(R.string.last_refresh_report),getString(R.string.last_duplicate_report),getString(R.string.primary_subscription)};
+        String[] strArr = {getString(R.string.scan_qr), getString(R.string.add_from_clipboard), getString(R.string.add_manual_link), getString(R.string.add_raw_json), getString(R.string.add_subscription), getString(R.string.update_subscriptions), getString(R.string.backup_restore), getString(R.string.remove_duplicates),getString(R.string.last_import_report),getString(R.string.last_refresh_report),getString(R.string.last_duplicate_report),getString(R.string.primary_subscription),getString(R.string.import_file)};
         MaterialAlertDialogBuilder materialAlertDialogBuilder = new MaterialAlertDialogBuilder(this);
         materialAlertDialogBuilder.setTitle(R.string.add_server);
         materialAlertDialogBuilder.setItems(strArr, new F());
@@ -1791,7 +1804,7 @@ public class MainActivity extends AppCompatActivity {
                     com.parvaz.tunnel.core.IpLookup.Info info =
                             com.parvaz.tunnel.core.IpLookup.direct();
                     if (info.ok()) {
-                        prefs.f343a.edit().putString("last_direct_ip", info.ip).apply();
+                        prefs.f343a.edit().putString("last_direct_ip", info.ip).putLong("last_direct_ip_at",System.currentTimeMillis()).apply();
                     }
                 } catch (Throwable t) {
                     android.util.Log.w("Parvaz", "direct IP capture failed", t);
@@ -2354,6 +2367,7 @@ public class MainActivity extends AppCompatActivity {
         if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(this, "android.permission.POST_NOTIFICATIONS") != 0) {
             this.F.launch("android.permission.POST_NOTIFICATIONS");
         }
+        sharedDocumentPicker=registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),uri->{if(uri!=null)handleIntent(new Intent(Intent.ACTION_VIEW,uri));});
         handleIntent(getIntent());
         this.connectButton.postDelayed(new A(), 4000L);
         try {

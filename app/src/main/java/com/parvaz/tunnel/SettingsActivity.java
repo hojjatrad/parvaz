@@ -1034,27 +1034,22 @@ public class SettingsActivity extends AppCompatActivity {
         }
 
         androidx.appcompat.widget.SwitchCompat lanSwitch = findViewById(R.id.lan_proxy);
-        if (lanSwitch != null) {
-            lanSwitch.setChecked(this.C.f343a.getBoolean("lan_proxy", false));
-            lanSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-                @Override
-                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                    SettingsActivity.this.C.f343a.edit().putBoolean("lan_proxy", isChecked).apply();
-                    if (isChecked) {
-                        String ip = com.parvaz.tunnel.core.HotspotProxyManager.getLocalIpAddress();
-                        int port = com.parvaz.tunnel.core.HotspotProxyManager.LAN_HTTP_PORT;
-                        new com.google.android.material.dialog.MaterialAlertDialogBuilder(SettingsActivity.this)
-                                .setTitle(R.string.lan_proxy)
-                                .setMessage(getString(R.string.lan_proxy_guide, ip, Integer.valueOf(port)))
-                                .setPositiveButton(android.R.string.ok, null)
-                                .show();
-                        if (com.parvaz.tunnel.core.TunnelVpnService.serviceRunning) {
-                            com.parvaz.tunnel.core.HotspotProxyManager.start(SettingsActivity.this);
-                        }
-                    } else {
-                        com.parvaz.tunnel.core.HotspotProxyManager.stop();
-                    }
-                }
+        if(lanSwitch!=null){
+            lanSwitch.setChecked(com.parvaz.tunnel.core.HotspotProxyManager.isRunning());
+            lanSwitch.setOnCheckedChangeListener((button,checked)->{
+                C.f343a.edit().putBoolean("lan_proxy",false).apply();
+                if(!checked){com.parvaz.tunnel.core.HotspotProxyManager.stop();return;}
+                if(!com.parvaz.tunnel.core.TunnelVpnService.serviceRunning){lanSwitch.setChecked(false);new com.google.android.material.dialog.MaterialAlertDialogBuilder(this).setMessage(R.string.lan_need_vpn).setPositiveButton(android.R.string.ok,null).show();return;}
+                java.util.List<String> addresses=com.parvaz.tunnel.core.HotspotProxyManager.addresses();
+                if(addresses.isEmpty()){lanSwitch.setChecked(false);new com.google.android.material.dialog.MaterialAlertDialogBuilder(this).setMessage(R.string.lan_no_interface).setPositiveButton(android.R.string.ok,null).show();return;}
+                new com.google.android.material.dialog.MaterialAlertDialogBuilder(this).setTitle(R.string.lan_select_interface)
+                    .setItems(addresses.toArray(new String[0]),(dialog,index)->{
+                        C.f343a.edit().putString("lan_bind_address",addresses.get(index)).apply();
+                        if(!com.parvaz.tunnel.core.HotspotProxyManager.start(this)){lanSwitch.setChecked(false);new com.google.android.material.dialog.MaterialAlertDialogBuilder(this).setMessage(R.string.lan_start_failed).setPositiveButton(android.R.string.ok,null).show();return;}
+                        String guide=getString(R.string.lan_secure_guide,com.parvaz.tunnel.core.HotspotProxyManager.boundAddress(),com.parvaz.tunnel.core.HotspotProxyManager.LAN_HTTP_PORT,com.parvaz.tunnel.core.HotspotProxyManager.password());
+                        androidx.appcompat.app.AlertDialog info=new com.google.android.material.dialog.MaterialAlertDialogBuilder(this).setTitle(R.string.lan_proxy).setMessage(guide).setPositiveButton(android.R.string.ok,null).create();
+                        if(info.getWindow()!=null)info.getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE);info.show();
+                    }).setNegativeButton(R.string.cancel,(d,w)->lanSwitch.setChecked(false)).setOnCancelListener(d->lanSwitch.setChecked(false)).show();
             });
         }
 

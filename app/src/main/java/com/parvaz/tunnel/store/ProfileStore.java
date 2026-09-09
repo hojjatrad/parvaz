@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 /* renamed from: S1.c */
@@ -15,6 +16,7 @@ import org.json.JSONObject;
 public final class ProfileStore {
     public static ProfileStore d;
     private long revision;
+    private final StoreCipher recordCipher;
 
     public static final class Snapshot {
         public final Subscription subscription;
@@ -44,12 +46,13 @@ public final class ProfileStore {
         this.f347c = arrayList2;
         HashMap hashMap = new HashMap();
         SharedPreferences sharedPreferences = context.getApplicationContext().getSharedPreferences("parvaz_store", 0);
+        this.recordCipher=StoreCipher.open(context,sharedPreferences);
         this.f345a = sharedPreferences;
         arrayList.clear();
         arrayList2.clear();
         hashMap.clear();
         try {
-            JSONArray jSONArray = new JSONArray(sharedPreferences.getString("profiles", "[]"));
+            JSONArray jSONArray = new JSONArray(recordCipher.decode("profiles",sharedPreferences.getString("profiles", "[]")));
             for (int i = 0; i < jSONArray.length(); i++) {
                 try {
                     JSONObject optJSONObject = jSONArray.optJSONObject(i);
@@ -64,7 +67,7 @@ public final class ProfileStore {
             android.util.Log.w("Parvaz/ProfileStore", "Exception ignored", unused2);
         }
         try {
-            JSONArray jSONArray2 = new JSONArray(sharedPreferences.getString("subs", "[]"));
+            JSONArray jSONArray2 = new JSONArray(recordCipher.decode("subs",sharedPreferences.getString("subs", "[]")));
             for (int i2 = 0; i2 < jSONArray2.length(); i2++) {
                 arrayList2.add(Subscription.fromJson(jSONArray2.getJSONObject(i2)));
             }
@@ -146,6 +149,17 @@ public final class ProfileStore {
         try{return Subscription.fromJson(sub.toJson());}catch(org.json.JSONException e){throw new IllegalStateException("Subscription copy failed");}
     }
 
+    /** Validate first; commit all restored records together, never a delete-first restore. */
+    public synchronized void restoreRecords(java.util.List<Profile> profiles,java.util.List<Subscription> subscriptions,String primary)throws JSONException {
+        JSONArray pj=new JSONArray(),sj=new JSONArray();JSONObject pings=new JSONObject();boolean found=primary.isEmpty()||MANUAL_GROUP.equals(primary);
+        for(Profile p:profiles){pj.put(p.toJson());if(p.ping>0)pings.put(p.id,p.ping);}
+        for(Subscription sub:subscriptions){sj.put(sub.toJson());if(sub.id.equals(primary))found=true;}
+        if(!found)primary=MANUAL_GROUP;
+        if(!f345a.edit().putString("profiles",recordCipher.encode("profiles",pj.toString())).putString("subs",recordCipher.encode("subs",sj.toString()))
+            .putString("pings",pings.toString()).putString("primary_subscription",primary).putString("primary_choice","1").commit())throw new IllegalStateException("Restore commit failed");
+        f346b.clear();f346b.addAll(profiles);f347c.clear();f347c.addAll(subscriptions);revision++;
+    }
+
     /** All records remain in e() for backups; connection consumers use this scoped view. */
     public static final String MANUAL_GROUP="@manual";
     /** Migrate a combined view using its selected connection, never an unrelated source. */
@@ -175,7 +189,7 @@ public final class ProfileStore {
             ArrayList<Subscription> subs=f();boolean found=id.isEmpty()||MANUAL_GROUP.equals(id);JSONArray json=new JSONArray();
             for(Subscription sub:subs){if(sub.id.equals(id)){found=true;if(enable)sub.enabled=true;}json.put(sub.toJson());}
             if(!found)throw new IllegalArgumentException("Unknown primary source");
-            f345a.edit().putString("primary_subscription",id).putString("primary_choice","1").putString("subs",json.toString()).apply();
+            f345a.edit().putString("primary_subscription",id).putString("primary_choice","1").putString("subs",recordCipher.encode("subs",json.toString())).apply();
             f347c.clear();f347c.addAll(subs);revision++;
         }catch(org.json.JSONException e){throw new IllegalStateException("Source selection failed");}
     }
@@ -215,7 +229,7 @@ public final class ProfileStore {
             JSONArray pj=new JSONArray(),sj=new JSONArray();JSONObject pings=new JSONObject();
             for(Profile p:unique.values()){pj.put(p.toJson());if(p.ping>0)pings.put(p.id,p.ping);}
             for(Subscription sub:subs){Subscription c=Subscription.fromJson(sub.toJson());c.count=0;for(Profile p:unique.values())if(p.subscriptionId.equals(c.id))c.count++;sj.put(c.toJson());}
-            f345a.edit().putString("profiles",pj.toString()).putString("subs",sj.toString()).putString("pings",pings.toString())
+            f345a.edit().putString("profiles",recordCipher.encode("profiles",pj.toString())).putString("subs",recordCipher.encode("subs",sj.toString())).putString("pings",pings.toString())
                 .putString("primary_subscription",owners.getOrDefault(primarySubscription(),primarySubscription())).apply();
             f346b.clear();f346b.addAll(unique.values());f347c.clear();
             for(int i=0;i<sj.length();i++)f347c.add(Subscription.fromJson(sj.getJSONObject(i)));
@@ -232,7 +246,7 @@ public final class ProfileStore {
             }
             if(!found)throw new StaleRefresh();
             JSONArray json=new JSONArray();for(Subscription sub:subs)json.put(sub.toJson());
-            f345a.edit().putString("subs",json.toString()).apply();
+            f345a.edit().putString("subs",recordCipher.encode("subs",json.toString())).apply();
             f347c.clear();f347c.addAll(subs);revision++;
         }catch(org.json.JSONException e){throw new IllegalStateException("Quota serialization failed");}
     }
@@ -281,7 +295,7 @@ public final class ProfileStore {
             JSONArray profilesJson=new JSONArray(),subsJson=new JSONArray();JSONObject pings=new JSONObject();
             for(Profile p:plan.all){profilesJson.put(p.toJson());if(p.ping>0)pings.put(p.id,p.ping);}
             for(Subscription sub:subscriptions)subsJson.put(sub.toJson());
-            f345a.edit().putString("profiles",profilesJson.toString()).putString("subs",subsJson.toString()).putString("pings",pings.toString()).apply();
+            f345a.edit().putString("profiles",recordCipher.encode("profiles",profilesJson.toString())).putString("subs",recordCipher.encode("subs",subsJson.toString())).putString("pings",pings.toString()).apply();
             f346b.clear();f346b.addAll(plan.all);f347c.clear();f347c.addAll(subscriptions);revision++;
             return plan;
         } catch(org.json.JSONException e) { throw new IllegalStateException("Subscription serialization failed"); }
@@ -355,7 +369,7 @@ public final class ProfileStore {
                     jSONObject.put(profile2.id, i);
                 }
             }
-            this.f345a.edit().putString("profiles", jSONArray.toString()).putString("subs", jSONArray2.toString()).putString("pings", jSONObject.toString()).apply();
+            this.f345a.edit().putString("profiles",recordCipher.encode("profiles",jSONArray.toString())).putString("subs",recordCipher.encode("subs",jSONArray2.toString())).putString("pings", jSONObject.toString()).apply();
         } catch (Exception unused2) {
             android.util.Log.w("Parvaz/ProfileStore", "Exception ignored", unused2);
         }

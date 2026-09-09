@@ -297,9 +297,8 @@ public class TunnelVpnService extends VpnService {
                     } else {
                         CoreManager.b().start(tunnelVpnService, tunnelVpnService.profile, tunnelVpnService.tunInterface.getFd(), new h());
                         TunnelVpnService.serviceRunning = true;
-                        if (tunnelVpnService.f != null && tunnelVpnService.f.f343a.getBoolean("lan_proxy", false)) {
-                            HotspotProxyManager.start(tunnelVpnService);
-                        }
+                        // LAN sharing is explicitly enabled per session from Settings.
+                        HotspotProxyManager.stop();
                         if (tunnelVpnService.startedAt == 0) {
                             tunnelVpnService.startedAt = System.currentTimeMillis();
                         }

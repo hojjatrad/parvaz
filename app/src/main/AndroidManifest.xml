@@ -44,6 +44,16 @@
                 <data android:scheme="hy2"/>
                 <data android:scheme="tuic"/>
                 <data android:scheme="socks"/>
+                <data android:scheme="socks5"/><data android:scheme="wg"/><data android:scheme="wireguard"/>
+                <data android:scheme="v2rayng"/><data android:scheme="hiddify"/>
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND"/><category android:name="android.intent.category.DEFAULT"/>
+                <data android:mimeType="text/*"/><data android:mimeType="application/json"/><data android:mimeType="application/yaml"/><data android:mimeType="application/octet-stream"/>
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/><category android:name="android.intent.category.DEFAULT"/>
+                <data android:scheme="content" android:mimeType="text/*"/><data android:scheme="content" android:mimeType="application/json"/><data android:scheme="content" android:mimeType="application/yaml"/>
             </intent-filter>
         </activity>
         <activity android:exported="false" android:name="com.parvaz.tunnel.core.UpdateInstallActivity"/>

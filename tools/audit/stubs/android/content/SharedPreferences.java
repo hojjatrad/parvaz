@@ -5,5 +5,5 @@ public interface SharedPreferences {
  int getInt(String key,int fallback);
  boolean getBoolean(String key,boolean fallback);
  default Editor edit(){throw new UnsupportedOperationException();}
- interface Editor { Editor putString(String key,String value); void apply(); }
+ interface Editor { Editor putString(String key,String value); void apply(); default boolean commit(){apply();return true;} }
 }

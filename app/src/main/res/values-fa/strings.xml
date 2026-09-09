@@ -433,4 +433,12 @@
     <string name="import_done_short">افزوده شد.</string>
     <string name="operation_done_short">انجام شد.</string>
     <string name="operation_failed_short">عملیات انجام نشد.</string>
+    <string name="leak_test_inconclusive">نتیجه نامشخص است؛ این مشاهده‌ها نبود نشت DNS یا IPv6 را اثبات نمی‌کنند.</string>
+    <string name="lan_need_vpn">ابتدا پرواز را وصل کنید، سپس اشتراک‌گذاری را فعال کنید.</string>
+    <string name="lan_no_interface">رابط خصوصی وای‌فای یا هات‌اسپات در دسترس نیست.</string>
+    <string name="lan_select_interface">آدرس خصوصی شبکه را انتخاب کنید</string>
+    <string name="lan_start_failed">پروکسی شبکه شروع نشد و فعال نیست.</string>
+    <string name="lan_secure_guide">پروکسی HTTP: %1$s:%2$d\nنام کاربری: parvaz\nرمز: %3$s\nرمز فقط برای همین نشست است؛ پس از اتصال مجدد باید دوباره فعال کنید. دستگاه دوم باید احراز هویت پروکسی را پشتیبانی کند. این قابلیت همهٔ ترافیک هات‌اسپات را خودکار تونل نمی‌کند. فقط در شبکهٔ خصوصی قابل‌اعتماد استفاده کنید؛ احراز هویت پروکسی روی وای‌فای رمزگذاری نشده است.</string>
+    <string name="import_file">افزودن فایل کانفیگ</string>
+    <string name="shared_input_failed">این ورودی خوانده نشد؛ فایل کانفیگ UTF-8 کوچک‌تر از ۵ مگابایت انتخاب کنید.</string>
 </resources>

@@ -452,4 +452,12 @@ Tap + to paste a config link or add a subscription."</string>
     <string name="import_done_short">Added.</string>
     <string name="operation_done_short">Done.</string>
     <string name="operation_failed_short">Could not complete the operation.</string>
+    <string name="leak_test_inconclusive">Inconclusive: these observations do not prove absence of DNS or IPv6 leaks.</string>
+    <string name="lan_need_vpn">Connect Parvaz before enabling LAN sharing.</string>
+    <string name="lan_no_interface">No private Wi-Fi or hotspot interface is available.</string>
+    <string name="lan_select_interface">Select the private LAN address</string>
+    <string name="lan_start_failed">Could not start the LAN proxy. It is not running.</string>
+    <string name="lan_secure_guide">HTTP proxy: %1$s:%2$d\nUsername: parvaz\nPassword: %3$s\nSession-only credentials; reconnecting requires enabling sharing again. Only clients supporting proxy authentication can use this. This is not automatic hotspot tunneling. Use a trusted private LAN: proxy authentication itself is not encrypted on Wi-Fi.</string>
+    <string name="import_file">Import configuration file</string>
+    <string name="shared_input_failed">Could not read this input. Select a UTF-8 configuration file under 5 MiB.</string>
 </resources>

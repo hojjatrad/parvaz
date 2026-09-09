@@ -23,3 +23,9 @@ def copyArchiveHelper = tasks.register('copyArchiveHelper', Copy) {
     into layout.buildDirectory.dir('generated/probeJava/com/parvaz/tunnel/core')
 }
 tasks.named('preBuild').configure { dependsOn copyArchiveHelper }
+
+def copyStoreCipher = tasks.register('copyStoreCipher', Copy) {
+    from '../../app/src/main/java/com/parvaz/tunnel/store/StoreCipher.java'
+    into layout.buildDirectory.dir('generated/probeJava/com/parvaz/tunnel/store')
+}
+tasks.named('preBuild').configure { dependsOn copyStoreCipher }

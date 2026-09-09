@@ -27,181 +27,44 @@ public final class BackupManager {
         public int f342b;
     }
 
-    public static a a(Context context, String str) throws JSONException {
-        JSONObject jSONObject = new JSONObject(str);
-        if (!jSONObject.has("profiles") && !jSONObject.has("subscriptions")) {
-            throw new IllegalArgumentException("not BackupManager Parvaz backup");
+    public static a a(Context context,String str)throws JSONException {
+        if(str==null||str.length()>16*1024*1024)throw new IllegalArgumentException("Backup size limit");
+        com.parvaz.tunnel.config.LinkParser.checkJsonDepth(str);
+        JSONObject root=new JSONObject(str);
+        if(!root.has("profiles")||!root.has("subscriptions"))throw new IllegalArgumentException("Incomplete backup");
+        JSONArray nodes=root.getJSONArray("profiles"),sources=root.getJSONArray("subscriptions");
+        if(nodes.length()>5000||sources.length()>1000)throw new IllegalArgumentException("Backup count limit");
+        ArrayList<Profile> profiles=new ArrayList<>();ArrayList<Subscription> subs=new ArrayList<>();java.util.Set<String> ids=new java.util.HashSet<>();
+        for(int i=0;i<sources.length();i++){
+            Subscription sub=Subscription.fromJson(sources.getJSONObject(i));
+            if(sub.id.isEmpty()||!ids.add(sub.id))throw new IllegalArgumentException("Invalid subscription identity");
+            if(!sub.url.isEmpty())com.parvaz.tunnel.config.SubscriptionUrl.normalize(sub.url);
+            subs.add(sub);
         }
-        ProfileStore f = ProfileStore.f(context);
-        SharedPreferences sharedPreferences = context.getApplicationContext().getSharedPreferences("parvaz_prefs", 0);
-        a obj = new a();
-        synchronized (f) {
-            f.f346b.clear();
-            f.h();
+        ids.clear();for(int i=0;i<nodes.length();i++){
+            Profile p=Profile.fromJson(nodes.getJSONObject(i));if(p==null||!com.parvaz.tunnel.config.LinkParser.valid(p)||!ids.add(p.id))throw new IllegalArgumentException("Invalid profile");
+            profiles.add(p);
         }
-        JSONArray optJSONArray = jSONObject.optJSONArray("subscriptions");
-        if (optJSONArray != null) {
-            for (int i = 0; i < optJSONArray.length(); i++) {
-                Subscription fromJson = Subscription.fromJson(optJSONArray.getJSONObject(i));
-                if (fromJson != null) {
-                    synchronized (f) {
-                        f.f347c.add(fromJson);
-                        f.h();
-                    }
-                    obj.f342b++;
-                }
-            }
+        JSONObject settings=root.optJSONObject("settings");if(settings==null)settings=new JSONObject();
+        SharedPreferences prefs=context.getSharedPreferences("parvaz_prefs",0);SharedPreferences.Editor edit=prefs.edit();
+        // Explicit allowlist; keys controlling credentials, LAN exposure and update verification never come from a backup.
+        for(String key:new String[]{"routing_mode","remote_dns","direct_dns","log_level","domain_strategy","ping_url","lang","per_app_mode","fragment_packets","fragment_length","fragment_interval","custom_rules","domains_direct","domains_proxy","domains_block","auto_wifi","auto_cell","trusted_wifi","chain_profile","selected_profile"})
+            if(settings.has(key))edit.putString(key,settings.getString(key));
+        for(String key:new String[]{"mux_enabled","ipv6_enabled","bypass_lan","auto_switch","fragment_enabled","kill_switch","haptics","shake_to_switch"})if(settings.has(key))edit.putBoolean(key,settings.getBoolean(key));
+        for(String key:new String[]{"mux_concurrency","vpn_mtu","ping_threshold","health_interval","sub_auto_hours","buffer_size_kb","health_strikes"})if(settings.has(key))edit.putInt(key,settings.getInt(key));
+        if(settings.has("data_limit_gb")){double v=settings.getDouble("data_limit_gb");if(!Double.isFinite(v)||v<0)throw new IllegalArgumentException("Invalid quota");edit.putFloat("data_limit_gb",(float)v);}
+        for(String key:new String[]{"favorites","per_app_list"})if(settings.has(key)){
+            JSONArray list=settings.getJSONArray(key);java.util.LinkedHashSet<String> values=new java.util.LinkedHashSet<>();
+            for(int i=0;i<list.length();i++){String value=list.getString(i);if(value.contains("\n")||value.length()>1024)throw new IllegalArgumentException("Invalid setting list");values.add(value);}
+            edit.putString(key,String.join("\n",values));
         }
-        JSONArray optJSONArray2 = jSONObject.optJSONArray("profiles");
-        if (optJSONArray2 != null) {
-            ArrayList arrayList = new ArrayList();
-            for (int i2 = 0; i2 < optJSONArray2.length(); i2++) {
-                Profile fromJson2 = Profile.fromJson(optJSONArray2.getJSONObject(i2));
-                if (fromJson2 != null && !fromJson2.address.isEmpty()) {
-                    arrayList.add(fromJson2);
-                }
-            }
-            f.a(arrayList, null);
-            obj.f341a = arrayList.size();
-        }
-        f.h();
-        JSONObject optJSONObject = jSONObject.optJSONObject("settings");
-        if (optJSONObject != null) {
-            if (optJSONObject.has("routing_mode")) {
-                RulesActivity__ExternalSyntheticOutline0.j(sharedPreferences, "routing_mode", optJSONObject.optString("routing_mode"));
-            }
-            if (optJSONObject.has("remote_dns")) {
-                RulesActivity__ExternalSyntheticOutline0.j(sharedPreferences, "remote_dns", optJSONObject.optString("remote_dns"));
-            }
-            if (optJSONObject.has("direct_dns")) {
-                RulesActivity__ExternalSyntheticOutline0.j(sharedPreferences, "direct_dns", optJSONObject.optString("direct_dns"));
-            }
-            if (optJSONObject.has("mux_enabled")) {
-                RulesActivity__ExternalSyntheticOutline0.k(sharedPreferences, "mux_enabled", optJSONObject.optBoolean("mux_enabled"));
-            }
-            if (optJSONObject.has("mux_concurrency")) {
-                sharedPreferences.edit().putInt("mux_concurrency", optJSONObject.optInt("mux_concurrency", 8)).apply();
-            }
-            if (optJSONObject.has("vpn_mtu")) {
-                sharedPreferences.edit().putInt("vpn_mtu", optJSONObject.optInt("vpn_mtu", 1500)).apply();
-            }
-            if (optJSONObject.has("ipv6_enabled")) {
-                RulesActivity__ExternalSyntheticOutline0.k(sharedPreferences, "ipv6_enabled", optJSONObject.optBoolean("ipv6_enabled"));
-            }
-            if (optJSONObject.has("bypass_lan")) {
-                RulesActivity__ExternalSyntheticOutline0.k(sharedPreferences, "bypass_lan", optJSONObject.optBoolean("bypass_lan", true));
-            }
-            if (optJSONObject.has("log_level")) {
-                RulesActivity__ExternalSyntheticOutline0.j(sharedPreferences, "log_level", optJSONObject.optString("log_level"));
-            }
-            if (optJSONObject.has("domain_strategy")) {
-                RulesActivity__ExternalSyntheticOutline0.j(sharedPreferences, "domain_strategy", optJSONObject.optString("domain_strategy"));
-            }
-            if (optJSONObject.has("ping_url")) {
-                RulesActivity__ExternalSyntheticOutline0.j(sharedPreferences, "ping_url", optJSONObject.optString("ping_url"));
-            }
-            if (optJSONObject.has("lang")) {
-                RulesActivity__ExternalSyntheticOutline0.j(sharedPreferences, "lang", optJSONObject.optString("lang", "fa"));
-            }
-            if (optJSONObject.has("auto_switch")) {
-                RulesActivity__ExternalSyntheticOutline0.k(sharedPreferences, "auto_switch", optJSONObject.optBoolean("auto_switch", true));
-            }
-            if (optJSONObject.has("ping_threshold")) {
-                sharedPreferences.edit().putInt("ping_threshold", Math.max(200, optJSONObject.optInt("ping_threshold", 1200))).apply();
-            }
-            if (optJSONObject.has("health_interval")) {
-                sharedPreferences.edit().putInt("health_interval", Math.max(5, optJSONObject.optInt("health_interval", 15))).apply();
-            }
-            if (optJSONObject.has("data_limit_gb")) {
-                sharedPreferences.edit().putFloat("data_limit_gb", Math.max(0.0f, (float) optJSONObject.optDouble("data_limit_gb", 0.0d))).apply();
-            }
-            if (optJSONObject.has("connect_on_boot")) {
-                RulesActivity__ExternalSyntheticOutline0.k(sharedPreferences, "connect_on_boot", optJSONObject.optBoolean("connect_on_boot"));
-            }
-            if (optJSONObject.has("per_app_mode")) {
-                RulesActivity__ExternalSyntheticOutline0.j(sharedPreferences, "per_app_mode", optJSONObject.optString("per_app_mode", "off"));
-            }
-            if (optJSONObject.has("sub_auto_hours")) {
-                sharedPreferences.edit().putInt("sub_auto_hours", Math.max(0, optJSONObject.optInt("sub_auto_hours", 0))).apply();
-            }
-            if (optJSONObject.has("fragment_enabled")) {
-                RulesActivity__ExternalSyntheticOutline0.k(sharedPreferences, "fragment_enabled", optJSONObject.optBoolean("fragment_enabled"));
-            }
-            if (optJSONObject.has("fragment_packets")) {
-                RulesActivity__ExternalSyntheticOutline0.j(sharedPreferences, "fragment_packets", optJSONObject.optString("fragment_packets", "tlshello"));
-            }
-            if (optJSONObject.has("fragment_length")) {
-                RulesActivity__ExternalSyntheticOutline0.j(sharedPreferences, "fragment_length", optJSONObject.optString("fragment_length", "100-200"));
-            }
-            if (optJSONObject.has("fragment_interval")) {
-                RulesActivity__ExternalSyntheticOutline0.j(sharedPreferences, "fragment_interval", optJSONObject.optString("fragment_interval", "10-20"));
-            }
-            if (optJSONObject.has("kill_switch")) {
-                RulesActivity__ExternalSyntheticOutline0.k(sharedPreferences, "kill_switch", optJSONObject.optBoolean("kill_switch"));
-            }
-            if (optJSONObject.has("haptics")) {
-                RulesActivity__ExternalSyntheticOutline0.k(sharedPreferences, "haptics", optJSONObject.optBoolean("haptics", true));
-            }
-            if (optJSONObject.has("custom_rules")) {
-                RulesActivity__ExternalSyntheticOutline0.j(sharedPreferences, "custom_rules", optJSONObject.optString("custom_rules", "[]"));
-            }
-            JSONArray optJSONArray3 = optJSONObject.optJSONArray("per_app_list");
-            if (optJSONArray3 != null) {
-                ArrayList arrayList2 = new ArrayList();
-                for (int i3 = 0; i3 < optJSONArray3.length(); i3++) {
-                    arrayList2.add(optJSONArray3.getString(i3));
-                }
-                StringBuilder sb = new StringBuilder();
-                Iterator it = arrayList2.iterator();
-                while (it.hasNext()) {
-                    String str2 = (String) it.next();
-                    if (sb.length() > 0) {
-                        sb.append('\n');
-                    }
-                    sb.append(str2);
-                }
-                sharedPreferences.edit().putString("per_app_list", sb.toString()).apply();
-            }
-            JSONArray optJSONArrayFavs = optJSONObject.optJSONArray("favorites");
-            if (optJSONArrayFavs != null) {
-                java.util.HashSet<String> favSet = new java.util.HashSet<>();
-                for (int i4 = 0; i4 < optJSONArrayFavs.length(); i4++) {
-                    favSet.add(optJSONArrayFavs.getString(i4));
-                }
-                new Prefs(context).saveFavorites(favSet);
-            }
-            if (optJSONObject.has("domains_direct")) {
-                RulesActivity__ExternalSyntheticOutline0.j(sharedPreferences, "domains_direct", optJSONObject.optString("domains_direct", ""));
-            }
-            if (optJSONObject.has("domains_proxy")) {
-                RulesActivity__ExternalSyntheticOutline0.j(sharedPreferences, "domains_proxy", optJSONObject.optString("domains_proxy", ""));
-            }
-            if (optJSONObject.has("domains_block")) {
-                RulesActivity__ExternalSyntheticOutline0.j(sharedPreferences, "domains_block", optJSONObject.optString("domains_block", ""));
-            }
-            if (optJSONObject.has("buffer_size_kb")) {
-                sharedPreferences.edit().putInt("buffer_size_kb", Math.max(8, optJSONObject.optInt("buffer_size_kb", 512))).apply();
-            }
-            if (optJSONObject.has("health_strikes")) {
-                sharedPreferences.edit().putInt("health_strikes", Math.max(1, optJSONObject.optInt("health_strikes", 3))).apply();
-            }
-            if (optJSONObject.has("auto_wifi")) {
-                RulesActivity__ExternalSyntheticOutline0.j(sharedPreferences, "auto_wifi", optJSONObject.optString("auto_wifi", "none"));
-            }
-            if (optJSONObject.has("auto_cell")) {
-                RulesActivity__ExternalSyntheticOutline0.j(sharedPreferences, "auto_cell", optJSONObject.optString("auto_cell", "none"));
-            }
-            if (optJSONObject.has("trusted_wifi")) {
-                RulesActivity__ExternalSyntheticOutline0.j(sharedPreferences, "trusted_wifi", optJSONObject.optString("trusted_wifi", ""));
-            }
-            if (optJSONObject.has("shake_to_switch")) {
-                RulesActivity__ExternalSyntheticOutline0.k(sharedPreferences, "shake_to_switch", optJSONObject.optBoolean("shake_to_switch", false));
-            }
-            if (optJSONObject.has("chain_profile")) {
-                RulesActivity__ExternalSyntheticOutline0.j(sharedPreferences, "chain_profile", optJSONObject.optString("chain_profile", ""));
-            }
-        }
-        return obj;
+        // Import never turns on automatic VPN connection or LAN sharing unexpectedly.
+        edit.putBoolean("connect_on_boot",false).putBoolean("lan_proxy",false);
+        String selected=settings.optString("selected_profile","");if(!ids.contains(selected))edit.putString("selected_profile",profiles.isEmpty()?"":profiles.get(0).id);
+        ProfileStore store=ProfileStore.f(context);
+        store.restoreRecords(profiles,subs,root.optString("active_subscription",""));
+        if(!edit.commit())throw new IllegalStateException("Settings restore commit failed");
+        store.removeDuplicates(prefs);a result=new a();result.f341a=profiles.size();result.f342b=subs.size();return result;
     }
 
     /* renamed from: b */
@@ -209,7 +72,8 @@ public final class BackupManager {
         ProfileStore f = ProfileStore.f(context);
         Prefs prefs = new Prefs(context);
         JSONObject jSONObject = new JSONObject();
-        jSONObject.put("format", 1);
+        jSONObject.put("format", 2);
+        jSONObject.put("active_subscription",f.primarySubscription());
         jSONObject.put("app", "parvaz");
         jSONObject.put("exported", System.currentTimeMillis());
         JSONArray jSONArray = new JSONArray();
@@ -226,6 +90,7 @@ public final class BackupManager {
         jSONObject.put("subscriptions", jSONArray2);
         JSONObject jSONObject2 = new JSONObject();
         SharedPreferences sharedPreferences = prefs.f343a;
+        jSONObject2.put("selected_profile",sharedPreferences.getString("selected_profile",""));
         jSONObject2.put("routing_mode", sharedPreferences.getString("routing_mode", "iran_direct"));
         jSONObject2.put("remote_dns", sharedPreferences.getString("remote_dns", "https://1.1.1.1/dns-query,https://dns.google/dns-query"));
         jSONObject2.put("direct_dns", sharedPreferences.getString("direct_dns", "78.157.42.100"));

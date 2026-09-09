@@ -56,7 +56,9 @@ public final class LeakTester {
         }
 
         public boolean allPassed() {
-            return failures() == 0;
+            if(checks.isEmpty())return false;
+            for(Check check:checks)if(check.status!=PASS)return false;
+            return true;
         }
     }
 
@@ -75,10 +77,8 @@ public final class LeakTester {
         report.tunnelIp = tunnel.ip;
 
         String direct = directIpHint;
-        if (direct == null || direct.isEmpty()) {
-            IpLookup.Info d = IpLookup.direct();
-            direct = d.ip;
-        }
+        // Never create a supposedly direct baseline while VPN is already running.
+        if(direct==null)direct="";
         report.directIp = direct;
 
         report.checks.add(checkIp(direct, tunnel.ip));
@@ -102,7 +102,7 @@ public final class LeakTester {
             return new Check("ip", UNKNOWN, tunnelIp);
         }
         String detail = directIp + " \u2192 " + tunnelIp;
-        return new Check("ip", directIp.equals(tunnelIp) ? FAIL : PASS, detail);
+        return new Check("ip", directIp.equals(tunnelIp) ? UNKNOWN : PASS, detail);
     }
 
     /**
@@ -153,7 +153,8 @@ public final class LeakTester {
             boolean iranianResolver = geo.toLowerCase(java.util.Locale.US).contains("iran")
                     || geo.toUpperCase(java.util.Locale.US).startsWith("IR");
             String detail = geo.isEmpty() ? resolverIp : (resolverIp + " (" + geo + ")");
-            return new Check("dns", iranianResolver ? FAIL : PASS, detail);
+            // Resolver geography cannot establish the DNS route. Evidence only.
+            return new Check("dns", UNKNOWN, detail);
         } catch (Exception e) {
             return new Check("dns", UNKNOWN, "");
         } finally {
@@ -174,7 +175,8 @@ public final class LeakTester {
     private static Check checkIpv6() {
         HttpURLConnection conn = null;
         try {
-            conn = (HttpURLConnection) new URL("https://api6.ipify.org").openConnection();
+            conn = (HttpURLConnection) new URL("https://api6.ipify.org").openConnection(
+                    new Proxy(Proxy.Type.HTTP,new InetSocketAddress("127.0.0.1",10809)));
             conn.setConnectTimeout(4000);
             conn.setReadTimeout(4000);
             conn.setRequestProperty("User-Agent", "curl/8.0");
@@ -187,6 +189,7 @@ public final class LeakTester {
                     int read;
                     while ((read = in.read(buf)) > 0) {
                         sb.append(new String(buf, 0, read, "UTF-8"));
+                        if(sb.length()>4096)throw new java.io.IOException("Response limit");
                     }
                 } finally {
                     try {
@@ -198,13 +201,13 @@ public final class LeakTester {
                 String v6 = sb.toString().trim();
                 if (v6.contains(":")) {
                     // Reachable over v6 outside the tunnel.
-                    return new Check("ipv6", FAIL, v6);
+                    return new Check("ipv6", UNKNOWN, v6);
                 }
             }
-            return new Check("ipv6", PASS, "");
+            return new Check("ipv6", UNKNOWN, "");
         } catch (Exception e) {
-            // No IPv6 route at all is the safe outcome here.
-            return new Check("ipv6", PASS, "");
+            // A failed measurement proves nothing about IPv6 leakage.
+            return new Check("ipv6", UNKNOWN, "");
         } finally {
             if (conn != null) {
                 try {

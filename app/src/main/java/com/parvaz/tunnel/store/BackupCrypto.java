@@ -1,141 +1,59 @@
 package com.parvaz.tunnel.store;
 
 import android.util.Base64;
-
-import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
-import java.security.spec.KeySpec;
+import java.util.Arrays;
+import javax.crypto.*;
+import javax.crypto.spec.*;
 
-import javax.crypto.Cipher;
-import javax.crypto.SecretKey;
-import javax.crypto.SecretKeyFactory;
-import javax.crypto.spec.GCMParameterSpec;
-import javax.crypto.spec.PBEKeySpec;
-import javax.crypto.spec.SecretKeySpec;
-
-/**
- * Password-based encryption for exported backups.
- *
- * <p>A backup file is the single most sensitive artefact the app produces: it contains
- * every server address plus the UUIDs, passwords and REALITY keys needed to use them.
- * Users share these over Telegram and email and store them in cloud drives, so a
- * plaintext export is a credential leak waiting to happen.
- *
- * <p>The scheme is AES-256-GCM with a PBKDF2-HMAC-SHA256-derived key. GCM is
- * authenticated, so a wrong password or a corrupted file fails loudly at decrypt time
- * instead of silently yielding garbage. Salt and IV are random per export and stored in
- * the envelope, which is versioned so future formats stay readable.
- *
- * <p>Envelope (JSON-free, so it cannot be confused with a plaintext backup):
- * <pre>PARVAZ-ENC-1:&lt;base64 salt&gt;:&lt;base64 iv&gt;:&lt;base64 ciphertext&gt;</pre>
- */
+/** Authenticated, versioned backup. New files specify their KDF and work factor.
+ * Legacy v1 remains readable; its historical KDF ambiguity is resolved by GCM verification. */
 public final class BackupCrypto {
-
-    private BackupCrypto() {
+    public static final String MAGIC="PARVAZ-ENC-2";
+    private static final String LEGACY="PARVAZ-ENC-1";
+    private static final int ITERATIONS=210000,MAX_BYTES=16*1024*1024;
+    private BackupCrypto(){}
+    public static boolean isEncrypted(String text){return text!=null&&(text.trim().startsWith(MAGIC+":")||text.trim().startsWith(LEGACY+":"));}
+    public static String encrypt(String text,char[] password)throws Exception {
+        if(password==null||password.length==0||text==null)throw new IllegalArgumentException("Invalid backup input");
+        byte[] plain=text.getBytes(StandardCharsets.UTF_8);if(plain.length>MAX_BYTES)throw new IllegalArgumentException("Backup too large");
+        byte[] salt=new byte[16],iv=new byte[12];SecureRandom random=new SecureRandom();random.nextBytes(salt);random.nextBytes(iv);
+        String header=MAGIC+":PBKDF2-SHA256:"+ITERATIONS+":"+b64(salt)+":"+b64(iv);
+        Cipher c=Cipher.getInstance("AES/GCM/NoPadding");c.init(Cipher.ENCRYPT_MODE,derive(password,salt,ITERATIONS,"PBKDF2WithHmacSHA256"),new GCMParameterSpec(128,iv));
+        c.updateAAD(header.getBytes(StandardCharsets.US_ASCII));
+        try{return header+":"+b64(c.doFinal(plain));}finally{Arrays.fill(plain,(byte)0);}
     }
-
-    /** Magic prefix identifying an encrypted export. */
-    public static final String MAGIC = "PARVAZ-ENC-1";
-
-    private static final int SALT_BYTES = 16;
-    private static final int IV_BYTES = 12;          // GCM standard nonce length
-    private static final int TAG_BITS = 128;
-    private static final int KEY_BITS = 256;
-
-    /**
-     * PBKDF2 rounds. High enough to make offline guessing expensive, low enough that a
-     * budget phone finishes in well under a second.
-     */
-    private static final int ITERATIONS = 120000;
-
-    /** True when the text looks like output of {@link #encrypt}. */
-    public static boolean isEncrypted(String text) {
-        return text != null && text.trim().startsWith(MAGIC + ":");
-    }
-
-    /**
-     * Encrypts a backup document.
-     *
-     * @param plaintext the JSON backup
-     * @param password  user-chosen password; must not be empty
-     * @return the envelope string
-     * @throws Exception if the password is empty or crypto is unavailable
-     */
-    public static String encrypt(String plaintext, char[] password) throws Exception {
-        if (password == null || password.length == 0) {
-            throw new IllegalArgumentException("empty password");
+    public static String decrypt(String envelope,char[] password)throws Exception {
+        if(envelope==null||password==null||password.length==0||envelope.length()>MAX_BYTES*2)throw new IllegalArgumentException("Invalid backup");
+        String[] parts=envelope.trim().split(":",-1);
+        if(parts.length==6&&parts[0].equals(MAGIC)) {
+            if(!parts[1].equals("PBKDF2-SHA256"))throw new IllegalArgumentException("Unsupported backup KDF");
+            int rounds=Integer.parseInt(parts[2]);if(rounds<120000||rounds>1000000)throw new IllegalArgumentException("Invalid work factor");
+            byte[] salt=decode(parts[3],16),iv=decode(parts[4],12),cipher=decode(parts[5],-1);
+            String header=String.join(":",Arrays.copyOf(parts,5));
+            return decryptWith(cipher,password,salt,iv,rounds,"PBKDF2WithHmacSHA256",header);
         }
-        SecureRandom random = new SecureRandom();
-
-        byte[] salt = new byte[SALT_BYTES];
-        random.nextBytes(salt);
-        byte[] iv = new byte[IV_BYTES];
-        random.nextBytes(iv);
-
-        SecretKey key = deriveKey(password, salt);
-
-        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-        cipher.init(Cipher.ENCRYPT_MODE, key, new GCMParameterSpec(TAG_BITS, iv));
-        byte[] ciphertext = cipher.doFinal(utf8(plaintext));
-
-        return MAGIC + ":" + b64(salt) + ":" + b64(iv) + ":" + b64(ciphertext);
-    }
-
-    /**
-     * Decrypts an envelope produced by {@link #encrypt}.
-     *
-     * @throws IllegalArgumentException if the envelope is malformed
-     * @throws Exception                if the password is wrong or the file was tampered
-     *                                  with (GCM tag mismatch)
-     */
-    public static String decrypt(String envelope, char[] password) throws Exception {
-        if (envelope == null) {
-            throw new IllegalArgumentException("null backup");
+        if(parts.length==4&&parts[0].equals(LEGACY)) {
+            byte[] salt=decode(parts[1],16),iv=decode(parts[2],12),cipher=decode(parts[3],-1);
+            try{return decryptWith(cipher,password,salt,iv,120000,"PBKDF2WithHmacSHA256",null);}
+            catch(java.security.GeneralSecurityException e){return decryptWith(cipher,password,salt,iv,120000,"PBKDF2WithHmacSHA1",null);}
         }
-        String trimmed = envelope.trim();
-        String[] parts = trimmed.split(":");
-        if (parts.length != 4 || !MAGIC.equals(parts[0])) {
-            throw new IllegalArgumentException("not an encrypted Parvaz backup");
-        }
-
-        byte[] salt = unb64(parts[1]);
-        byte[] iv = unb64(parts[2]);
-        byte[] ciphertext = unb64(parts[3]);
-
-        SecretKey key = deriveKey(password, salt);
-
-        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-        cipher.init(Cipher.DECRYPT_MODE, key, new GCMParameterSpec(TAG_BITS, iv));
-        byte[] plain = cipher.doFinal(ciphertext);
-
-        try {
-            return new String(plain, "UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            return new String(plain);
-        }
+        throw new IllegalArgumentException("Unsupported backup format");
     }
-
-    private static SecretKey deriveKey(char[] password, byte[] salt) throws Exception {
-        KeySpec spec = new PBEKeySpec(password, salt, ITERATIONS, KEY_BITS);
-        SecretKeyFactory factory;
-        try {
-            factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-        } catch (java.security.NoSuchAlgorithmException e) {
-            factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
-        }
-        byte[] keyBytes = factory.generateSecret(spec).getEncoded();
-        return new SecretKeySpec(keyBytes, "AES");
+    private static String decryptWith(byte[] encrypted,char[] password,byte[] salt,byte[] iv,int rounds,String kdf,String aad)throws Exception{
+        Cipher c=Cipher.getInstance("AES/GCM/NoPadding");c.init(Cipher.DECRYPT_MODE,derive(password,salt,rounds,kdf),new GCMParameterSpec(128,iv));
+        if(aad!=null)c.updateAAD(aad.getBytes(StandardCharsets.US_ASCII));byte[] plain=c.doFinal(encrypted);
+        try{return StandardCharsets.UTF_8.newDecoder().decode(java.nio.ByteBuffer.wrap(plain)).toString();}finally{Arrays.fill(plain,(byte)0);}
     }
-
-    private static byte[] utf8(String s) throws UnsupportedEncodingException {
-        return (s == null ? "" : s).getBytes("UTF-8");
+    private static javax.crypto.SecretKey derive(char[] password,byte[] salt,int rounds,String algorithm)throws Exception{
+        PBEKeySpec spec=new PBEKeySpec(password,salt,rounds,256);byte[] key=null;
+        try{key=SecretKeyFactory.getInstance(algorithm).generateSecret(spec).getEncoded();return new SecretKeySpec(key,"AES");}
+        finally{spec.clearPassword();if(key!=null)Arrays.fill(key,(byte)0);}
     }
-
-    private static String b64(byte[] raw) {
-        return Base64.encodeToString(raw, Base64.NO_WRAP);
+    private static byte[] decode(String value,int length){
+        byte[] result=Base64.decode(value,Base64.NO_WRAP);
+        if(length>=0&&result.length!=length||length<0&&(result.length<16||result.length>MAX_BYTES+16))throw new IllegalArgumentException("Invalid backup field");return result;
     }
-
-    private static byte[] unb64(String s) {
-        return Base64.decode(s, Base64.NO_WRAP);
-    }
+    private static String b64(byte[] value){return Base64.encodeToString(value,Base64.NO_WRAP);}
 }
