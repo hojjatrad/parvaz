@@ -1,0 +1,31 @@
+name: Retry verified signed-release run
+on:
+  push:
+    branches: ['release/retry-v1.19']
+permissions:
+  contents: read
+  actions: write
+jobs:
+  retry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Retry the known failed release job, never an arbitrary workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.request
+          base='https://api.github.com/repos/hojjatrad/parvaz'
+          headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json','User-Agent':'Parvaz-release-retry'}
+          run_id=34311459935
+          with urllib.request.urlopen(urllib.request.Request(base+'/actions/runs/'+str(run_id),headers=headers),timeout=25) as response:
+              run=json.load(response)
+          if run['head_sha']!='b092484d436075799f59e9764861e25180d34acf' or run['head_branch']!='v1.19':
+              raise SystemExit('Unexpected run identity; retry refused.')
+          if run['status']!='completed' or run['conclusion']=='success':
+              raise SystemExit('Run is not a completed unsuccessful release; retry refused.')
+          request=urllib.request.Request(base+'/actions/runs/'+str(run_id)+'/rerun',data=b'',headers=headers,method='POST')
+          with urllib.request.urlopen(request,timeout=25) as response:
+              print('Retry accepted:',response.status)
+          PY
