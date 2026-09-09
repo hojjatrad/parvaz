@@ -83,7 +83,7 @@ public class SmartImportRegressionTest {
         store.f346b.add(a);store.f346b.add(b);store.f346b.add(other);store.h();ProfileStore.d=store;
         org.robolectric.android.controller.ActivityController<com.parvaz.tunnel.MainActivity> controller=org.robolectric.Robolectric.buildActivity(com.parvaz.tunnel.MainActivity.class).create();
         try {
-            com.parvaz.tunnel.MainActivity activity=controller.get();assertEquals(2,activity.z.getItemCount());
+            com.parvaz.tunnel.MainActivity activity=controller.get();activity.reload();assertEquals(2,activity.z.getItemCount());
             activity.new F().onClick(null,7);
             ((androidx.appcompat.app.AlertDialog)org.robolectric.shadows.ShadowDialog.getLatestDialog()).getButton(android.content.DialogInterface.BUTTON_POSITIVE).performClick();
             org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
