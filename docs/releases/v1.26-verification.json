@@ -1,0 +1,56 @@
+{
+  "version": "1.26",
+  "versionCode": 27,
+  "package": "com.parvaz.tunnel",
+  "tag": "v1.26",
+  "source_commit": "c3fc5dc6c187cf7af82553ba912dfc000f8b666a",
+  "tested_code_commit": "7ab8ef305e982dd27a2de6864e3fce35b3d83021",
+  "release": "https://github.com/hojjatrad/parvaz/releases/tag/v1.26",
+  "assets": [
+    {
+      "name": "Parvaz-1.26-arm64.apk",
+      "size": 45367464,
+      "sha256": "095bec144e95f5788aebd00d2a7e2b960cf952bb4d3a218072fa6abb095c2771",
+      "url": "https://github.com/hojjatrad/parvaz/releases/download/v1.26/Parvaz-1.26-arm64.apk"
+    },
+    {
+      "name": "Parvaz-1.26-source.tar.gz",
+      "size": 477392414,
+      "sha256": "672925cc6b9adfd11efb8479be460c31885b7d2daa3e018e84a50dd9f85c14ba",
+      "url": "https://github.com/hojjatrad/parvaz/releases/download/v1.26/Parvaz-1.26-source.tar.gz"
+    },
+    {
+      "name": "Parvaz-1.26.apk",
+      "size": 88646206,
+      "sha256": "3a3da34b17ea130f20c179ecd35661d61453e09e442035ded81cecef73e63bb0",
+      "url": "https://github.com/hojjatrad/parvaz/releases/download/v1.26/Parvaz-1.26.apk"
+    },
+    {
+      "name": "SHA256SUMS.txt",
+      "size": 262,
+      "sha256": "aa0eb7b4d4d557084d4f2d9487f861b27b4b760c06ad6cc390575af47129c2e6",
+      "url": "https://github.com/hojjatrad/parvaz/releases/download/v1.26/SHA256SUMS.txt"
+    }
+  ],
+  "certificate_sha256": "d1383b8f34da5d3299b13634de421487289d82c1bb47ec3bc7f20ae8d02fe500",
+  "core": "v26.9.9",
+  "native_validation_run": "https://github.com/hojjatrad/parvaz/actions/runs/34359855616",
+  "validation_run": "https://github.com/hojjatrad/parvaz/actions/runs/34359856376",
+  "publication_run": "https://github.com/hojjatrad/parvaz/actions/runs/34361823865",
+  "independent_public_asset_stream_hashes_verified": true,
+  "normal_latest_verified": true,
+  "limitations": [
+    "Emulator native tests use x86_64 Android API 29/34, not physical ARM phones or full-app TUN tests.",
+    "Emulator QUIC fixtures use a disposable self-signed certificate with explicit test-only opt-out; strict TLS and wrong-SNI rejection were tested separately on host.",
+    "No private panel, physical in-place installation, Kill Switch, roaming, Doze, force-kill, LAN client or actual device leak proof.",
+    "Full desktop configurations remain constrained; explicit DIRECT rules are preserved.",
+    "Backup restore spans separate settings/record commits, not one cross-file transaction.",
+    "16 KiB ELF checks cover the added engines and are not a physical-device installation test."
+  ],
+  "workspace": {
+    "apks_retained_locally": false,
+    "source_archive_retained_locally": false
+  },
+  "future_order_guard_against_published_source_verified": true,
+  "python_guard_tests": 25
+}
