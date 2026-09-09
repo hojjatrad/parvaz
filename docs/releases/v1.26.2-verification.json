@@ -1,0 +1,56 @@
+{
+  "version": "1.26.2",
+  "versionCode": 29,
+  "package": "com.parvaz.tunnel",
+  "tag": "v1.26.2",
+  "source_commit": "8f633fe7dee7a26083abcd728a21e8aa4b532e1c",
+  "tested_code_commit": "a16392e735d8cecad8d908e7c350f7de30407223",
+  "release": "https://github.com/hojjatrad/parvaz/releases/tag/v1.26.2",
+  "assets": [
+    {
+      "name": "Parvaz-1.26.2-arm64.apk",
+      "size": 45368292,
+      "sha256": "fad252fd17940207f19eed0bcb24da99fbb6aea051d874154bd06640022fc7f6",
+      "url": "https://github.com/hojjatrad/parvaz/releases/download/v1.26.2/Parvaz-1.26.2-arm64.apk"
+    },
+    {
+      "name": "Parvaz-1.26.2-source.tar.gz",
+      "size": 477416594,
+      "sha256": "27f0cebcca576f3216bcb06a3aeb11e5f3b330f1aff283795113f835779bb889",
+      "url": "https://github.com/hojjatrad/parvaz/releases/download/v1.26.2/Parvaz-1.26.2-source.tar.gz"
+    },
+    {
+      "name": "Parvaz-1.26.2.apk",
+      "size": 88647034,
+      "sha256": "4e57ef0c27543f1bd971afa70e366b99ff4542d2494bb822dd14acbf982b6f47",
+      "url": "https://github.com/hojjatrad/parvaz/releases/download/v1.26.2/Parvaz-1.26.2.apk"
+    },
+    {
+      "name": "SHA256SUMS.txt",
+      "size": 268,
+      "sha256": "ffcc28f6e7ede46888a3a32bc07567db132212cd54d96321607483bab287115c",
+      "url": "https://github.com/hojjatrad/parvaz/releases/download/v1.26.2/SHA256SUMS.txt"
+    }
+  ],
+  "certificate_sha256": "d1383b8f34da5d3299b13634de421487289d82c1bb47ec3bc7f20ae8d02fe500",
+  "core": "v26.9.9",
+  "reproduction_run": "https://github.com/hojjatrad/parvaz/actions/runs/34372522939",
+  "android_validation_run": "https://github.com/hojjatrad/parvaz/actions/runs/34373320823",
+  "platform_validation_run": "https://github.com/hojjatrad/parvaz/actions/runs/34373320797",
+  "validation_run": "https://github.com/hojjatrad/parvaz/actions/runs/34373320442",
+  "independent_public_asset_stream_hashes_verified": true,
+  "normal_latest_verified": true,
+  "python_guard_tests": 25,
+  "limitations": [
+    "Records and settings restore still use two separate commits: crash, power loss and disk-write failure between them are not solved by input-validation tests.",
+    "Robolectric validates parser/restore state preservation; its StoreCipher key provider is test-only and reopening ProfileStore is not a real cold process restart.",
+    "Real Android emulator probes exercise crypto/Keystore and metadata/certificate extraction using the previously published v1.26.1 APK fixture, not installation of this candidate.",
+    "Physical ARM devices, in-place installation, private panels, full TUN/Kill Switch, real DNS/IPv6 leaks, roaming, Doze/battery and LAN clients remain unverified."
+  ],
+  "workspace": {
+    "apks_retained_locally": false,
+    "source_archive_retained_locally": false
+  },
+  "publication_run": "https://github.com/hojjatrad/parvaz/actions/runs/34375220210",
+  "future_order_guard_against_published_source_verified": true
+}
