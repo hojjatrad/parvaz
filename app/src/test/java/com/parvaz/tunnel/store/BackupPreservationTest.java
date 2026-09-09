@@ -83,6 +83,13 @@ public class BackupPreservationTest {
    assertEquals(2,store.e().size());assertEquals("active-source",store.primarySubscription());
   }
  }
+ @Test public void validatedNonDefaultPortIsThePortActuallyRestored()throws Exception {
+  for(Object port:new Object[]{8443,"8443","۸۴۴۳",8443.0,"8.443e3"}){
+   JSONObject root=new JSONObject(good);root.getJSONArray("profiles").getJSONObject(1).put("port",port);
+   BackupManager.a(context,root.toString());assertEquals(8443,store.getById("owned-fixture").port);
+   assertEquals(8443,new ProfileStore(context).getById("owned-fixture").port);
+  }
+ }
  @Test public void lateInvalidSubscriptionPreservesEverything()throws Exception {
   JSONObject root=new JSONObject(good);root.getJSONArray("subscriptions").getJSONObject(1).put("id","active-source");reject(root.toString());
   root=new JSONObject(good);root.getJSONArray("subscriptions").getJSONObject(1).put("url","file:///not-a-subscription");reject(root.toString());

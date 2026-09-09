@@ -45,8 +45,8 @@ public final class BackupManager {
             JSONObject node=nodes.getJSONObject(i);
             // Profile.fromJson() normalizes invalid ports to 443 for stored legacy data.
             // A user-selected backup must not silently repair an explicit corrupt value.
-            validateBackupPort(node);
-            Profile p=Profile.fromJson(node);if(p==null||!com.parvaz.tunnel.config.LinkParser.valid(p)||!ids.add(p.id))throw new IllegalArgumentException("Invalid profile");
+            int restoredPort=backupPort(node);
+            Profile p=Profile.fromJson(node);p.port=restoredPort;if(!com.parvaz.tunnel.config.LinkParser.valid(p)||!ids.add(p.id))throw new IllegalArgumentException("Invalid profile");
             profiles.add(p);
         }
         JSONObject settings=root.optJSONObject("settings");if(settings==null)settings=new JSONObject();
@@ -71,8 +71,8 @@ public final class BackupManager {
         store.removeDuplicates(prefs);a result=new a();result.f341a=profiles.size();result.f342b=subs.size();return result;
     }
 
-    private static void validateBackupPort(JSONObject node)throws JSONException {
-        if(!node.has("port"))return; // Retain the historical default for omitted fields.
+    private static int backupPort(JSONObject node)throws JSONException {
+        if(!node.has("port"))return 443; // Retain the historical default for omitted fields.
         Object raw=node.get("port");
         if(!(raw instanceof Number)&&!(raw instanceof String))throw new IllegalArgumentException("Invalid backup profile port");
         String text=raw.toString().trim();
@@ -80,6 +80,7 @@ public final class BackupManager {
         try {
             int port=new java.math.BigDecimal(text).intValueExact();
             if(port<1||port>65535)throw new ArithmeticException();
+            return port;
         }catch(NumberFormatException|ArithmeticException invalid){throw new IllegalArgumentException("Invalid backup profile port");}
     }
 
