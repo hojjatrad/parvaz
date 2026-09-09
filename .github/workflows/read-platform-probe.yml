@@ -14,7 +14,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          python3 - <<'PY'
+          python3 -u <<'PY'
           import urllib.request,urllib.error,os,json,time
           base='https://api.github.com/repos/hojjatrad/parvaz'
           headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json','User-Agent':'Parvaz-probe-results'}
@@ -22,13 +22,13 @@ jobs:
               with urllib.request.urlopen(urllib.request.Request(base+path,headers=headers),timeout=30) as r:return json.load(r)
           class NoRedirect(urllib.request.HTTPRedirectHandler):
               def redirect_request(self,*args,**kwargs):return None
-          for attempt in range(18):
+          for attempt in range(1):
               data=api('/actions/runs/34325917804/jobs')
               for job in data['jobs']:
                   active=[s['name'] for s in job['steps'] if s['status']=='in_progress']
                   print('::notice title=PROBE_PROGRESS::'+job['name']+' '+job['status']+' '+str(job['conclusion'])+' '+str(active))
               if all(j['status']=='completed' for j in data['jobs']):break
-              time.sleep(60)
+              # One-shot read; no polling or modifications.
           for job in data['jobs']:
               if job['status']!='completed':continue
               request=urllib.request.Request(base+'/actions/jobs/'+str(job['id'])+'/logs',headers=headers)
