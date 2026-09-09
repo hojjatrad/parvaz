@@ -1,0 +1,78 @@
+{
+  "release": "v1.22",
+  "version_code": 23,
+  "application_id": "com.parvaz.tunnel",
+  "tag_source": "c00953bce9a27bde357e4cead3117e48a356765f",
+  "permanent_certificate_sha256": "d1383b8f34da5d3299b13634de421487289d82c1bb47ec3bc7f20ae8d02fe500",
+  "core": {
+    "repository": "2dust/AndroidLibXrayLite",
+    "tag": "v26.9.9",
+    "asset": "libv2ray.aar",
+    "url": "https://github.com/2dust/AndroidLibXrayLite/releases/download/v26.9.9/libv2ray.aar",
+    "sha256": "9ecf4c921568d8f4cb8550d3bafe08ff6f1d1984f45a6ad183dcdf52ee9302de"
+  },
+  "host_assertions": 251,
+  "release_python_tests": 23,
+  "robolectric_sdks": [
+    29,
+    34
+  ],
+  "checks": [
+    {
+      "name": "Original archive behavior reproduced: SDK29 metadata present but signingInfo null; SDK34 normal",
+      "run": "34327073956",
+      "status": "expected_failure_on_sdk29"
+    },
+    {
+      "name": "Focused native reproduction report",
+      "run": "34327679873",
+      "status": "success"
+    },
+    {
+      "name": "Production archive helper, real published APK and pinned certificate on actual Android29/34 emulators",
+      "run": "34328343489",
+      "status": "success"
+    },
+    {
+      "name": "Final source unit tests and signed validation",
+      "run": "34328435396",
+      "status": "success"
+    },
+    {
+      "name": "Exact tag tests, signing and publication",
+      "run": "34328849004",
+      "status": "success"
+    },
+    {
+      "name": "Installed updater API and release-order guard, read-only",
+      "run": "34329235165",
+      "status": "success"
+    }
+  ],
+  "assets": [
+    {
+      "name": "Parvaz-1.22-arm64.apk",
+      "url": "https://github.com/hojjatrad/parvaz/releases/download/v1.22/Parvaz-1.22-arm64.apk",
+      "bytes": 15860743,
+      "sha256": "ddccbda82740a07e8a2e79976f02a673fcce9079135c99100d93b4f29db9d010",
+      "independently_streamed": true
+    },
+    {
+      "name": "Parvaz-1.22.apk",
+      "url": "https://github.com/hojjatrad/parvaz/releases/download/v1.22/Parvaz-1.22.apk",
+      "bytes": 28430492,
+      "sha256": "7d49f1af59662ec3938bf0191849244704fa97000e12f639f2cd7abcd6c1cfb6",
+      "independently_streamed": true
+    }
+  ],
+  "latest_verified": true,
+  "draft": false,
+  "prerelease": false,
+  "limitations": [
+    "The user reported WRONG_UPDATE_PACKAGE. Its exact device-specific cause was not reproduced. The stock Android10 certificate bug would trigger UPDATE_SIGNATURE_MISMATCH in the prior app; the error codes were split in 1.22.",
+    "The native probe parses and verifies the existing real 1.21 APK with the new production helper; it does not install/run the ARM VPN on an x86 emulator.",
+    "Private subscription and actual phone were unavailable. TIMEOUT plus fetched=0 establishes a failed fetch, not a parser failure.",
+    "Own-tunnel routing is corrected and tested with a loopback proxy; not every timeout is confirmed fixed.",
+    "Manual APK installation over the existing app may be required once, since the old installed updater cannot execute its replacement code before installation."
+  ]
+}
