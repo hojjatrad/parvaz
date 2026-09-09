@@ -1,0 +1,60 @@
+name: Verify published in-app update channel
+on:
+  push:
+    branches: ['ci/verify-updater-v1.24']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Test future release-order guards without signing secrets
+        run: python3 -m unittest discover -s tools/release -p 'test_*.py'
+      - name: Verify the same latest endpoint used by installed applications
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import json,os,re,urllib.request
+          url='https://api.github.com/repos/hojjatrad/parvaz/releases/latest'
+          request=urllib.request.Request(url,headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json','User-Agent':'Parvaz-update-channel-verification'})
+          with urllib.request.urlopen(request,timeout=30) as response: release=json.load(response)
+          assert release['tag_name']=='v1.24' and not release['draft'] and not release['prerelease'], 'Unexpected updater release'
+          assets={a['name']:a for a in release['assets']}
+          assert set(assets)=={'Parvaz-1.24-arm64.apk','Parvaz-1.24.apk','SHA256SUMS.txt'}
+          sums_url='https://github.com/hojjatrad/parvaz/releases/download/v1.24/SHA256SUMS.txt'
+          with urllib.request.urlopen(sums_url,timeout=30) as response: text=response.read(4096).decode()
+          sums={line.split()[1]:line.split()[0] for line in text.splitlines() if line.strip()}
+          for name in ('Parvaz-1.24-arm64.apk','Parvaz-1.24.apk'):
+              a=assets[name]
+              assert a['browser_download_url']=='https://github.com/hojjatrad/parvaz/releases/download/v1.24/'+name
+              assert 0<a['size']<=128*1024*1024
+              assert re.fullmatch(r'sha256:[0-9a-f]{64}',a.get('digest',''))
+              assert a['digest']=='sha256:'+sums[name]
+          print('::notice title=UPDATE_CHANNEL_VERIFIED::The installed updater latest endpoint returns v1.24, not a draft/prerelease, with both expected APKs and matching SHA-256 metadata.')
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as out:
+              out.write('Verified the installed updater endpoint: **v1.24**, normal latest release. Both APK URLs, sizes and API SHA-256 digests match the published checksum file. Android installation still requires user approval.\n')
+          PY
+      - name: Exercise future release-order guard against the published source (read only)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PYCODE'
+          import sys,tempfile,json
+          from pathlib import Path
+          sys.path.insert(0,'tools/release')
+          import check_release_order as guard
+          with tempfile.TemporaryDirectory() as d:
+              root=Path(d);(root/'app').mkdir();(root/'tools/release').mkdir(parents=True)
+              (root/'tools/release/core-lock.json').write_text(Path('tools/release/core-lock.json').read_text())
+              (root/'app/build.gradle').write_text('versionName "1.24.1"\nversionCode 26\n')
+              guard.ROOT=root;guard.main()
+              (root/'app/build.gradle').write_text('versionName "1.24"\nversionCode 25\n')
+              try:guard.main()
+              except ValueError:print('::notice title=ROLLBACK_GUARD_VERIFIED::A newer synthetic candidate passes; an equal published version is rejected. No publication or repository write was attempted.')
+              else:raise AssertionError('Equal version must be rejected')
+          PYCODE
