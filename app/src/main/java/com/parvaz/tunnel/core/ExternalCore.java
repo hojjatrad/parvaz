@@ -13,6 +13,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * A compiled PR_SET_PDEATHSIG guard prevents children surviving the Android app process. */
 public final class ExternalCore implements AutoCloseable {
  private static final Semaphore CAPACITY=new Semaphore(3);
+ // Linux PDEATHSIG follows the thread that forked the child, not just its process.
+ // Never fork on a short-lived VPN startup/measurement caller. This private daemon
+ // stays alive for the app process; parent death still kills native children.
+ private static final ExecutorService LAUNCHER=Executors.newSingleThreadExecutor(task->{
+  Thread thread=new Thread(task,"parvaz-engine-parent");thread.setDaemon(true);return thread;
+ });
  private final AtomicBoolean closed=new AtomicBoolean();
  private Process process;private File directory;private boolean permit;
  public int port,dnsPort;public String username="parvaz",password;
@@ -28,7 +34,7 @@ public final class ExternalCore implements AutoCloseable {
    ProcessBuilder builder=new ProcessBuilder(command).directory(session.directory).redirectErrorStream(true);
    builder.environment().keySet().removeIf(k->k.startsWith("CLASH_")||k.startsWith("SING_BOX_")||k.startsWith("SSL_CERT_"));builder.environment().put("GOMAXPROCS","2");
    configureSystemTrust(builder,session.directory);
-   session.process=builder.start();
+   LAUNCHER.submit(()->{session.launch(builder);return null;}).get();
    Thread drain=new Thread(()->{try(InputStream in=session.process.getInputStream()){byte[] buffer=new byte[4096];while(in.read(buffer)!=-1){/* Private engine logs are deliberately not published. */}}catch(IOException ignored){}},"parvaz-engine-output");drain.setDaemon(true);drain.start();
    try(OutputStream input=session.process.getOutputStream()){input.write(EngineConfig.serialize(EngineConfig.build(profile,session.port,session.dnsPort,session.username,session.password),profile.protocol).getBytes(StandardCharsets.UTF_8));}
    long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(30);boolean ready=false;
@@ -38,6 +44,13 @@ public final class ExternalCore implements AutoCloseable {
    if(!ready||!session.alive())throw new IOException("Native engine startup timeout");
    Thread monitor=new Thread(()->{try{session.process.waitFor();if(!session.closed.get()){session.close();if(failure!=null)failure.run();}}catch(InterruptedException ignored){Thread.currentThread().interrupt();}},"parvaz-engine-exit");monitor.setDaemon(true);monitor.start();return session;
   }catch(Exception e){session.close();throw e;}
+ }
+ // Coordinate an interrupted caller's close() with a queued/in-flight launch:
+ // no child may be created after session cleanup, and a completed fork is owned
+ // by this session even if the caller never receives its Future result.
+ private synchronized void launch(ProcessBuilder builder)throws IOException {
+  if(closed.get())throw new IOException("Engine session closed before launch");
+  process=builder.start();
  }
  /** Use Android's trust manager rather than Go's legacy filesystem CA paths.
   * This also covers Conscrypt's Android 14+ APEX trust store. Only public CA
@@ -63,7 +76,7 @@ public final class ExternalCore implements AutoCloseable {
  public Profile relay(Profile original){Profile p;try{p=Profile.fromJson(original.toJson());}catch(org.json.JSONException e){throw new IllegalArgumentException("Invalid relay profile",e);}p.protocol="socks";p.address="127.0.0.1";p.port=port;p.uuid=username;p.quicKey=password;p.security="";p.network="tcp";p.sni="";p.host="";p.rawJson="";return p;}
  private boolean alive(){try{process.exitValue();return false;}catch(IllegalThreadStateException stillRunning){return true;}}
  public boolean isRunning(){return !closed.get()&&process!=null&&alive();}
- @Override public void close(){if(closed.getAndSet(true))return;if(process!=null){process.destroy();if(android.os.Build.VERSION.SDK_INT>=26){try{if(!process.waitFor(1500,TimeUnit.MILLISECONDS))process.destroyForcibly();}catch(InterruptedException e){process.destroyForcibly();Thread.currentThread().interrupt();}}}erase(directory);if(permit){permit=false;CAPACITY.release();}password=null;}
+ @Override public synchronized void close(){if(closed.getAndSet(true))return;if(process!=null){process.destroy();if(android.os.Build.VERSION.SDK_INT>=26){try{if(!process.waitFor(1500,TimeUnit.MILLISECONDS))process.destroyForcibly();}catch(InterruptedException e){process.destroyForcibly();Thread.currentThread().interrupt();}}}erase(directory);if(permit){permit=false;CAPACITY.release();}password=null;}
  private static void erase(File directory){if(directory==null)return;File[] files=directory.listFiles();if(files!=null)for(File file:files){try{if(file.getCanonicalFile().getParentFile().equals(directory.getCanonicalFile())){if(file.isDirectory())erase(file);else file.delete();}}catch(IOException ignored){}}directory.delete();}
  public static void cleanOrphans(Context context){File[] files=context.getNoBackupFilesDir().listFiles();if(files!=null)for(File file:files)if(file.isDirectory()&&file.getName().startsWith("engine-session-"))erase(file);}
 }
