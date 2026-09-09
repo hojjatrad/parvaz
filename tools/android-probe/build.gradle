@@ -1,0 +1,17 @@
+plugins { id 'com.android.application' version '8.5.2' }
+android {
+    namespace 'com.parvaz.probe'
+    compileSdk 34
+    defaultConfig {
+        applicationId 'com.parvaz.probe'
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName '1.0'
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+    }
+}
+dependencies {
+    androidTestImplementation 'androidx.test:runner:1.5.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+}
