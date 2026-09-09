@@ -40,6 +40,53 @@ public class NativeEngineTest {
    }finally{echo.join(3500);}
   }
  }
+ private void exchangeUdp(ExternalCore core)throws Exception {
+  try(java.net.DatagramSocket target=new java.net.DatagramSocket(0,java.net.InetAddress.getByName("127.0.0.1"))){
+   target.setSoTimeout(3500);
+   Thread echo=new Thread(()->{try{byte[] bytes=new byte[64];java.net.DatagramPacket packet=new java.net.DatagramPacket(bytes,bytes.length);target.receive(packet);target.send(packet);}catch(Exception ignored){}});echo.setDaemon(true);echo.start();
+   try(java.net.Socket control=authenticated(core);java.net.DatagramSocket udp=new java.net.DatagramSocket()){
+    control.getOutputStream().write(new byte[]{5,3,0,1,0,0,0,0,0,0});int relay=readAddress(control),port=target.getLocalPort();udp.setSoTimeout(3500);
+    byte[] bytes=new byte[]{0,0,0,1,127,0,0,1,(byte)(port>>8),(byte)port,85,68,80};udp.send(new java.net.DatagramPacket(bytes,bytes.length,java.net.InetAddress.getByName("127.0.0.1"),relay));
+    java.net.DatagramPacket reply=new java.net.DatagramPacket(new byte[128],128);udp.receive(reply);int n=reply.getLength();assertTrue(n>=3);assertEquals(85,reply.getData()[n-3]);assertEquals(68,reply.getData()[n-2]);assertEquals(80,reply.getData()[n-1]);
+   }finally{echo.join(4000);}
+  }
+ }
+ private String asset(Context context,String name)throws Exception {
+  try(java.io.InputStream in=context.getAssets().open(name)){java.io.ByteArrayOutputStream out=new java.io.ByteArrayOutputStream();byte[] bytes=new byte[4096];int n;while((n=in.read(bytes))!=-1)out.write(bytes,0,n);return out.toString("UTF-8");}
+ }
+ @Test public void hysteria2AndroidTcpAndUdp()throws Exception {assertQuic("hysteria2");}
+ @Test public void tuicAndroidTcpAndUdp()throws Exception {assertQuic("tuic");}
+ private void assertQuic(String protocol)throws Exception {
+  Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();int port;
+  try(java.net.DatagramSocket reserve=new java.net.DatagramSocket(0,java.net.InetAddress.getByName("127.0.0.1"))){port=reserve.getLocalPort();}
+  org.json.JSONObject user=new org.json.JSONObject().put("password","integration-only-secret");
+  if(protocol.equals("tuic"))user.put("uuid","11111111-1111-4111-8111-111111111111");
+  org.json.JSONObject tls=new org.json.JSONObject().put("enabled",true).put("alpn",new org.json.JSONArray().put("h3")).put("certificate",new org.json.JSONArray().put(asset(context,"fixture-cert.pem"))).put("key",new org.json.JSONArray().put(asset(context,"fixture-key.pem")));
+  org.json.JSONObject inbound=new org.json.JSONObject().put("type",protocol).put("listen","127.0.0.1").put("listen_port",port).put("users",new org.json.JSONArray().put(user)).put("tls",tls);
+  String config=new org.json.JSONObject().put("log",new org.json.JSONObject().put("disabled",true)).put("inbounds",new org.json.JSONArray().put(inbound)).put("outbounds",new org.json.JSONArray().put(new org.json.JSONObject().put("type","direct"))).toString();
+  java.io.File executable=new java.io.File(context.getApplicationInfo().nativeLibraryDir,"libsingbox.so");
+  Process server=new ProcessBuilder(executable.toString(),"run","-D",context.getNoBackupFilesDir().toString(),"-c","stdin").redirectErrorStream(true).start();
+  Thread drain=new Thread(()->{try(java.io.InputStream in=server.getInputStream()){byte[] bytes=new byte[4096];while(in.read(bytes)!=-1){}}catch(Exception ignored){}});drain.setDaemon(true);drain.start();ExternalCore client=null;
+  try{
+   try(java.io.OutputStream out=server.getOutputStream()){out.write(config.getBytes("UTF-8"));}
+   long deadline=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(8);boolean ready=false;
+   while(System.nanoTime()<deadline){
+    assertTrue("Fixture QUIC server exited",server.isAlive());
+    try(java.net.DatagramSocket check=new java.net.DatagramSocket(null)){check.bind(new java.net.InetSocketAddress("127.0.0.1",port));}
+    catch(java.net.BindException bound){ready=true;break;}
+    Thread.sleep(30);
+   }
+   assertTrue("Fixture QUIC server did not bind",ready);
+   Profile p=new Profile();p.protocol=protocol;p.address="127.0.0.1";p.port=port;p.uuid=protocol.equals("tuic")?"11111111-1111-4111-8111-111111111111":"integration-only-secret";p.quicKey="integration-only-secret";p.sni="localhost";p.alpn="h3";p.headerType="native";
+   // This self-signed emulator fixture tests transport only. Host fixtures separately
+   // test strict certificate verification and wrong-SNI rejection; app defaults stay strict.
+   p.allowInsecure=true;
+   client=ExternalCore.start(context,p,null);exchangeTcp(client);exchangeUdp(client);
+   server.destroy();assertTrue(server.waitFor(5,java.util.concurrent.TimeUnit.SECONDS));
+   boolean blocked=false;try{exchangeTcp(client);}catch(java.io.IOException expected){blocked=true;}assertTrue("Unexpected direct fallback",blocked);
+   android.util.Log.i("ParvazProbe","ANDROID_QUIC_OK "+protocol+" TCP UDP server-down-blocked SDK="+android.os.Build.VERSION.SDK_INT);
+  }finally{if(client!=null)client.close();server.destroyForcibly();server.waitFor(3,java.util.concurrent.TimeUnit.SECONDS);}
+ }
  private void assertRuntime(String kind)throws Exception {
   Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
    Profile p=new Profile();p.protocol=kind;p.rawJson=kind.equals("full-singbox")?"{\"outbounds\":[{\"type\":\"direct\"}]}":"{\"proxies\":[],\"rules\":[\"MATCH,DIRECT\"]}";

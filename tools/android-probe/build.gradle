@@ -34,6 +34,7 @@ def prepareProbeSources=tasks.register('prepareProbeSources',Sync){
 tasks.named('preBuild').configure { dependsOn prepareProbeSources }
 if(project.hasProperty('nativeProbe')){
     android.sourceSets.main.jniLibs.srcDirs=['../../.cache/native-probe']
+    android.sourceSets.main.assets.srcDirs=['../../.cache/native-test-assets']
     android.packagingOptions.jniLibs.useLegacyPackaging=true
 }else{
     android.sourceSets.main.java.exclude 'com/parvaz/tunnel/config/FullConfig.java'
