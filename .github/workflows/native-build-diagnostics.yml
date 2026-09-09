@@ -1,0 +1,41 @@
+name: Read public native-build failure diagnostics
+on:
+  push:
+    branches: ['ci/native-build-diagnostics']
+permissions:
+  actions: read
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read only the explicitly selected native-only job
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import os,json,urllib.request,urllib.error
+          base='https://api.github.com/repos/hojjatrad/parvaz'
+          headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json','User-Agent':'Parvaz-native-diagnostics'}
+          def api(path):
+              with urllib.request.urlopen(urllib.request.Request(base+path,headers=headers),timeout=30) as response:return json.load(response)
+          run=34349324827
+          info=api('/actions/runs/'+str(run))
+          assert info['path']=='.github/workflows/native-engines.yml'
+          jobs=api('/actions/runs/'+str(run)+'/jobs')['jobs']
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self,*args,**kwargs):return None
+          opener=urllib.request.build_opener(NoRedirect())
+          for job in jobs:
+              if job['conclusion']!='failure':continue
+              print('::notice title=NATIVE_FAILED_STEP::'+str([s['name'] for s in job['steps'] if s.get('conclusion')=='failure']))
+              try:
+                  with opener.open(urllib.request.Request(base+'/actions/jobs/'+str(job['id'])+'/logs',headers=headers),timeout=30) as r:data=r.read()
+              except urllib.error.HTTPError as e:
+                  if e.code not in (301,302,303,307,308):raise
+                  location=e.headers['Location'];assert location.startswith('https://')
+                  with urllib.request.urlopen(location,timeout=30) as r:data=r.read()
+              lines=data.decode(errors='replace').splitlines()
+              text='\n'.join(lines[-90:])[-18000:]
+              print('::notice title=NATIVE_BUILD_DIAGNOSTICS::'+text.replace('%','%25').replace('\r','%0D').replace('\n','%0A'))
+          PY
