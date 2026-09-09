@@ -20,13 +20,14 @@ public final class ExternalCore implements AutoCloseable {
   ExternalCore session=new ExternalCore();
   try{
    if(!CAPACITY.tryAcquire(30,TimeUnit.SECONDS))throw new IOException("Engine capacity reached");session.permit=true;
-   session.port=freePort();session.dnsPort=freePort();session.password=UUID.randomUUID().toString()+UUID.randomUUID();
+   session.port=freePort();do{session.dnsPort=freePort();}while(session.dnsPort==session.port);session.password=UUID.randomUUID().toString()+UUID.randomUUID();
    session.directory=new File(context.getNoBackupFilesDir(),"engine-session-"+UUID.randomUUID());if(!session.directory.mkdir())throw new IOException("Private runtime unavailable");
    String name=profile.protocol.equals("full-clash")?"mihomo":"singbox";
    File executable=new File(context.getApplicationInfo().nativeLibraryDir,"lib"+name+".so");if(!executable.isFile()||!executable.canExecute())throw new IOException("Bundled engine unavailable");
    List<String> command=name.equals("mihomo")?Arrays.asList(executable.toString(),"-d",session.directory.toString(),"-f","-"):Arrays.asList(executable.toString(),"run","-D",session.directory.toString(),"-c","stdin");
    ProcessBuilder builder=new ProcessBuilder(command).directory(session.directory).redirectErrorStream(true);
    builder.environment().keySet().removeIf(k->k.startsWith("CLASH_")||k.startsWith("SING_BOX_")||k.startsWith("SSL_CERT_"));builder.environment().put("GOMAXPROCS","2");
+   configureSystemTrust(builder,session.directory);
    session.process=builder.start();
    Thread drain=new Thread(()->{try(InputStream in=session.process.getInputStream()){byte[] buffer=new byte[4096];while(in.read(buffer)!=-1){/* Private engine logs are deliberately not published. */}}catch(IOException ignored){}},"parvaz-engine-output");drain.setDaemon(true);drain.start();
    try(OutputStream input=session.process.getOutputStream()){input.write(EngineConfig.serialize(EngineConfig.build(profile,session.port,session.dnsPort,session.username,session.password),profile.protocol).getBytes(StandardCharsets.UTF_8));}
@@ -37,6 +38,22 @@ public final class ExternalCore implements AutoCloseable {
    if(!ready||!session.alive())throw new IOException("Native engine startup timeout");
    Thread monitor=new Thread(()->{try{session.process.waitFor();if(!session.closed.get()){session.close();if(failure!=null)failure.run();}}catch(InterruptedException ignored){Thread.currentThread().interrupt();}},"parvaz-engine-exit");monitor.setDaemon(true);monitor.start();return session;
   }catch(Exception e){session.close();throw e;}
+ }
+ /** Use Android's trust manager rather than Go's legacy filesystem CA paths.
+  * This also covers Conscrypt's Android 14+ APEX trust store. Only public CA
+  * certificates are exported; no private/device/signing keys are accessed. */
+ private static void configureSystemTrust(ProcessBuilder builder,File directory)throws Exception {
+  javax.net.ssl.TrustManagerFactory factory=javax.net.ssl.TrustManagerFactory.getInstance(javax.net.ssl.TrustManagerFactory.getDefaultAlgorithm());
+  factory.init((java.security.KeyStore)null);StringBuilder pem=new StringBuilder();
+  for(javax.net.ssl.TrustManager manager:factory.getTrustManagers())if(manager instanceof javax.net.ssl.X509TrustManager){
+   for(java.security.cert.X509Certificate certificate:((javax.net.ssl.X509TrustManager)manager).getAcceptedIssuers()){
+    pem.append("-----BEGIN CERTIFICATE-----\n").append(android.util.Base64.encodeToString(certificate.getEncoded(),android.util.Base64.NO_WRAP)).append("\n-----END CERTIFICATE-----\n");
+   }
+  }
+  if(pem.length()==0)throw new IOException("Android system trust store unavailable");
+  File trust=new File(directory,"trust-"+UUID.randomUUID());if(!trust.mkdir())throw new IOException("Private trust directory unavailable");
+  File bundle=new File(trust,"roots.pem");try(OutputStream out=new FileOutputStream(bundle)){out.write(pem.toString().getBytes(StandardCharsets.US_ASCII));}
+  builder.environment().put("SSL_CERT_FILE",bundle.toString());builder.environment().put("SSL_CERT_DIR",trust.toString());
  }
  private static int freePort()throws IOException {try(ServerSocket s=new ServerSocket(0,1,InetAddress.getByName("127.0.0.1"))){return s.getLocalPort();}}
  private void authenticate()throws IOException {
