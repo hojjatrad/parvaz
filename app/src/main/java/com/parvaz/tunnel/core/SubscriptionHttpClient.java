@@ -57,8 +57,14 @@ public final class SubscriptionHttpClient {
     }
 
     static Response fetch(String input, ConnectionFactory factory) throws IOException {
+        return fetch(input,factory,0);
+    }
+    public static Response fetch(String input,int format) throws IOException {
+        return fetch(input,url -> (HttpURLConnection)url.openConnection(),format);
+    }
+    static Response fetch(String input,ConnectionFactory factory,int format) throws IOException {
         try {
-            return fetchInternal(input, factory);
+            return fetchInternal(input, factory,format);
         } catch (FetchException e) {
             throw e;
         } catch (SSLException e) {
@@ -71,7 +77,7 @@ public final class SubscriptionHttpClient {
         }
     }
 
-    private static Response fetchInternal(String input, ConnectionFactory factory) throws IOException {
+    private static Response fetchInternal(String input, ConnectionFactory factory,int format) throws IOException {
         URL current = checkedUrl(input);
         long deadline = System.nanoTime() + BUDGET_NANOS;
         Set<String> visited = new HashSet<>();
@@ -84,9 +90,12 @@ public final class SubscriptionHttpClient {
                 conn.setReadTimeout(remaining(deadline, 20000));
                 conn.setInstanceFollowRedirects(false);
                 conn.setUseCaches(false);
-                // Keep the legacy panel format negotiation until explicit format presets ship.
-                conn.setRequestProperty("User-Agent", "v2rayNG/1.8.5");
-                conn.setRequestProperty("Accept", "text/plain,application/json,application/yaml,text/yaml,*/*;q=0.5");
+                // Same URL and token; never guess new endpoint paths or weaken TLS.
+                String[] agents={"v2rayNG/1.10.11","Clash.Meta/1.19.0","sing-box/1.12.0"};
+                String[] accepts={"text/plain,application/json,application/yaml,text/yaml,*/*;q=0.5","application/yaml,text/yaml,text/plain,*/*;q=0.5","application/json,text/plain,*/*;q=0.5"};
+                if(format<0||format>=agents.length)throw new FetchException(Error.INVALID_URL);
+                conn.setRequestProperty("User-Agent",agents[format]);
+                conn.setRequestProperty("Accept",accepts[format]);
                 conn.setRequestProperty("Accept-Encoding", "gzip");
                 int status = conn.getResponseCode();
                 remaining(deadline, 20000);

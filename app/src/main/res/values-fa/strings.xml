@@ -395,4 +395,14 @@
     <string name="import_smart_result">فهرست: %1$d اتصال یکتا؛ ساب به‌روز: %2$d؛ ناموفق: %3$d</string>
     <string name="quota_no_metadata">۰ — اطلاعات حجم معتبر برای این اتصال دریافت نشده است؛ مصرف دستگاه به‌جای حجم سرویس نمایش داده نمی‌شود.</string>
     <string name="quota_unlimited">حجم نامحدود (اعلام‌شده توسط سرور)</string>
+
+    <string name="last_import_report">گزارش آخرین افزودن</string>
+    <string name="import_report_empty">هنوز گزارشی ثبت نشده است.</string>
+    <string name="import_report_help">نتیجهٔ خالی به معنی ورود موفق نیست. این گزارش فقط تعداد و کد خطا دارد، نه لینک ساب یا رمز. برای بررسی مشکل، گزارش را کپی کنید. صفحهٔ وب یا ورود پنل جایگزین لینک خام ساب نیست؛ خطای TLS یا ورود باید از سمت لینک/پنل بررسی شود.</string>
+    <string name="copy_safe_report">کپی گزارش امن</string>
+    <string name="update_retry">تلاش مجدد</string>
+    <string name="update_official_page">صفحهٔ دانلود رسمی</string>
+    <string name="core_update_title">به‌روزرسانی هستهٔ Xray</string>
+    <string name="core_update_check">بررسی آپدیت برنامه و هسته</string>
+    <string name="core_update_help">هستهٔ Xray یک کتابخانهٔ بومی داخل APK امضاشده است. مخزن هر روز نسخهٔ رسمی جدید را بررسی می‌کند و فقط پس از موفقیت ساخت، تست و بررسی امضا، آپدیت برنامه می‌سازد. با نصب آپدیت برنامه، هسته نیز به‌روز می‌شود. تأیید نصب Android لازم است؛ قطع شبکه یا شکست تست می‌تواند آپدیت را به تأخیر بیندازد.</string>
 </resources>

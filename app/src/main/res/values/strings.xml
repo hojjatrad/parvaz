@@ -414,4 +414,14 @@ Tap + to paste a config link or add a subscription."</string>
     <string name="import_smart_result">List: %1$d unique connections; subscriptions updated: %2$d; failures: %3$d</string>
     <string name="quota_no_metadata">0 — No applicable subscription traffic metadata. Values are not estimated from device traffic.</string>
     <string name="quota_unlimited">Unlimited plan (reported by server)</string>
+
+    <string name="last_import_report">Last import report</string>
+    <string name="import_report_empty">No import has been recorded yet.</string>
+    <string name="import_report_help">An empty result is not a successful import. This report contains counts and fixed error codes, not subscription URLs or passwords. Copy it when asking for help. TLS/authentication failures require a valid raw subscription endpoint; a web login page is not a configuration.</string>
+    <string name="copy_safe_report">Copy safe report</string>
+    <string name="update_retry">Retry</string>
+    <string name="update_official_page">Official download page</string>
+    <string name="core_update_title">Xray core updates</string>
+    <string name="core_update_check">Check app and core update</string>
+    <string name="core_update_help">The Xray core is a native library inside the signed APK. The repository checks for newer official releases daily and publishes an app update only after automated build, test and signing checks. Install the app update to receive the core. Android still requires your approval; network failures or failed tests can delay an update.</string>
 </resources>

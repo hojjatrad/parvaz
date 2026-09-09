@@ -815,7 +815,7 @@ public class SettingsActivity extends AppCompatActivity {
         try {
             str = Libv2ray.checkVersionX();
         } catch (Throwable unused) {
-            str = "unknown";
+            str = getString(R.string.bundled_core_version);
         }
         String appVersion;
         try {
@@ -824,6 +824,9 @@ public class SettingsActivity extends AppCompatActivity {
             appVersion = "1.8";
         }
         textView.setText(getString(R.string.version_fmt, appVersion, str));
+        textView.setOnClickListener(v->new MaterialAlertDialogBuilder(this).setTitle(R.string.core_update_title)
+            .setMessage(R.string.core_update_help).setPositiveButton(R.string.core_update_check,(dialog,which)->UpdateFlow.checkForUpdate(this,false))
+            .setNegativeButton(R.string.cancel,null).show());
         // ---- v1.8 tools -------------------------------------------------
         findViewById(R.id.btn_diagnose).setOnClickListener(new View.OnClickListener() {
             @Override

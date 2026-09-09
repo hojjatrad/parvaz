@@ -14,8 +14,9 @@ android {
         applicationId "com.parvaz.tunnel"
         minSdk 24
         targetSdk 34
-        versionCode 21
-        versionName "1.20"
+        versionCode 22
+        versionName "1.21"
+        resValue "string", "bundled_core_version", new groovy.json.JsonSlurper().parse(rootProject.file('tools/release/core-lock.json')).tag
         vectorDrawables.useSupportLibrary = true
 
         // libv2ray.aar also ships x86/x86_64 builds of libgojni. No Iranian Android

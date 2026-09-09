@@ -15,6 +15,9 @@ public final class JsonInput {
             return value;
         }catch(JSONException e){throw new JSONException("Invalid JSON document");}
     }
+    public static String string(String text) throws JSONException {
+        Object value=read(text);if(!(value instanceof String))throw new JSONException("Expected JSON string");return (String)value;
+    }
     public static JSONObject object(String text) throws JSONException {
         Object value=read(text);
         if(!(value instanceof JSONObject))throw new JSONException("Expected JSON object");

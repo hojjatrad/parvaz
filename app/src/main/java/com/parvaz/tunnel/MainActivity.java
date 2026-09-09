@@ -302,6 +302,7 @@ public class MainActivity extends AppCompatActivity {
             MainActivity mainActivity = MainActivity.this;
             mainActivity.getClass();
             if(i==7){mainActivity.removeDuplicateConnections();return;}
+            if(i==8){mainActivity.showLastImportReport();return;}
             String str = "";
             if (i == 0) {
                 try {
@@ -453,7 +454,7 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onComplete(com.parvaz.tunnel.core.SubscriptionRefresh.Result result) {
-            if(isFinishing()||isDestroyed())return;
+            if(isFinishing()||isDestroyed()||importing)return;
             MainActivity.this.refresh.setRefreshing(false);
             MainActivity.this.reload();
             String summary=getString(R.string.subscription_refresh_summary,result.updated,result.failed,com.parvaz.tunnel.store.ProfileDuplicates.visible(b0.e(),L.f343a.getString("selected_profile",""),L.getFavorites()).size(),result.warnings);
@@ -1100,11 +1101,24 @@ public class MainActivity extends AppCompatActivity {
                 query="";favOnly=false;searchInput.setText("");renderFavFilter();reload();
                 int count=com.parvaz.tunnel.store.ProfileDuplicates.visible(b0.e(),L.f343a.getString("selected_profile",""),L.getFavorites()).size();
                 String summary=getString(R.string.import_smart_result,count,result.subscriptions,result.failed);
-                if(!result.codes.isEmpty())summary+="\n"+String.join(", ",result.codes.subList(0,Math.min(8,result.codes.size())));
-                Snackbar.make(connectButton,summary,Snackbar.LENGTH_LONG).show();
-                showImportSummary(result.parsed);
+                String report=com.parvaz.tunnel.core.SmartImport.safeReport(result,com.parvaz.tunnel.core.UpdateChecker.currentVersion(this));
+                L.f343a.edit().putString("last_import_report",report).apply();
+                if(result.recognized>0){selectTab(1);Snackbar.make(findViewById(android.R.id.content),summary,Snackbar.LENGTH_LONG).show();}
+                if(result.failed>0||result.recognized==0||result.parsed.rejected>0)showLastImportReport();
+                else if(result.parsed.warnings>0)showImportSummary(result.parsed);
             });
         },"parvaz-smart-import").start();
+    }
+
+    public final void showLastImportReport() {
+        String report=L.f343a.getString("last_import_report",getString(R.string.import_report_empty));
+        new MaterialAlertDialogBuilder(this).setTitle(R.string.last_import_report)
+            .setMessage(getString(R.string.import_report_help)+"\n\n"+report)
+            .setPositiveButton(R.string.ok,null)
+            .setNeutralButton(R.string.copy_safe_report,(dialog,which)->{
+                ClipboardManager clipboard=(ClipboardManager)getSystemService("clipboard");
+                if(clipboard!=null)clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Parvaz import report",report));
+            }).show();
     }
 
     private void removeDuplicateConnections() {
@@ -1680,7 +1694,7 @@ public class MainActivity extends AppCompatActivity {
 
     /* renamed from: N */
     public final void showAddDialog() {
-        String[] strArr = {getString(R.string.scan_qr), getString(R.string.add_from_clipboard), getString(R.string.add_manual_link), getString(R.string.add_raw_json), getString(R.string.add_subscription), getString(R.string.update_subscriptions), getString(R.string.backup_restore), getString(R.string.remove_duplicates)};
+        String[] strArr = {getString(R.string.scan_qr), getString(R.string.add_from_clipboard), getString(R.string.add_manual_link), getString(R.string.add_raw_json), getString(R.string.add_subscription), getString(R.string.update_subscriptions), getString(R.string.backup_restore), getString(R.string.remove_duplicates),getString(R.string.last_import_report)};
         MaterialAlertDialogBuilder materialAlertDialogBuilder = new MaterialAlertDialogBuilder(this);
         materialAlertDialogBuilder.setTitle(R.string.add_server);
         materialAlertDialogBuilder.setItems(strArr, new F());
@@ -1820,6 +1834,10 @@ public class MainActivity extends AppCompatActivity {
 
     /* renamed from: Q */
     private final Handler quotaRefreshHandler=new Handler(Looper.getMainLooper());
+    private final Runnable automaticUpdateCheck=()->{
+        if(!isFinishing()&&!isDestroyed()&&(!L.f343a.getBoolean("app_lock",false)||unlocked))
+            com.parvaz.tunnel.core.UpdateFlow.checkForUpdate(this,true);
+    };
     private final Runnable quotaRefreshTick=new Runnable(){public void run(){
         if(isFinishing()||isDestroyed())return;
         long now=System.currentTimeMillis();
@@ -2303,6 +2321,7 @@ public class MainActivity extends AppCompatActivity {
     public final void onPause() {
         super.onPause();
         quotaRefreshHandler.removeCallbacks(quotaRefreshTick);
+        quotaRefreshHandler.removeCallbacks(automaticUpdateCheck);
         try {
             unregisterReceiver(this.p0);
         } catch (Exception unused) {
@@ -2376,6 +2395,8 @@ public class MainActivity extends AppCompatActivity {
         }
         reload();
         quotaRefreshHandler.removeCallbacks(quotaRefreshTick);
+        quotaRefreshHandler.removeCallbacks(automaticUpdateCheck);
         quotaRefreshHandler.post(quotaRefreshTick);
+        quotaRefreshHandler.postDelayed(automaticUpdateCheck,10000L);
     }
 }

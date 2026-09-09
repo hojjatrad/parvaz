@@ -16,7 +16,7 @@ public final class SubscriptionRefresh {
     private SubscriptionRefresh() {}
     interface Fetcher { SubscriptionUpdater.b fetch(String url) throws IOException; }
     public static final class Result {
-        public int updated, failed, skipped, serverCount, added, retained, removed, warnings;
+        public int updated, failed, skipped, serverCount, added, retained, removed, warnings, fetched, recognized;
         public boolean retryable, cancelled;
         public final ArrayList<String> codes=new ArrayList<>();
         void fail(String code,boolean retry){failed++;retryable|=retry;if(codes.size()<10)codes.add(code);}
@@ -50,7 +50,11 @@ public final class SubscriptionRefresh {
                 try {
                     SubscriptionUpdater.b response=fetcher.fetch(snapshot.subscription.url);
                     if(stop(cancelled,result))break;
-                    ImportResult parsed=LinkParser.parseDetailed(response.f6300a);
+                    result.fetched++;
+                    ImportResult parsed=response.parsed==null?LinkParser.parseDetailed(response.f6300a):response.parsed;
+                    result.recognized+=parsed.profiles.size();
+                    if(result.codes.size()<10)result.codes.add("FORMAT_"+response.format);
+                    for(String issue:parsed.issues)if(result.codes.size()<10)result.codes.add(issue);
                     result.warnings+=parsed.warnings;
                     if(!parsed.safeToReplace()) {
                         if(!parsed.fatal&&!parsed.profiles.isEmpty()) {
@@ -71,13 +75,14 @@ public final class SubscriptionRefresh {
                             System.currentTimeMillis(),prefs.getString("selected_profile",""));
                     result.updated++;result.serverCount+=plan.count;result.added+=plan.added;result.retained+=plan.retained;result.removed+=plan.removed;
                 }catch(ProfileStore.StaleRefresh e){result.fail("STALE_RESPONSE_IGNORED",true);}
-                 catch(SubscriptionHttpClient.FetchException e){result.fail(e.error.name(),transientError(e));}
+                 catch(SubscriptionHttpClient.FetchException e){result.fail(e.error.name()+(e.httpStatus>0?"_"+e.httpStatus:""),transientError(e));}
                  catch(IOException e){result.fail("NETWORK_FAILURE",true);}
                  catch(IllegalArgumentException e){result.fail("INVALID_SUBSCRIPTION",false);}
                  catch(Exception e){result.fail("REFRESH_FAILED",true);}
             }
         }catch(Exception e){result.fail("REFRESH_FAILED",true);}
         finally{LOCK.unlock();}
+        if(targetId!=null&&result.updated==0&&result.failed==0)result.fail("SUBSCRIPTION_NOT_PROCESSED",true);
         return result;
     }
     private static boolean stop(BooleanSupplier cancelled,Result result) {

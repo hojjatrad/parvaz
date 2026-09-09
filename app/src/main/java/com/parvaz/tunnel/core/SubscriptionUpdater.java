@@ -21,10 +21,12 @@ public final class SubscriptionUpdater {
     public static class b {
         public final String f6300a;
         public final String f6301b;
-
-        public b(String str, String str2) {
+        public final int format;
+        public final com.parvaz.tunnel.config.ImportResult parsed;
+        public b(String str,String str2){this(str,str2,0,null);}
+        public b(String str,String str2,int format,com.parvaz.tunnel.config.ImportResult parsed) {
             this.f6300a = str == null ? "" : str;
-            this.f6301b = str2;
+            this.f6301b = str2;this.format=format;this.parsed=parsed;
         }
     }
 
@@ -34,7 +36,32 @@ public final class SubscriptionUpdater {
 
     /** Fetch with system TLS validation, bounded bodies and safe redirects. */
     public static b a(String str) throws java.io.IOException {
-        SubscriptionHttpClient.Response response = SubscriptionHttpClient.fetch(str);
+        return negotiate(str,SubscriptionHttpClient::fetch);
+    }
+    interface FormatFetcher {SubscriptionHttpClient.Response fetch(String url,int format)throws java.io.IOException;}
+    static b negotiate(String str,FormatFetcher fetcher)throws java.io.IOException {
+        b best=null;int bestCount=-1;
+        SubscriptionHttpClient.FetchException last=null;
+        for(int format=0;format<3;format++) {
+            if(Thread.currentThread().isInterrupted())throw new java.io.IOException("CANCELLED");
+            try {
+                SubscriptionHttpClient.Response response=fetcher.fetch(str,format);
+                com.parvaz.tunnel.config.ImportResult parsed=com.parvaz.tunnel.config.LinkParser.parseDetailed(response.body);
+                b candidate=withMetadata(response,format,parsed);
+                if(parsed.profiles.size()>bestCount){best=candidate;bestCount=parsed.profiles.size();}
+                if(parsed.safeToReplace())return candidate;
+                // A partial response with valid servers is useful: do not replace it with an unrelated format.
+                if(!parsed.fatal&&!parsed.profiles.isEmpty())return candidate;
+            }catch(SubscriptionHttpClient.FetchException e) {
+                // Do not retry TLS/auth/rate-limit failures under another identity.
+                if(e.error!=SubscriptionHttpClient.Error.HTML_RESPONSE&&e.error!=SubscriptionHttpClient.Error.EMPTY_RESPONSE)throw e;
+                last=e;
+            }
+        }
+        if(best!=null)return best;
+        throw last==null?new java.io.IOException("NO_SUBSCRIPTION_RESPONSE"):last;
+    }
+    private static b withMetadata(SubscriptionHttpClient.Response response,int format,com.parvaz.tunnel.config.ImportResult parsed) {
         String responseBody = response.body;
         String userinfo = response.userinfo;
 
@@ -53,6 +80,6 @@ public final class SubscriptionUpdater {
             }
         }
 
-        return new b(responseBody, userinfo);
+        return new b(responseBody,userinfo,format,parsed);
     }
 }

@@ -52,6 +52,10 @@ public final class LinkParser {
         }
         String text = clean(input);
         if (text.isEmpty()) return;
+        if(text.startsWith("\"")) {
+            try {parseInto(JsonInput.string(text),result,depth+1);}catch(JSONException e){result.fail("INVALID_JSON_STRING");}
+            return;
+        }
         if (text.startsWith("{") || text.startsWith("[")) {
             checkJsonDepth(text);
             if (text.startsWith("[")) {
@@ -77,8 +81,8 @@ public final class LinkParser {
                 else if (SingBoxParser.isSingBox(text)) result.merge(SingBoxParser.parseDetailed(text));
                 else if (root.has("links") && !root.has("outbounds")) {
                     // Explicit panel API envelope, e.g. Marzban. No arbitrary JSON-to-server fallback.
-                    JSONArray links = root.optJSONArray("links");
-                    if (links == null) { result.fail("INVALID_PANEL_LINKS"); return; }
+                    Object links=root.opt("links");
+                    if(!(links instanceof JSONArray)&&!(links instanceof String)){result.fail("INVALID_PANEL_LINKS");return;}
                     parseInto(links.toString(), result, depth + 1);
                 } else if(!root.has("outbounds") && (root.has("configs")||root.has("data"))) {
                     Object payload=root.has("configs")?root.opt("configs"):root.opt("data");

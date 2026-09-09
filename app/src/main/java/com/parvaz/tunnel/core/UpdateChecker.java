@@ -284,6 +284,13 @@ public final class UpdateChecker {
         // The Android package installer performs the final cryptographic/install checks.
     }
 
+    public static synchronized boolean claimAutomaticCheck(Context context) {
+        android.content.SharedPreferences prefs=context.getSharedPreferences(PREFS,Context.MODE_PRIVATE);
+        long now=System.currentTimeMillis(),last=prefs.getLong("last_auto_attempt",0);
+        if(!isCheckDue(context)||(now>=last&&now-last<6L*60*60*1000))return false;
+        prefs.edit().putLong("last_auto_attempt",now).apply();return true;
+    }
+
     /** True when an automatic background check is due. */
     public static boolean isCheckDue(Context context) {
         long last = context.getApplicationContext()

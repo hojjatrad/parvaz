@@ -1,0 +1,79 @@
+name: Maintain pinned Xray core and publish tested updates
+on:
+  schedule:
+    - cron: '23 3 * * *'
+  workflow_dispatch:
+  push:
+    branches: ['ci/core-maintenance-check']
+permissions:
+  contents: write
+concurrency:
+  group: xray-core-maintenance
+  cancel-in-progress: false
+jobs:
+  maintain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'push' && github.ref || 'main' }}
+          fetch-depth: 1
+      - name: Discover newer official stable core or resume a failed upload
+        id: candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CORE_CHECK_ONLY: ${{ github.event_name == 'push' && 'true' || 'false' }}
+        run: python3 tools/release/auto_core_update.py
+      - uses: actions/setup-java@v5
+        if: steps.candidate.outputs.changed == 'true'
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        if: steps.candidate.outputs.changed == 'true'
+      - uses: gradle/actions/setup-gradle@v4
+        if: steps.candidate.outputs.changed == 'true'
+        with:
+          gradle-version: '8.9'
+          cache-disabled: true
+      - name: Test candidate with unchanged signing identity
+        if: steps.candidate.outputs.changed == 'true'
+        env:
+          PARVAZ_KEYSTORE_BASE64: ${{ secrets.PARVAZ_KEYSTORE_BASE64 }}
+          PARVAZ_KEYSTORE_PASSWORD: ${{ secrets.PARVAZ_KEYSTORE_PASSWORD }}
+          PARVAZ_KEY_ALIAS: ${{ secrets.PARVAZ_KEY_ALIAS }}
+          PARVAZ_KEY_PASSWORD: ${{ secrets.PARVAZ_KEY_PASSWORD }}
+        run: |
+          python3 -m unittest discover -s tools/release -p 'test_*.py'
+          python3 tools/release/build_signed.py --verify-only
+          bash tools/audit/run.sh
+          sdkmanager 'platforms;android-34' 'build-tools;34.0.0'
+          bash tools/release/fetch_core.sh
+          gradle --no-daemon --max-workers=2 :app:testDebugUnitTest
+          python3 tools/release/build_signed.py
+          python3 tools/release/verify_apk.py
+      - name: Commit and tag only a verified new candidate; never force refs
+        if: steps.candidate.outputs.changed == 'true' && steps.candidate.outputs.mode == 'new'
+        env:
+          VERSION: ${{ steps.candidate.outputs.version }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tools/release/core-lock.json tools/release/auto-core-release.json app/build.gradle "docs/releases/v$VERSION.md"
+          git commit -m "core: verified Xray update for v$VERSION"
+          git tag -a "v$VERSION" -m "Verified Xray core update v$VERSION; same permanent signing identity"
+          git push --atomic origin HEAD:refs/heads/main "refs/tags/v$VERSION"
+      - name: Publish verified APKs directly (token-created tags do not trigger another workflow)
+        if: steps.candidate.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.candidate.outputs.version }}
+        run: |
+          if gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo 'Release already exists; refusing to replace its files.'
+            exit 1
+          fi
+          gh release create "v$VERSION" release-artifacts/*.apk release-artifacts/SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" --verify-tag --title "Parvaz $VERSION — Xray update" \
+            --notes-file "docs/releases/v$VERSION.md" --latest

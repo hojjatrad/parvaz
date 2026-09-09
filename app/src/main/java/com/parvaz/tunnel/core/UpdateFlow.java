@@ -25,6 +25,8 @@ import java.util.ArrayList;
  */
 public final class UpdateFlow {
 
+    private static final java.util.concurrent.atomic.AtomicBoolean CHECKING=new java.util.concurrent.atomic.AtomicBoolean();
+    private static final java.util.concurrent.atomic.AtomicBoolean DOWNLOADING=new java.util.concurrent.atomic.AtomicBoolean();
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
 
     private UpdateFlow() {
@@ -34,6 +36,8 @@ public final class UpdateFlow {
 
     /** Checks for a newer release and offers to download and install it. */
     public static void checkForUpdate(final Activity activity, final boolean silent) {
+        if(!CHECKING.compareAndSet(false,true))return;
+        if(silent&&!UpdateChecker.claimAutomaticCheck(activity)){CHECKING.set(false);return;}
         if (!silent) {
             toast(activity, activity.getString(R.string.update_checking));
         }
@@ -48,6 +52,7 @@ public final class UpdateFlow {
                     error = String.valueOf(e.getMessage());
                 }
 
+                CHECKING.set(false);
                 final UpdateChecker.Release found = release;
                 final String failure = error;
                 MAIN.post(new Runnable() {
@@ -58,8 +63,7 @@ public final class UpdateFlow {
                         }
                         if (failure != null) {
                             if (!silent) {
-                                toast(activity,
-                                        activity.getString(R.string.update_failed, failure));
+                                showUpdateFailure(activity,failure,()->checkForUpdate(activity,false));
                             }
                             return;
                         }
@@ -113,6 +117,7 @@ public final class UpdateFlow {
 
     private static void downloadAndInstall(final Activity activity,
                                            final UpdateChecker.Release release) {
+        if(!DOWNLOADING.compareAndSet(false,true))return;
         toast(activity, activity.getString(R.string.update_downloading, 0));
         new Thread(new Runnable() {
             @Override
@@ -146,6 +151,7 @@ public final class UpdateFlow {
                     error = String.valueOf(e.getMessage());
                 }
 
+                DOWNLOADING.set(false);
                 final File file = apk;
                 final String failure = error;
                 MAIN.post(new Runnable() {
@@ -155,8 +161,7 @@ public final class UpdateFlow {
                             return;
                         }
                         if (failure != null || file == null) {
-                            toast(activity, activity.getString(R.string.update_failed,
-                                    String.valueOf(failure)));
+                            showUpdateFailure(activity,String.valueOf(failure),()->downloadAndInstall(activity,release));
                             return;
                         }
                         launchInstaller(activity, file);
@@ -164,6 +169,17 @@ public final class UpdateFlow {
                 });
             }
         }, "parvaz-download").start();
+    }
+
+    private static void showUpdateFailure(Activity activity,String failure,Runnable retry) {
+        if(activity.isFinishing()||activity.isDestroyed())return;
+        new MaterialAlertDialogBuilder(activity).setTitle(R.string.update_title)
+            .setMessage(activity.getString(R.string.update_failed,failure))
+            .setPositiveButton(R.string.update_retry,(dialog,which)->retry.run())
+            .setNeutralButton(R.string.update_official_page,(dialog,which)->{
+                try{activity.startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse("https://github.com/hojjatrad/parvaz/releases/latest")));}
+                catch(Exception e){toast(activity,activity.getString(R.string.update_failed,"NO_BROWSER"));}
+            }).setNegativeButton(R.string.cancel,null).show();
     }
 
     private static void launchInstaller(Activity activity, File apk) {
@@ -176,8 +192,7 @@ public final class UpdateFlow {
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             activity.startActivity(intent);
         } catch (Exception e) {
-            toast(activity, activity.getString(R.string.update_failed,
-                    String.valueOf(e.getMessage())));
+            showUpdateFailure(activity,"INSTALLER_UNAVAILABLE",()->launchInstaller(activity,apk));
         }
     }
 

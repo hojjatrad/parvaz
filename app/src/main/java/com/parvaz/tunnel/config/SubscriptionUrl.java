@@ -8,7 +8,14 @@ import java.util.Locale;
 public final class SubscriptionUrl {
     private SubscriptionUrl() {}
     public static String unwrap(String input) {
-        String text=input==null?"":input.trim();
+        String text=input==null?"":input.replaceAll("^[\\s\\p{Cf}]+|[\\s\\p{Cf}]+$", "");
+        if(text.startsWith("```")&&text.endsWith("```")) {
+            int newline=text.indexOf('\n');if(newline>=0)text=text.substring(newline+1,text.length()-3).trim();
+        }
+        if(text.length()>2&&((text.startsWith("<")&&text.endsWith(">"))||(text.startsWith("\"")&&text.endsWith("\"")))) {
+            String inner=text.substring(1,text.length()-1);
+            if(inner.toLowerCase(Locale.ROOT).startsWith("https://")||inner.toLowerCase(Locale.ROOT).startsWith("http://"))text=inner;
+        }
         if(text.startsWith("\uFEFF"))text=text.substring(1).trim();
         for(int depth=0;depth<3;depth++) {
             String lower=text.toLowerCase(Locale.ROOT);
