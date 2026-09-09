@@ -20,21 +20,26 @@ public class RestoreCrashRecoveryTest {
  static final class SimulatedDeath extends Error {}
  Context base;FaultContext context;String desired;
  static final class FaultContext extends ContextWrapper {
-  boolean dieBeforeSettings,failSettings,dieAfterSettings;
+  boolean dieBeforeSettings,failSettings,dieAfterSettings,failRecords;
+  int settingsCommits,failSettingsCommit=-1;
   FaultContext(Context base){super(base);}
   @Override public Context getApplicationContext(){return this;}
   @Override public SharedPreferences getSharedPreferences(String name,int mode){
    SharedPreferences original=super.getSharedPreferences(name,mode);
-   if(!name.equals("parvaz_prefs"))return original;
+   boolean settings=name.equals("parvaz_prefs");
+   if(!settings&&!name.equals("parvaz_store"))return original;
    return (SharedPreferences)Proxy.newProxyInstance(SharedPreferences.class.getClassLoader(),new Class[]{SharedPreferences.class},(proxy,method,args)->{
     Object result=method.invoke(original,args);
     if(!method.getName().equals("edit"))return result;
     SharedPreferences.Editor editor=(SharedPreferences.Editor)result;
     return Proxy.newProxyInstance(SharedPreferences.Editor.class.getClassLoader(),new Class[]{SharedPreferences.Editor.class},(p,m,a)->{
-     if(m.getName().equals("commit")&&dieBeforeSettings){dieBeforeSettings=false;throw new SimulatedDeath();}
+     if(m.getName().equals("commit")&&settings&&dieBeforeSettings){dieBeforeSettings=false;throw new SimulatedDeath();}
      Object value=m.invoke(editor,a);
-     if(m.getName().equals("commit")&&dieAfterSettings){dieAfterSettings=false;throw new SimulatedDeath();}
-     if(m.getName().equals("commit")&&failSettings)return false; // Memory/disk may already contain the new values; false is not an acknowledgement.
+     if(m.getName().equals("commit")&&settings&&dieAfterSettings){dieAfterSettings=false;throw new SimulatedDeath();}
+     if(m.getName().equals("commit")){
+      if(settings){settingsCommits++;if(failSettings||settingsCommits==failSettingsCommit)return false;}
+      else if(failRecords)return false;
+     } // Memory/disk may already contain the new values; false is not an acknowledgement.
      return value instanceof SharedPreferences.Editor?p:value;
     });
    });
@@ -83,5 +88,25 @@ public class RestoreCrashRecoveryTest {
   String before=new JSONArray(cipher.decode("profiles",base.getSharedPreferences("parvaz_store",0).getString("profiles",""))).getJSONObject(0).getString("id");
   ProfileStore.d=null;assertEquals(before,ProfileStore.f(base).activeProfiles().get(0).id);
   assertEquals(before,new Prefs(base).f343a.getString("selected_profile",""));
+ }
+ @Test public void failedRecordCommitRemainsPendingAndBlocksReads()throws Exception {
+  ProfileStore store=ProfileStore.f(context);context.failRecords=true;
+  try{BackupManager.a(context,desired);fail();}catch(ProfileStore.RestoreUnavailable expected){}
+  assertTrue(RestoreJournal.hasState(base));
+  assertEquals("old",base.getSharedPreferences("parvaz_prefs",0).getString("selected_profile",""));
+  try{store.e();fail("Failed record generation exposed");}catch(ProfileStore.RestoreUnavailable expected){}
+  context.failRecords=false;
+  assertEquals("new",store.activeProfiles().get(0).id);
+  assertEquals("new",new Prefs(base).f343a.getString("selected_profile",""));assertFalse(RestoreJournal.hasState(base));
+ }
+ @Test public void failedFinalFlushReplaysDuplicateCleanupAndFavorites()throws Exception {
+  JSONObject root=new JSONObject(desired);
+  JSONObject alias=new JSONObject(root.getJSONArray("profiles").getJSONObject(0).toString()).put("id","alias");
+  root.getJSONArray("profiles").put(alias);root.getJSONObject("settings").put("favorites",new JSONArray().put("alias"));
+  context.settingsCommits=0;context.failSettingsCommit=2;
+  try{BackupManager.a(context,root.toString());fail();}catch(ProfileStore.RestoreUnavailable expected){}
+  assertTrue(RestoreJournal.hasState(base));ProfileStore.d=null;
+  ProfileStore reopened=ProfileStore.f(base);assertEquals(1,reopened.e().size());assertNotNull(reopened.getById("new"));
+  assertTrue(new Prefs(base).getFavorites().contains("new"));assertFalse(RestoreJournal.hasState(base));
  }
 }

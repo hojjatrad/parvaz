@@ -48,20 +48,22 @@ jobs:
           from pathlib import Path
           import xml.etree.ElementTree as ET
           base=Path('tools/android-probe/build/outputs/androidTest-results')
+          cases=[]; totals=[]; archive=[]
           for file in base.rglob('logcat*.txt'):
               for line in file.read_text(errors='replace').splitlines():
-                  if 'I ParvazProbe:' in line:print('::notice title=ANDROID_ARCHIVE_PROBE::'+line)
+                  if 'I ParvazProbe:' in line:archive.append(line)
           for file in base.rglob('*.xml'):
               root=ET.parse(file).getroot()
-              print('::notice title=PLATFORM_TEST_COUNTS::'+root.get('name','')+' '+str({k:root.get(k,'0') for k in ['tests','failures','errors','skipped']}))
+              totals.append({k:root.get(k,'0') for k in ['tests','failures','errors','skipped']})
               for case in root.iter('testcase'):
                   if 'RestoreProcessDeathTest' in case.get('classname',''):
                       status='failed' if any(case.find(tag) is not None for tag in ['failure','error','skipped']) else 'passed'
-                      print('::notice title=RESTORE_PROCESS_DEATH::'+case.get('name','')+' '+status)
-              for item in root.iter('system-out'):
-                  for line in (item.text or '').splitlines():
-                      if 'ARCHIVE ' in line:print('::notice title=ANDROID_ARCHIVE_PROBE::'+line)
+                      cases.append(case.get('name','')+'='+status)
               for item in root.iter('failure'):print('::error title=ANDROID_ARCHIVE_PROBE::'+item.get('message','Assertion failed'))
+          print('::notice title=PLATFORM_TEST_SUMMARY::'+str(totals)+' process_death='+str(cases))
+          print('::notice title=ANDROID_ARCHIVE_PROBE::'+' | '.join(archive))
+          if len(cases)!=5 or any(not case.endswith('=passed') for case in cases):
+              raise SystemExit('All five process-death tests must execute and pass')
           PY
       - uses: actions/upload-artifact@v4
         if: always()

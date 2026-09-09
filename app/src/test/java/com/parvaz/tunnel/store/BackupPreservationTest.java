@@ -98,6 +98,10 @@ public class BackupPreservationTest {
   JSONObject root=new JSONObject(good);root.getJSONObject("settings").put("vpn_mtu","not-an-integer");reject(root.toString());
   root=new JSONObject(good);root.getJSONObject("settings").put("favorites",new JSONArray().put("bad\nentry"));reject(root.toString());
  }
+ @Test public void quotaOverflowIsRejectedBeforeJournaling()throws Exception {
+  JSONObject root=new JSONObject(good);root.getJSONObject("settings").put("data_limit_gb",1e100);
+  reject(root.toString());assertFalse(RestoreJournal.hasState(context));
+ }
  @Test public void wrongPasswordAndTamperedCiphertextNeverReachRestore()throws Exception {
   String encrypted=BackupCrypto.encrypt(good,"fixture-only".toCharArray());
   boolean rejected=false;

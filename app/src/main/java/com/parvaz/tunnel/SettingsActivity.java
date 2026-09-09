@@ -699,7 +699,12 @@ public class SettingsActivity extends AppCompatActivity {
         Snackbar.make(findViewById(R.id.save),R.string.backup_busy,0).show();return false;
     }
     private void finishBackup(Runnable action){runOnUiThread(()->{BACKUP_BUSY.set(false);if(!isFinishing()&&!isDestroyed())action.run();});}
-    private void backupFailed(){finishBackup(()->Snackbar.make(findViewById(R.id.save),R.string.backup_operation_failed,0).show());}
+    private void backupFailed(){finishBackup(()->{
+        if(com.parvaz.tunnel.store.RestoreJournal.hasState(getApplicationContext())){
+            // Do not let later settings edits race with an unfinished restore.
+            startActivity(new android.content.Intent(this,BackupRecoveryActivity.class));finish();
+        }else Snackbar.make(findViewById(R.id.save),R.string.backup_operation_failed,0).show();
+    });}
     private void restoreBackupText(String json)throws Exception {
         BackupManager.a result=BackupManager.a(getApplicationContext(),json);
         finishBackup(()->{android.widget.Toast.makeText(this,getString(R.string.backup_restored,result.f341a,result.f342b),android.widget.Toast.LENGTH_LONG).show();recreate();});

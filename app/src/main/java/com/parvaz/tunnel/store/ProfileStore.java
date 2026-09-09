@@ -21,7 +21,7 @@ public final class ProfileStore {
     private final RestoreJournal restoreJournal;
     private boolean restoring;
     public static final class RestoreUnavailable extends IllegalStateException {
-        RestoreUnavailable(Exception cause){super("Backup recovery is incomplete; encrypted journal retained. Retry after storage becomes available.",cause);}
+        RestoreUnavailable(Exception cause){super("Backup restore did not complete; any existing encrypted journal was retained. Retry after storage becomes available.",cause);}
     }
     public static void recoverBeforeUse(Context context){if(RestoreJournal.hasState(context))f(context);}
     public synchronized void recoverPendingRestore(){
