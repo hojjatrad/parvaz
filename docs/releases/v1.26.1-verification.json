@@ -1,0 +1,54 @@
+{
+  "version": "1.26.1",
+  "versionCode": 28,
+  "package": "com.parvaz.tunnel",
+  "tag": "v1.26.1",
+  "source_commit": "5b6d0c4746cdb70352bcc32a1c2d9d2b93167c7b",
+  "tested_code_commit": "31c262bce7a734ae826d6f63346f534b1b6c0851",
+  "release": "https://github.com/hojjatrad/parvaz/releases/tag/v1.26.1",
+  "assets": [
+    {
+      "name": "Parvaz-1.26.1-arm64.apk",
+      "size": 45367828,
+      "sha256": "f84f93a0ac9608826f68f85f7313c595dd710470674138538a13efafddfdc5d2",
+      "url": "https://github.com/hojjatrad/parvaz/releases/download/v1.26.1/Parvaz-1.26.1-arm64.apk"
+    },
+    {
+      "name": "Parvaz-1.26.1-source.tar.gz",
+      "size": 477404220,
+      "sha256": "51c31f0bf3ffb4b4cd6b49ec6bc30e0cca90fb33051fa2d39282745880640d00",
+      "url": "https://github.com/hojjatrad/parvaz/releases/download/v1.26.1/Parvaz-1.26.1-source.tar.gz"
+    },
+    {
+      "name": "Parvaz-1.26.1.apk",
+      "size": 88646570,
+      "sha256": "9a643345f9565173fc4c79247db7877e9628a9f458b822f0ec7e74807230904c",
+      "url": "https://github.com/hojjatrad/parvaz/releases/download/v1.26.1/Parvaz-1.26.1.apk"
+    },
+    {
+      "name": "SHA256SUMS.txt",
+      "size": 268,
+      "sha256": "094ffe7d8f69a483bb058943294c3c69bbc338d8ce125a54689a35c625f1f1a3",
+      "url": "https://github.com/hojjatrad/parvaz/releases/download/v1.26.1/SHA256SUMS.txt"
+    }
+  ],
+  "certificate_sha256": "d1383b8f34da5d3299b13634de421487289d82c1bb47ec3bc7f20ae8d02fe500",
+  "core": "v26.9.9",
+  "native_validation_run": "https://github.com/hojjatrad/parvaz/actions/runs/34365898301",
+  "validation_run": "https://github.com/hojjatrad/parvaz/actions/runs/34365897839",
+  "independent_public_asset_stream_hashes_verified": true,
+  "normal_latest_verified": true,
+  "python_guard_tests": 25,
+  "limitations": [
+    "Native probe tests run on x86_64 Android API 29/34, not physical ARM phones or the full production TUN.",
+    "Android strict-TLS fixture trusts a disposable CA only in its helper debug APK; production trust configuration is unchanged.",
+    "Caller-thread survival, owner Binder death and listener closure/rebind are tested; this is not proof of full-app Kill Switch or absence of device DNS/IPv6 leaks.",
+    "Private panels, physical installation, roaming, Doze/battery and LAN clients remain unverified."
+  ],
+  "workspace": {
+    "apks_retained_locally": false,
+    "source_archive_retained_locally": false
+  },
+  "future_order_guard_against_published_source_verified": true,
+  "publication_run": "https://github.com/hojjatrad/parvaz/actions/runs/34367420763"
+}
