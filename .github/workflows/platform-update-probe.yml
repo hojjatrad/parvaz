@@ -1,4 +1,4 @@
-name: Actual Android package archive probe
+name: Android archive and backup security probes
 on:
   push:
     branches: ['ci/platform-update-probe']
@@ -27,8 +27,8 @@ jobs:
       - name: Fetch previously published signed APK as test data, never signing secrets
         run: |
           mkdir -p tools/android-probe/src/androidTest/assets
-          curl -fL --max-time 120 https://github.com/hojjatrad/parvaz/releases/download/v1.21/Parvaz-1.21-arm64.apk -o tools/android-probe/src/androidTest/assets/published.apk
-          echo '9c27f19a93a9a7ce09886eee62250a85811b9def119e55a8b4d289737aaaa40f  tools/android-probe/src/androidTest/assets/published.apk' | sha256sum -c
+          curl -fL --max-time 120 https://github.com/hojjatrad/parvaz/releases/download/v1.26.1/Parvaz-1.26.1-arm64.apk -o tools/android-probe/src/androidTest/assets/published.apk
+          echo 'f84f93a0ac9608826f68f85f7313c595dd710470674138538a13efafddfdc5d2  tools/android-probe/src/androidTest/assets/published.apk' | sha256sum -c
       - name: Enable emulator hardware acceleration
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules

@@ -13,7 +13,7 @@ public class ArchiveProbeTest {
         Context c=InstrumentationRegistry.getInstrumentation().getTargetContext();
         for(File dir:new File[]{c.getCacheDir(),c.getExternalCacheDir()}) {
             if(dir==null)continue;
-            for(String name:new String[]{"parvaz-1.21.apk.part","parvaz-1.21.apk"}) {
+            for(String name:new String[]{"parvaz-1.26.1.apk.part","parvaz-1.26.1.apk"}) {
                 File file=new File(dir,name);
                 try(InputStream in=InstrumentationRegistry.getInstrumentation().getContext().getAssets().open("published.apk");OutputStream out=new FileOutputStream(file)) {
                     byte[] buffer=new byte[65536];int n;while((n=in.read(buffer))!=-1)out.write(buffer,0,n);
@@ -30,7 +30,7 @@ public class ArchiveProbeTest {
                 android.util.Log.i("ParvazProbe",dir.getName()+" "+name+" "+result);
                 System.out.println("ARCHIVE "+dir+" "+name+" "+result);
                 try(PrintWriter report=new PrintWriter(new FileWriter(new File(c.getFilesDir(),"probe.txt"),true))) {report.println("ARCHIVE "+dir+" "+name+" "+result);}
-                if(name.endsWith(".apk")) {assertNotNull(info);assertEquals("com.parvaz.tunnel",info.packageName);assertEquals("1.21",info.versionName);assertNotNull(info.signingInfo);}
+                if(name.endsWith(".apk")) {assertNotNull(info);assertEquals("com.parvaz.tunnel",info.packageName);assertEquals("1.26.1",info.versionName);assertEquals(28,info.getLongVersionCode());assertNotNull(info.signingInfo);}
                 file.delete();
             }
         }
