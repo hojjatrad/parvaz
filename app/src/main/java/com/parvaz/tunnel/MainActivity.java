@@ -1147,7 +1147,7 @@ public class MainActivity extends AppCompatActivity {
                   String text=clipboard.getPrimaryClip().getItemAt(0).coerceToText(this).toString();
                   com.parvaz.tunnel.config.ImportInput input=com.parvaz.tunnel.config.ImportInput.parse(text);
                   if(input.subscriptions.size()!=1||!input.configs.trim().isEmpty())throw new IllegalArgumentException();
-                  final String url=input.subscriptions.get(0);
+                  final String url=input.subscriptions.iterator().next();
                   new MaterialAlertDialogBuilder(this).setTitle(R.string.primary_subscription).setMessage(R.string.primary_explanation)
                       .setNegativeButton(R.string.cancel,null).setPositiveButton(R.string.ok,(confirm,button)->{
                           try{Subscription sub=b0.addOrGetSubscription(url);applyPrimarySubscription(sub.id,true);}
@@ -1158,7 +1158,8 @@ public class MainActivity extends AppCompatActivity {
     }
     public final void applyPrimarySubscription(String id,boolean refreshAfter) {
         if(importing||manualRefreshing||TunnelVpnService.serviceRunning||state==1)return;
-        b0.setPrimarySubscription(id);query="";favOnly=false;searchInput.setText("");renderFavFilter();reload();
+        try{b0.setPrimarySubscription(id);}catch(IllegalArgumentException error){showPrimarySubscriptionPicker(refreshAfter);return;}
+        query="";favOnly=false;searchInput.setText("");renderFavFilter();reload();
         if(refreshAfter)updateSubscriptions();
         else Snackbar.make(findViewById(android.R.id.content),R.string.primary_saved,Snackbar.LENGTH_LONG).show();
     }
