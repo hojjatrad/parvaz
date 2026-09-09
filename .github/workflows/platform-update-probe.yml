@@ -40,11 +40,10 @@ jobs:
           arch: x86_64
           target: default
           disable-animations: true
-          script: gradle -p tools/android-probe --no-daemon --max-workers=2 connectedDebugAndroidTest
+          script: gradle -p tools/android-probe --no-daemon --max-workers=2 connectedDebugAndroidTest; result=$?; adb shell run-as com.parvaz.probe cat files/probe.txt | sed 's/^/::notice title=ANDROID_ARCHIVE_PROBE::/'; exit $result
       - name: Expose public APK parser results
         if: always()
         run: |
-          adb logcat -d -s ParvazProbe:I '*:S' || true
           python3 - <<'PY'
           from pathlib import Path
           import xml.etree.ElementTree as ET

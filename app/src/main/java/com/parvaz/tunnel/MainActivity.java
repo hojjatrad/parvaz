@@ -1101,7 +1101,8 @@ public class MainActivity extends AppCompatActivity {
                 query="";favOnly=false;searchInput.setText("");renderFavFilter();reload();
                 int count=com.parvaz.tunnel.store.ProfileDuplicates.visible(b0.e(),L.f343a.getString("selected_profile",""),L.getFavorites()).size();
                 String summary=getString(R.string.import_smart_result,count,result.subscriptions,result.failed);
-                String report=com.parvaz.tunnel.core.SmartImport.safeReport(result,com.parvaz.tunnel.core.UpdateChecker.currentVersion(this));
+                String report=com.parvaz.tunnel.core.SmartImport.safeReport(result,com.parvaz.tunnel.core.UpdateChecker.currentVersion(this))
+                    +"\nSDK_"+android.os.Build.VERSION.SDK_INT+"; PARVAZ_RUNNING_"+com.parvaz.tunnel.core.TunnelVpnService.serviceRunning;
                 L.f343a.edit().putString("last_import_report",report).apply();
                 if(result.recognized>0){selectTab(1);Snackbar.make(findViewById(android.R.id.content),summary,Snackbar.LENGTH_LONG).show();}
                 if(result.failed>0||result.recognized==0||result.parsed.rejected>0)showLastImportReport();

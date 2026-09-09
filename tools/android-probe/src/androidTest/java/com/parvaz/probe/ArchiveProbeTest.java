@@ -22,6 +22,7 @@ public class ArchiveProbeTest {
                 String result=(info==null?"NULL":info.packageName+" version="+info.versionName+" code="+info.getLongVersionCode()+" signed="+(info.signingInfo!=null));
                 android.util.Log.i("ParvazProbe",dir.getName()+" "+name+" "+result);
                 System.out.println("ARCHIVE "+dir+" "+name+" "+result);
+                try(PrintWriter report=new PrintWriter(new FileWriter(new File(c.getFilesDir(),"probe.txt"),true))) {report.println("ARCHIVE "+dir+" "+name+" "+result);}
                 if(name.endsWith(".apk")) {assertNotNull(info);assertEquals("com.parvaz.tunnel",info.packageName);assertEquals("1.21",info.versionName);assertNotNull(info.signingInfo);}
                 file.delete();
             }

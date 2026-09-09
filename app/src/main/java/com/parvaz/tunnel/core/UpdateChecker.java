@@ -245,7 +245,11 @@ public final class UpdateChecker {
     }
 
     static String safeError(Exception error) {
+        if(error instanceof java.net.SocketTimeoutException)return "UPDATE_TIMEOUT";
+        if(error instanceof javax.net.ssl.SSLException)return "UPDATE_TLS_FAILURE";
+        if(error instanceof java.net.UnknownHostException)return "UPDATE_DNS_FAILURE";
         String code=error.getMessage();
+        if(code!=null&&code.matches("HTTP [0-9]{3}"))return "UPDATE_HTTP_"+code.substring(5);
         return code!=null&&code.matches("[A-Z][A-Z0-9_]{2,80}")?code:"UPDATE_IO_OR_PLATFORM_ERROR";
     }
     static void verifyReadyFile(Context context,File file,Release release)throws Exception {
