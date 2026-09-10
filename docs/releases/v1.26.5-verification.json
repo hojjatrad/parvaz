@@ -1,0 +1,71 @@
+{
+  "version": "1.26.5",
+  "version_code": 32,
+  "tag_commit": "6ad70e696c5f9f80d86c9a18f75199cc7b51a019",
+  "tested_executable": "72f8db89a8424d1d96c25b98329713459e2b7ba7",
+  "release_id": 386303307,
+  "stable_latest_verified": true,
+  "anonymous_api_verified": true,
+  "latest_redirect_verified": true,
+  "assets": [
+    {
+      "name": "Parvaz-1.26.5-arm64.apk",
+      "bytes": 45394208,
+      "sha256": "f30862f7b17dda820cb15a9639fcde4a544ad40113f1b48881b503a4d9b9d159",
+      "github_digest_match": true,
+      "whole_file_streamed": true,
+      "signature_verified": true,
+      "certificate_sha256": "d1383b8f34da5d3299b13634de421487289d82c1bb47ec3bc7f20ae8d02fe500",
+      "v2": true,
+      "v3": false,
+      "package": "com.parvaz.tunnel",
+      "version_name": "1.26.5",
+      "version_code": 32,
+      "abis": [
+        "arm64-v8a"
+      ]
+    },
+    {
+      "name": "Parvaz-1.26.5-source.tar.gz",
+      "bytes": 477489940,
+      "sha256": "f39d4923b13cc53fb987f79bdad29062a5236f27d4c972078af8e50d4f2ce09b",
+      "github_digest_match": true,
+      "whole_file_streamed": true
+    },
+    {
+      "name": "Parvaz-1.26.5.apk",
+      "bytes": 88672950,
+      "sha256": "011d56389599788c69fc2fdddc51ab92a642af75641d51be359cdafc4b133182",
+      "github_digest_match": true,
+      "whole_file_streamed": true,
+      "signature_verified": true,
+      "certificate_sha256": "d1383b8f34da5d3299b13634de421487289d82c1bb47ec3bc7f20ae8d02fe500",
+      "v2": true,
+      "v3": false,
+      "package": "com.parvaz.tunnel",
+      "version_name": "1.26.5",
+      "version_code": 32,
+      "abis": [
+        "arm64-v8a",
+        "armeabi-v7a"
+      ]
+    },
+    {
+      "name": "SHA256SUMS.txt",
+      "bytes": 268,
+      "sha256": "4a0b5f5f0697f5495eafd8270bc090afb30c8d0712066b2e34b9773074d0cf1e",
+      "github_digest_match": true,
+      "whole_file_streamed": true
+    }
+  ],
+  "phone_installation": "NOT_RUN",
+  "signature_verifier": {
+    "library": "com.android.tools.build:apksig:8.5.2",
+    "jar_sha256": "c4f6fdf2148490296f422a7eb37647ea11d1c3b02f1f2349c33ce257f3c29b1f"
+  },
+  "api_verification_method": "Anonymous HTTPS /releases/latest, read directly in the sandbox",
+  "remote_tags_ssh_verified": {
+    "refs/tags/v1.26.4": "8440a15df251ab3a5fc075854342f5196853266b",
+    "refs/tags/v1.26.5": "6ad70e696c5f9f80d86c9a18f75199cc7b51a019"
+  }
+}
