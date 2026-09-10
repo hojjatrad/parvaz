@@ -616,8 +616,10 @@ public class TunnelVpnService extends VpnService {
                 boolean handedOff=false;
                 try{
                     if(!m.this.isCurrent())return;
-                    CoreManager manager=CoreManager.b();CoreController controller=manager.controller;
-                    final boolean alive=manager.running&&controller!=null&&controller.getIsRunning();
+                    CoreManager manager=CoreManager.b();
+                    // Observe the volatile publication flag before reading its controller.
+                    boolean published=manager.running;CoreController controller=manager.controller;
+                    final boolean alive=published&&controller!=null&&controller.getIsRunning();
                     long delay=-1;
                     // Do not spend a probe/radio wakeup when replies already arrived.
                     if(alive&&sessionDown<=lastHealthBytes){
@@ -975,9 +977,10 @@ public class TunnelVpnService extends VpnService {
         final long ownerSession=CoreManager.b().sessionId();
         final int previousState=currentState;
         final java.util.function.BooleanSupplier owns=()->operations.current(ticket)&&serviceRunning&&this.profile==current&&CoreManager.b().sessionId()==ownerSession;
-        this.switching = true;
-        this.chainedSwitches++;
-        h(getString(R.string.state_switching), 5);
+        if(!operations.commit(ticket,()->{
+            this.switching = true;this.chainedSwitches++;
+            h(getString(R.string.state_switching),5);
+        }))return;
 
         final ArrayList<Profile> raceCandidates = candidates;
         new Thread(new Runnable() {
@@ -990,22 +993,25 @@ public class TunnelVpnService extends VpnService {
                         if(!owns.getAsBoolean())return;
                         Profile winner = race.winner;
                         if(race.cancelled||race.deferred||(winner!=null&&HappyEyeballs.activeCandidates(java.util.Collections.singletonList(winner),ProfileStore.f(TunnelVpnService.this).activeProfiles()).isEmpty())){
-                            TunnelVpnService.this.switching=false;
-                            TunnelVpnService.this.chainedSwitches=Math.max(0,TunnelVpnService.this.chainedSwitches-1);
-                            TunnelVpnService.this.h("",previousState);
-                            TunnelVpnService.this.startHealthTicker();
+                            operations.commit(ticket,()->{
+                                TunnelVpnService.this.switching=false;
+                                TunnelVpnService.this.chainedSwitches=Math.max(0,TunnelVpnService.this.chainedSwitches-1);
+                                TunnelVpnService.this.h("",previousState);
+                                TunnelVpnService.this.startHealthTicker();
+                            });
                             return;
                         }
                         if (winner == null) {
-                            TunnelVpnService.this.switching = false;
                             failOwned(ticket,getString(R.string.no_alternative));
                             return;
                         }
 
-                        TunnelVpnService.this.p.put(winner.id, Long.valueOf(System.currentTimeMillis()));
-                        ProfileStore.f(TunnelVpnService.this).i(winner.id, race.delayMs);
-                        LogBuffer.listener("switching to " + winner.remark);
-                        new l(winner,TunnelVpnService.this.getString(R.string.state_switching)).run();
+                        operations.commit(ticket,()->{
+                            TunnelVpnService.this.p.put(winner.id,Long.valueOf(System.currentTimeMillis()));
+                            ProfileStore.f(TunnelVpnService.this).i(winner.id,race.delayMs);
+                            LogBuffer.listener("switching to "+winner.remark);
+                            new l(winner,TunnelVpnService.this.getString(R.string.state_switching)).run();
+                        });
                     }
                 });
             }

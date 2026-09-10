@@ -24,4 +24,5 @@ public class ProbeOwnershipRegressionTest {
   CoreManager.c.stop();assertFalse(ticker.isCurrent());new TunnelVpnService_RunnableC0008AnonymousClass3_2(ticker).run();assertFalse(service.switching);
  }
  @Test public void replacementTickerInvalidatesPreviousOne(){TunnelVpnService service=service();TunnelVpnService.m old=service.new m(15000);service.b=old;assertTrue(old.isCurrent());service.b=service.new m(15000);assertFalse(old.isCurrent());assertTrue(service.b.isCurrent());service.switching=true;assertFalse(service.b.isCurrent());}
+ @Test public void acceptingNewIntentInvalidatesHealthBeforeNativeCoreChanges(){TunnelVpnService service=service();TunnelVpnService.m old=service.new m(15000);service.b=old;assertTrue(old.isCurrent());long core=CoreManager.c.sessionId();service.operations.start(true,ticket->{});assertEquals(core,CoreManager.c.sessionId());assertFalse(old.isCurrent());}
 }
