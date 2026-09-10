@@ -24,3 +24,7 @@
 - [app/dns/nameserver_cached.go](https://raw.githubusercontent.com/XTLS/Xray-core/52a412d9e2f5/app/dns/nameserver_cached.go): singleflight، pubsub و refresh پس‌زمینه وجود دارند. flush امن به مرز نسل برای پاسخ‌های دیررس هم نیاز دارد؛ فقط «HTTP 204 از کنترلر موتور دیگر» کافی نیست.
 
 این بررسی ادعای نبود هر API ممکن در کل پروژه نیست. در ۱٫۲۸٫۲ تغییر binary/کنترلر برای flush اضافه نشده؛ اصلاح عملی به حفظ پیوستگی snapshot DNS در قطع/بازگشت و callback دیرهنگام محدود است. توسعهٔ پل محدود برای flush باید جداگانه با آزمون native و مالکیت نشست/نسل انجام شود.
+
+## شرط build برای API سینگ‌باکس
+
+[include/clashapi.go در pin فعلی](https://raw.githubusercontent.com/SagerNet/sing-box/0b8995879f29a9b98ee027bc17b75e101445b238/include/clashapi.go) با `//go:build with_clash_api`، بستهٔ clashapi را ثبت می‌کند. این tag در فهرست build فعلی `tools/native/engines-lock.json` انتخاب نشده است. بنابراین صرف وجود فایل router در upstream، مجوز فرض‌کردن دسترس‌پذیری آن در binary فعلی نیست؛ فعال‌کردن احتمالی به تغییر build، آزمون و کنترل محدود/احرازشده نیاز دارد. این تغییر در ۱٫۲۸٫۲ انجام نشده است.
