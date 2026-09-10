@@ -1,0 +1,38 @@
+name: Experimental DNS cache generation laboratory (no release)
+on:
+  push:
+    branches: ['experiment/dns-cache-generation']
+    paths: ['tools/dns-lab/**', '.github/workflows/dns-cache-lab.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: dns-cache-laboratory-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  source-laboratory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.27.0'
+          cache: false
+      - name: Reproduce naive flush, test generation patch and prove remaining transport blocker
+        run: python3 tools/dns-lab/run.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dns-cache-laboratory-evidence-NOT-AN-APK
+          include-hidden-files: true
+          path: |
+            .cache/dns-lab/run/*.json
+            .cache/dns-lab/run/*.jsonl
+            .cache/dns-lab/run/*-modules.txt
+          retention-days: 3

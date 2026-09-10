@@ -1,0 +1,80 @@
+{
+  "tested_inputs_sha256": {
+    "tools/dns-lab/run.py": "64fbced87e406c2c5471283d12000a9dbd47679e66d090a885e1d058b6b59d15",
+    "tools/dns-lab/source-pin.json": "98480381e81c6f170d6b8e68180dc99cd72ad4a9610e011149f3879b4e5f1346",
+    "tools/dns-lab/wrapper-source-pin.json": "18c144ec7b5712ed1fd202e8f751d46f2b0d471c8c230a3ce5330fecd2098819",
+    "tools/dns-lab/xray-cache-generation.patch": "7fce2e455311fd8c887444f3756e9b2dba9532be51c2f89b1e3a67998e01ef23",
+    "tools/dns-lab/tests/parvaz_cache_generation_test.go": "27ade2f7cb4b5524e38b379d3cb7dea911ff4eeb43de112f2b8f058b092d7d0a",
+    "tools/dns-lab/tests/parvaz_naive_flush_test.go": "928b4466544c36d276c8a464383976d02ba7b93d1217a521ebb5fd2759ce3e02",
+    "tools/dns-lab/tests/parvaz_transport_limit_test.go": "b162b51b53a78a3a48b1dcbb6527a967019a9711d29b53858e634d6606cfd99e"
+  },
+  "ci_commit": null,
+  "experiment": "Xray cache generation barrier",
+  "promotion_allowed": false,
+  "production_apk_changed": false,
+  "source": {
+    "repository": "XTLS/Xray-core",
+    "commit": "52a412d9e2f5c2a5142b1b4e2ab3771dacb8b120",
+    "url": "https://codeload.github.com/XTLS/Xray-core/tar.gz/52a412d9e2f5c2a5142b1b4e2ab3771dacb8b120",
+    "sha256": "a31a4fd9f42d49b23910d72395f77c4bc840968c1f2a37389cf7f270d95691e5"
+  },
+  "wrapper_source": {
+    "repository": "2dust/AndroidLibXrayLite",
+    "tag": "v26.9.9",
+    "commit": "d0c6c4ae1b09c912070c8288bd0dbcc2e492ac29",
+    "url": "https://codeload.github.com/2dust/AndroidLibXrayLite/tar.gz/d0c6c4ae1b09c912070c8288bd0dbcc2e492ac29",
+    "sha256": "29d48db71e6e3ab08fe8d62f791a7f77c090d1a0dad623585da43f88a0069323"
+  },
+  "patch_sha256": "7fce2e455311fd8c887444f3756e9b2dba9532be51c2f89b1e3a67998e01ef23",
+  "go_version": "go version go1.27.0 linux/amd64",
+  "stages": [
+    {
+      "stage": "baseline",
+      "top_level_pass_events": 1,
+      "unique_top_level_tests": [
+        "TestParvazNaiveFlushRepopulatesFromLateReply"
+      ],
+      "repetitions": 1,
+      "race_detector": true,
+      "module_graph_sha256": "60f02c3a5976ec1791fd314fafd77b403239ac7831ea1a94627b6900f924c690",
+      "effective_go_mod_sha256": "6b766478e4f7aae4e1e48cbd7ac59d3952381adb415c85f09250c9faead36dd7",
+      "log_sha256": "dd72950616b6d2800e32be25d90ad1a0f2c4dc14f4b79a60b5082eec25fcec39"
+    },
+    {
+      "stage": "patched",
+      "top_level_pass_events": 54,
+      "unique_top_level_tests": [
+        "TestFqdn",
+        "TestParvazCacheAndMigrationDoNotExtendExpiry",
+        "TestParvazConcurrentFlushLookupUpdateAndCleanup",
+        "TestParvazDisabledCacheStillSeparatesSubscribers",
+        "TestParvazFlushCancelsInflightAndSeparatesSingleflight",
+        "TestParvazFlushClearsBothFamiliesAndDirtyMap",
+        "TestParvazKnownLimitReusedUDPTransactionID",
+        "TestParvazLateNegativeReplyCannotPoisonNewGeneration",
+        "TestParvazLateReplyCannotWriteOrPublish",
+        "TestParvazOldCleanupCannotDeleteNewGeneration",
+        "TestParvazOldMigrationCannotResurrectOrClearNewMigration",
+        "TestParvazRecordSlotSnapshotIsDetached",
+        "TestParvazStaleBackgroundRefreshCannotReenterNewGeneration",
+        "TestParvazUnstampedAndOtherControllerRepliesRejected",
+        "TestStaticHosts",
+        "Test_buildReqMsgs",
+        "Test_genEDNS0Options",
+        "Test_parseResponse"
+      ],
+      "repetitions": 3,
+      "race_detector": true,
+      "module_graph_sha256": "60f02c3a5976ec1791fd314fafd77b403239ac7831ea1a94627b6900f924c690",
+      "effective_go_mod_sha256": "90edc2bfcf5858c47e3968e547ab71676fc4ccb796935762a53a0d9e0aadb804",
+      "log_sha256": "f81fef559d53688c5476058ee82ccb165df0acf63c0e06696e951e076a02c431"
+    }
+  ],
+  "blocked_by": [
+    "UDP_TRANSACTION_ID_REUSE_REPRODUCED",
+    "NO_ENGINE_WIDE_RESOLVER_RELOAD",
+    "OTHER_ENGINE_AND_SYSTEM_CACHES_NOT_COVERED",
+    "NO_ANDROID_WRAPPER_BRIDGE_OR_NATIVE_VPN_TEST"
+  ],
+  "scope": "Real pinned upstream DNS source, wrapper-root dependency resolution, synthetic/in-memory DNS fixtures; not the shipped AAR, not Android, not physical DNS/leak/battery validation."
+}
