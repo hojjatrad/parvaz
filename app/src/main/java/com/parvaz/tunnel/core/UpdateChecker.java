@@ -52,7 +52,7 @@ public final class UpdateChecker {
         public String sha256 = "";
 
         public boolean valid() {
-            return version.matches("[0-9]+(\\.[0-9]+){1,3}") && size>0 && size<=MAX_APK_BYTES
+            return version.length()<=40 && version.matches("[0-9]+(\\.[0-9]+){1,3}") && size>0 && size<=MAX_APK_BYTES
                     && sha256.matches("[0-9a-f]{64}")
                     && downloadUrl.startsWith("https://github.com/hojjatrad/parvaz/releases/download/v"+version+"/");
         }
@@ -162,86 +162,36 @@ public final class UpdateChecker {
         }
     }
 
-    /**
-     * Downloads the APK into external cache so a FileProvider can hand it to the
-     * package installer. Blocking.
-     */
-    public static synchronized File download(Context context, Release release, DownloadProgress progress)
-            throws Exception {
+    /** Downloads/resumes an untrusted cache entry, then validates the complete APK.
+     * Only the verified final name may be handed to the installer. */
+    public static synchronized File download(Context context, Release input, DownloadProgress progress)throws Exception {
+        Release release=new Release();release.version=input.version;release.size=input.size;
+        release.sha256=input.sha256;release.downloadUrl=input.downloadUrl;
         if(!release.valid())throw new IllegalArgumentException("INVALID_UPDATE_METADATA");
-        File dir = new File(context.getCacheDir(),"updates");
+        File dir=new File(context.getCacheDir(),"updates");
         if(!dir.isDirectory()&&!dir.mkdirs())throw new IllegalStateException("UPDATE_STORAGE_UNAVAILABLE");
-        File target = new File(dir, "parvaz-" + release.version + ".apk");
-        // Keep a real APK suffix for platform/OEM package parsers; never expose an unverified file.
-        File temp = new File(dir, "pending-"+release.version+".apk");
-
-        HttpURLConnection conn = null;
-        InputStream in = null;
-        FileOutputStream out = null;
-        try {
-            conn = openApk(release.downloadUrl);
-
-            if (conn.getResponseCode() != 200) {
-                throw new IllegalStateException("HTTP " + conn.getResponseCode());
-            }
-
-            long total = release.size;
-            if(conn.getContentLengthLong()>MAX_APK_BYTES)throw new IllegalStateException("UPDATE_TOO_LARGE");
-            java.security.MessageDigest digest=java.security.MessageDigest.getInstance("SHA-256");
-            long deadline=System.nanoTime()+300L*1000000000L;
-            in = conn.getInputStream();
-            out = new FileOutputStream(temp);
-
-            byte[] buf = new byte[65536];
-            long done = 0;
-            int lastPercent = -1;
-            while (true) {
-                int read = in.read(buf);
-                if (read <= 0) {
-                    break;
-                }
-                done += read;
-                if(done>MAX_APK_BYTES||done>release.size||System.nanoTime()>deadline)throw new IllegalStateException("UPDATE_SIZE_OR_TIME_LIMIT");
-                digest.update(buf,0,read);
-                out.write(buf, 0, read);
-                if (progress != null && total > 0) {
-                    int percent = (int) Math.min(99,(done * 100) / total);
-                    if (percent != lastPercent) {
-                        lastPercent = percent;
-                        progress.onProgress(percent);
-                    }
-                }
-            }
-            out.flush();
-            out.close();
-            out = null;
-
-            if(done!=release.size||!hex(digest.digest()).equals(release.sha256))throw new IllegalStateException("UPDATE_CHECKSUM_MISMATCH");
-            verifyArchive(context,temp,release);
-            if (target.exists()) {
-                target.delete();
-            }
-            if (!temp.renameTo(target)) {
-                throw new IllegalStateException("could not finalise download");
-            }
-            File[] old=dir.listFiles();
-            if(old!=null)for(File file:old)if(!file.equals(target)&&file.getName().matches("parvaz-[0-9.]+\\.apk(\\.part)?"))file.delete();
-            if(progress!=null)progress.onProgress(100);
-            return target;
-        } catch (Exception e) {
-            temp.delete();
-            throw e;
-        } finally {
-            closeQuietly(out);
-            closeQuietly(in);
-            if (conn != null) {
-                try {
-                    conn.disconnect();
-                } catch (Exception ignored) {
-                    android.util.Log.w("Parvaz/UpdateChecker", "Exception ignored", ignored);
-                }
-            }
+        File target=new File(dir,"parvaz-"+release.version+".apk");
+        File temp=new File(dir,partialName(release)); // Keep .apk for platform archive parsing.
+        // Keep at most one partial for the exact URL/hash/ABI/size. Cached APKs are
+        // disposable; configuration, signing keys and backups are never touched.
+        File[] previous=dir.listFiles();
+        if(previous!=null)for(File file:previous)if(!file.equals(temp)&&!file.equals(target)&&
+            file.getName().matches("(?:pending-[0-9.]+(?:-[0-9a-f]{64})?|parvaz-[0-9.]+)\\.apk(?:\\.part)?"))file.delete();
+        if(target.isFile()){
+            try{verifyReadyFile(context,target,release);if(progress!=null)progress.onProgress(100);return target;}
+            catch(Exception invalid){if(!target.delete())throw new IllegalStateException("UPDATE_STORAGE_UNAVAILABLE");}
         }
+        final AppNetwork.Route route=AppNetwork.capture(); // Never change route during redirects/retry.
+        ResumableDownload.fetch(temp,release.size,release.sha256,
+            offset->openApk(release.downloadUrl,offset,route),progress==null?null:progress::onProgress);
+        try{verifyArchive(context,temp,release);}
+        catch(Exception invalid){temp.delete();throw invalid;}
+        if(!temp.renameTo(target))throw new IllegalStateException("UPDATE_FINALIZE_FAILED");
+        if(progress!=null)progress.onProgress(100);return target;
+    }
+    static String partialName(Release release)throws Exception {
+        String identity=release.version+"\n"+release.size+"\n"+release.sha256+"\n"+release.downloadUrl;
+        return "pending-"+release.version+"-"+hex(java.security.MessageDigest.getInstance("SHA-256").digest(identity.getBytes(java.nio.charset.StandardCharsets.UTF_8)))+".apk";
     }
 
     static String safeError(Exception error) {
@@ -264,15 +214,17 @@ public final class UpdateChecker {
         verifyArchive(context,file,release);
     }
 
-    private static HttpURLConnection openApk(String value) throws Exception {
+    private static HttpURLConnection openApk(String value,long offset,AppNetwork.Route route) throws Exception {
         URL url=new URL(value);
         for(int i=0;i<=5;i++) {
             String host=url.getHost().toLowerCase(Locale.ROOT);
             if(!url.getProtocol().equals("https")||url.getUserInfo()!=null||
                     !(host.equals("github.com")||host.endsWith(".githubusercontent.com")))throw new IllegalStateException("UNTRUSTED_UPDATE_URL");
-            HttpURLConnection connection=AppNetwork.open(url);
+            HttpURLConnection connection=route.open(url);
             connection.setConnectTimeout(20000);connection.setReadTimeout(60000);connection.setInstanceFollowRedirects(false);
             connection.setRequestProperty("User-Agent","Parvaz");
+            connection.setRequestProperty("Accept-Encoding","identity");
+            if(offset>0)connection.setRequestProperty("Range","bytes="+offset+"-");
             int status;
             try{status=connection.getResponseCode();}catch(Exception e){connection.disconnect();throw e;}
             if(status==301||status==302||status==303||status==307||status==308) {
