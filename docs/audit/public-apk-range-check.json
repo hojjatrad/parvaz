@@ -1,0 +1,12 @@
+{
+  "asset": "Parvaz-1.26.3-arm64.apk",
+  "test": "PUBLIC_RANGE_RESPONSE_ONLY",
+  "requested_offset": 1024,
+  "full_apk_verification": false,
+  "status": 206,
+  "content_range": "bytes 1024-45376475/45376476",
+  "content_length": "45375452",
+  "encoding": "identity",
+  "final_host": "release-assets.githubusercontent.com",
+  "sampled_bytes": 1024
+}
