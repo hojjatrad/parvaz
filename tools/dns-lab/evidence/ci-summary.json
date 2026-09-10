@@ -1,0 +1,68 @@
+{
+  "tested_commit": "b46a23c507980f312710d8f7dd22162efd4be27d",
+  "promotion_allowed": false,
+  "latest_stable": "v1.28.2",
+  "stable_release_id": 386624584,
+  "stable_asset_names_sizes_digests_unchanged": true,
+  "runs": [
+    {
+      "id": 34538236929,
+      "name": "Subscription regression tests",
+      "head_sha": "b46a23c507980f312710d8f7dd22162efd4be27d",
+      "conclusion": "success",
+      "html_url": "https://github.com/hojjatrad/parvaz/actions/runs/34538236929"
+    },
+    {
+      "id": 34538236964,
+      "name": "Experimental DNS cache generation laboratory (no release)",
+      "head_sha": "b46a23c507980f312710d8f7dd22162efd4be27d",
+      "conclusion": "success",
+      "html_url": "https://github.com/hojjatrad/parvaz/actions/runs/34538236964"
+    },
+    {
+      "id": 34538236885,
+      "name": "Android compilation and unit tests",
+      "head_sha": "b46a23c507980f312710d8f7dd22162efd4be27d",
+      "conclusion": "success",
+      "html_url": "https://github.com/hojjatrad/parvaz/actions/runs/34538236885"
+    }
+  ],
+  "jobs": [
+    {
+      "run": 34538236929,
+      "workflow": "Subscription regression tests",
+      "job": "jvm-regressions",
+      "conclusion": "success",
+      "annotations": []
+    },
+    {
+      "run": 34538236964,
+      "workflow": "Experimental DNS cache generation laboratory (no release)",
+      "job": "source-laboratory",
+      "conclusion": "success",
+      "annotations": [
+        {
+          "title": "DNS_CACHE_LAB_RESULT",
+          "message": "Cache source tests/reproductions succeeded; PROMOTION_BLOCKED; baseline=1 patched=54 top-level PASS events; no APK publication"
+        }
+      ]
+    },
+    {
+      "run": 34538236885,
+      "workflow": "Android compilation and unit tests",
+      "job": "android-debug",
+      "conclusion": "success",
+      "annotations": [
+        {
+          "title": "UNIT_TEST_TOTALS",
+          "message": "{'tests': 387, 'failures': 0, 'errors': 0, 'skipped': 0} selected={'com.parvaz.tunnel.V115RegressionTest': {'tests': 15, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.BoundedProbeRaceTest': {'tests': 9, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.DnsReconnectPolicyRegressionTest': {'tests': 10, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.HealthPolicyTest': {'tests': 8, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.NetworkMonitorRegressionTest': {'tests': 36, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.ProbeOwnershipRegressionTest': {'tests': 12, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.ReadinessConfigTest': {'tests': 20, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.ReadinessMonitorTest': {'tests': 11, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.ReconnectOwnershipTest': {'tests': 6, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.ResolverIdentityTest': {'tests': 5, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.ResumableDownloadTest': {'tests': 12, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.SerialConnectionQueueTest': {'tests': 8, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.StartupDiagnosticsTest': {'tests': 13, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.StartupWarmupTest': {'tests': 12, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.TrafficSamplingTest': {'tests': 5, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.store.BackupPreservationTest': {'tests': 22, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.store.RestoreCrashRecoveryTest': {'tests': 12, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.store.RestoreJournalTest': {'tests': 14, 'failures': 0, 'errors': 0, 'skipped': 0}}"
+        },
+        {
+          "title": "FIXTURE_ISOLATION",
+          "message": "V115_STALE_STORE_NAMESPACE=true"
+        }
+      ]
+    }
+  ],
+  "note": "Green laboratory CI means the experiments and remaining-blocker reproductions behaved as asserted, not production approval."
+}

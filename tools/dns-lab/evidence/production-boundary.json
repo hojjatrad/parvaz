@@ -1,0 +1,10 @@
+{
+  "stable_version": "1.28.2",
+  "main_unchanged": true,
+  "main_commit": "93ece6535c25722aaba6161f53ff3e9c59463055",
+  "release_tag_commit": "a9ed66a4769fa87324778dd06f0a88f162b35b9a",
+  "release_tag_unchanged": true,
+  "tested_experiment_commit": "b46a23c507980f312710d8f7dd22162efd4be27d",
+  "app_and_production_build_pins_and_publication_workflows_unchanged": true,
+  "promotion_allowed": false
+}
