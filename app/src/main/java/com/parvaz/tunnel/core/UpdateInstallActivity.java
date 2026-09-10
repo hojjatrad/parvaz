@@ -16,7 +16,7 @@ public final class UpdateInstallActivity extends AppCompatActivity {
     private TextView message;
     private Button install;
     private boolean started,waiting,busy;
-    public static Intent intent(Activity activity,File file,UpdateChecker.Release release) {
+    public static Intent intent(Context activity,File file,UpdateChecker.Release release) {
         return new Intent(activity,UpdateInstallActivity.class).putExtra("file",file.getName())
             .putExtra("version",release.version).putExtra("sha256",release.sha256)
             .putExtra("size",release.size).putExtra("url",release.downloadUrl);

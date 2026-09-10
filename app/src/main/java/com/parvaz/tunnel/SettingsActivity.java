@@ -839,6 +839,12 @@ public class SettingsActivity extends AppCompatActivity {
                 UpdateFlow.clearMemory(SettingsActivity.this);
             }
         });
+        androidx.appcompat.widget.SwitchCompat autoCheck=findViewById(R.id.background_updates);
+        autoCheck.setChecked(C.f343a.getBoolean("background_updates",true));
+        autoCheck.setOnCheckedChangeListener((button,enabled)->{C.f343a.edit().putBoolean("background_updates",enabled).apply();com.parvaz.tunnel.core.AppUpdateWorker.schedule(this);});
+        androidx.appcompat.widget.SwitchCompat autoDownload=findViewById(R.id.auto_download_wifi);
+        autoDownload.setChecked(C.f343a.getBoolean("auto_download_wifi",true));
+        autoDownload.setOnCheckedChangeListener((button,enabled)->{C.f343a.edit().putBoolean("auto_download_wifi",enabled).apply();com.parvaz.tunnel.core.AppUpdateWorker.schedule(this);});
         findViewById(R.id.btn_check_update).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {

@@ -9,8 +9,8 @@ import java.util.function.BooleanSupplier;
  * success is not proof that the active VPN or every destination is ready. Native
  * work may ignore interruption; BoundedProbeRace retains its global slot until it exits. */
 public final class HappyEyeballs {
- public static final int DEFAULT_PARALLEL=3;
- private static final long RACE_TIMEOUT_MS=12000;
+ public static final int DEFAULT_PARALLEL=2;
+ private static final long RACE_TIMEOUT_MS=24000;
  private HappyEyeballs(){}
  public static final class Result {
   public Profile winner;public int delayMs=-1,probed;public long elapsedMs;
@@ -22,14 +22,17 @@ public final class HappyEyeballs {
   Context app=context.getApplicationContext();ProfileStore store=ProfileStore.f(app);
   String source=store.primarySubscription();
   ArrayList<Profile> allowed=activeCandidates(profiles,store.activeProfiles());
-  ArrayList<Profile> ranked=new ServerMemory(app).rank(app,allowed);
+  ServerMemory history=new ServerMemory(app);
+  ArrayList<Profile> ranked=history.rank(app,allowed);
+  Map<String,Integer> scores=new HashMap<>();Map<String,Double> jitter=new HashMap<>();
+  for(Profile p:ranked){ServerMemory.Entry entry=history.entryFor(app,p.id);scores.put(p.id,entry==null?50:entry.score());jitter.put(p.id,entry==null?0:entry.jitter);}
   String pingUrl=new Prefs(app).f343a.getString("ping_url","https://www.gstatic.com/generate_204");
   String network=NetContext.key(app);
   BooleanSupplier owns=()->current.getAsBoolean()&&source.equals(store.primarySubscription());
   // Same adapter as manual latency tests: HY2/TUIC/full configurations must use
   // their actual engine instead of being coerced into an Xray-only probe.
   BoundedProbeRace.Result<Profile> measured=BoundedProbeRace.run(ranked,parallel,RACE_TIMEOUT_MS,
-   profile->ProxyMeasurement.measure(app,profile,pingUrl),owns);
+   profile->ProxyMeasurement.measure(app,profile,pingUrl),owns,(p,delay)->SwitchPolicy.cost(delay,scores.get(p.id),jitter.get(p.id)),750);
   Result result=new Result();result.probed=measured.probed;result.elapsedMs=measured.elapsedMs;
   result.cancelled=measured.status==BoundedProbeRace.Status.CANCELLED||!owns.getAsBoolean();
   result.deferred=measured.status==BoundedProbeRace.Status.BUSY;

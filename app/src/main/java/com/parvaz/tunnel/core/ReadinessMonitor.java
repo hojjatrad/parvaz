@@ -61,6 +61,7 @@ final class ReadinessMonitor implements AutoCloseable {
         if(attempts<=5)return 15000;
         return 60000;
     }
+    synchronized void confirmedExternally(){Session previous=active.getAndSet(null);if(previous!=null&&previous.pending!=null)previous.pending.cancel();}
     synchronized void cancel(){Session previous=active.getAndSet(null);if(previous!=null&&previous.pending!=null)previous.pending.cancel();probe.cancel();}
     @Override public synchronized void close(){cancel();if(network!=null)network.close();if(executor!=null)executor.shutdownNow();}
     private static final class Session {

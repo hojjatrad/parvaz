@@ -81,6 +81,7 @@ public class App extends Application {
 
         try {
             SubscriptionWorker.g(this);
+            com.parvaz.tunnel.core.AppUpdateWorker.schedule(this);
         } catch (Throwable unused2) {
             android.util.Log.w("Parvaz/App", "Throwable ignored", unused2);
         }

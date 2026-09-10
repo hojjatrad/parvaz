@@ -106,10 +106,9 @@ public final class NetworkMonitor {
             if (cVar != null && TunnelVpnService.serviceRunning) {
                 TunnelVpnService tunnelVpnService = cVar.outer();
                 if (!tunnelVpnService.switching) {
-                    LogBuffer.listener("network changed - reconnecting");
+                    LogBuffer.listener("Network changed; checking live transport before restarting");
                     if (tunnelVpnService.profile != null && !tunnelVpnService.switching) {
-                        tunnelVpnService.switching = true;
-                        new Thread(cVar.newReconnect(), "net-reconnect").start();
+                        tunnelVpnService.verifyHandover(cVar.newReconnect());
                     }
                 }
             }

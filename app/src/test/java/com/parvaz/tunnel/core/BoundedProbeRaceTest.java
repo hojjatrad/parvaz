@@ -37,4 +37,9 @@ public class BoundedProbeRaceTest {
    assertEquals(BoundedProbeRace.Status.BUSY,second.status);assertEquals(0,second.probed);assertTrue(second.failed.isEmpty());
   }finally{release.countDown();assertTrue(exited.await(2,TimeUnit.SECONDS));}
  }
+ @org.junit.Test public void qualityWindowCanPreferStableOverFirstResponder(){
+  BoundedProbeRace.Result<Integer> r=BoundedProbeRace.run(java.util.Arrays.asList(1,2),2,1000,c->{if(c==2)Thread.sleep(30);return 100;},()->true,(c,d)->c==1?900:200,100);
+  org.junit.Assert.assertEquals(Integer.valueOf(2),r.winner);
+ }
+ @org.junit.Test public void unsupportedRouteIsNotARecordedFailure(){BoundedProbeRace.Result<Integer> r=BoundedProbeRace.run(java.util.Collections.singletonList(1),1,1000,c->-2,()->true);org.junit.Assert.assertNull(r.winner);org.junit.Assert.assertTrue(r.failed.isEmpty());}
 }

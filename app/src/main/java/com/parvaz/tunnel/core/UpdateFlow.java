@@ -36,6 +36,7 @@ public final class UpdateFlow {
 
     /** Checks for a newer release and offers to download and install it. */
     public static void checkForUpdate(final Activity activity, final boolean silent) {
+        if(silent&&!activity.getSharedPreferences("parvaz_prefs",0).getBoolean("background_updates",true))return;
         if(!CHECKING.compareAndSet(false,true))return;
         if(silent&&!UpdateChecker.claimAutomaticCheck(activity)){CHECKING.set(false);return;}
         if (!silent) {

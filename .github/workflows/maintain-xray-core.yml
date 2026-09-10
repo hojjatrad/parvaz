@@ -1,36 +1,50 @@
-name: Maintain pinned Xray core and publish tested updates
+name: Maintain all three engines and publish tested updates
 on:
   schedule:
-    - cron: '23 3 * * *'
+    - cron: '23 */6 * * *'
   workflow_dispatch:
   push:
     branches: ['ci/core-maintenance-check']
 permissions:
-  contents: write
+  contents: read
 concurrency:
   group: parvaz-stable-publication
   cancel-in-progress: false
 jobs:
-  maintain:
+  test-candidate:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
+    outputs:
+      changed: ${{ steps.candidate.outputs.changed }}
+      version: ${{ steps.candidate.outputs.version }}
+      mode: ${{ steps.candidate.outputs.mode }}
+      base: ${{ steps.base.outputs.sha }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'push' && github.ref || 'main' }}
           fetch-depth: 1
           persist-credentials: false
-      - name: Discover newer official stable core or resume a failed upload
+      - name: Discover official stable Xray, sing-box and Mihomo candidates
         id: candidate
         env:
           GH_TOKEN: ${{ github.token }}
           CORE_CHECK_ONLY: ${{ github.event_name == 'push' && 'true' || 'false' }}
         run: python3 tools/release/auto_core_update.py
+      - id: base
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Commit prepared data locally so corresponding source is the candidate, not its parent
+        if: steps.candidate.outputs.changed == 'true' && steps.candidate.outputs.mode == 'new'
+        env:
+          VERSION: ${{ steps.candidate.outputs.version }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tools/native/engines-lock.json tools/native/xray-source-lock.json tools/release/core-lock.json tools/release/auto-core-release.json app/build.gradle "docs/releases/v$VERSION.md"
+          git commit -m "candidate: prepared engine metadata for v$VERSION"
       - uses: actions/setup-java@v5
         if: steps.candidate.outputs.changed == 'true'
-        with:
-          distribution: temurin
-          java-version: '17'
+        with: {distribution: temurin, java-version: '17'}
       - uses: actions/setup-go@v6
         if: steps.candidate.outputs.changed == 'true'
         with: {go-version: '1.26.7', cache: false}
@@ -38,60 +52,124 @@ jobs:
         if: steps.candidate.outputs.changed == 'true'
       - uses: gradle/actions/setup-gradle@v4
         if: steps.candidate.outputs.changed == 'true'
-        with:
-          gradle-version: '8.9'
-          cache-disabled: true
-      - name: Run candidate tests without signing secrets
+        with: {gradle-version: '8.9', cache-disabled: true}
+      - name: Compile and test candidate without signing secrets or write permission
         if: steps.candidate.outputs.changed == 'true'
+        env:
+          PARVAZ_UNSIGNED_CANDIDATE: 'true'
         run: |
           python3 -m unittest discover -s tools/release -p 'test_*.py'
           bash tools/audit/run.sh
           sdkmanager 'platforms;android-34' 'build-tools;34.0.0' 'ndk;27.2.12479018'
           bash tools/release/fetch_core.sh
+          ./gradlew --no-daemon --max-workers=2 :app:testDebugUnitTest :app:lintDebug :app:lintRelease
           python3 tools/native/build.py
-          ./gradlew --no-daemon --max-workers=2 :app:testDebugUnitTest
-      - name: Sign tested candidate with the unchanged permanent key
+          python3 tools/native/source_bundle.py
+          ./gradlew --no-daemon --max-workers=2 :app:assembleRelease
+          python3 tools/native/verify_packaging.py
+          python3 tools/native/build.py --host
+          python3 tools/native/protocol_smoke.py
+          python3 tools/native/build.py --probe
+      - name: Prepare isolated Android native fixtures
         if: steps.candidate.outputs.changed == 'true'
+        run: |
+          mkdir -p .cache/native-test-assets .cache/native-test-res/raw
+          openssl req -x509 -newkey rsa:2048 -nodes -keyout .cache/native-test-assets/fixture-key.pem -out .cache/native-test-assets/fixture-cert.pem -days 1 -subj /CN=localhost -addext subjectAltName=DNS:localhost,IP:127.0.0.1 >/dev/null 2>&1
+          cp .cache/native-test-assets/fixture-cert.pem .cache/native-test-res/raw/native_fixture_ca.pem
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        if: steps.candidate.outputs.changed == 'true'
+        with:
+          api-level: 29
+          arch: x86_64
+          target: default
+          disable-animations: true
+          script: ./gradlew -p tools/android-probe -PnativeProbe --no-daemon --max-workers=2 connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.parvaz.probe.NativeEngineTest
+      - uses: reactivecircus/android-emulator-runner@v2
+        if: steps.candidate.outputs.changed == 'true'
+        with:
+          api-level: 34
+          arch: x86_64
+          target: default
+          disable-animations: true
+          script: ./gradlew -p tools/android-probe -PnativeProbe --no-daemon --max-workers=2 connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.parvaz.probe.NativeEngineTest
+      - name: Seal tested candidate data
+        if: steps.candidate.outputs.changed == 'true'
+        env:
+          VERSION: ${{ steps.candidate.outputs.version }}
+        run: python3 tools/release/core_candidate_artifacts.py pack "$VERSION"
+      - uses: actions/upload-artifact@v4
+        if: steps.candidate.outputs.changed == 'true'
+        with:
+          name: tested-core-candidate
+          path: .cache/core-candidate/
+          include-hidden-files: true
+          retention-days: 1
+  sign-and-publish:
+    needs: test-candidate
+    if: needs.test-candidate.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.test-candidate.outputs.base }}
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: tested-core-candidate
+          path: .cache/core-candidate
+      - name: Independently regenerate candidate metadata on the clean signer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_VERSION: ${{ needs.test-candidate.outputs.version }}
+        run: |
+          python3 tools/release/auto_core_update.py
+          python3 tools/release/core_candidate_artifacts.py verify "$EXPECTED_VERSION"
+      - uses: actions/setup-java@v5
+        with: {distribution: temurin, java-version: '17'}
+      - uses: android-actions/setup-android@v3
+      - run: sdkmanager 'build-tools;34.0.0'
+      - name: Sign prebuilt APKs only; never execute candidate engines on this runner
         env:
           PARVAZ_KEYSTORE_BASE64: ${{ secrets.PARVAZ_KEYSTORE_BASE64 }}
           PARVAZ_KEYSTORE_PASSWORD: ${{ secrets.PARVAZ_KEYSTORE_PASSWORD }}
           PARVAZ_KEY_ALIAS: ${{ secrets.PARVAZ_KEY_ALIAS }}
           PARVAZ_KEY_PASSWORD: ${{ secrets.PARVAZ_KEY_PASSWORD }}
+        run: python3 tools/release/sign_prebuilt.py
+      - name: Verify pinned signer, APK package, version and source hashes
         run: |
-          python3 tools/release/build_signed.py
           python3 tools/release/verify_apk.py
-          python3 tools/native/verify_packaging.py
-      - name: Prevent rollback of latest app, versionCode or core
-        if: steps.candidate.outputs.changed == 'true'
+          sha256sum release-artifacts/*-source.tar.gz | sed 's#release-artifacts/##' >> release-artifacts/SHA256SUMS.txt
+      - name: Prevent app or any engine downgrade
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 tools/release/check_release_order.py
-      - name: Commit and tag only a verified new candidate; never force refs
-        if: steps.candidate.outputs.changed == 'true' && steps.candidate.outputs.mode == 'new'
+      - name: Commit and tag a new verified candidate without force
+        if: needs.test-candidate.outputs.mode == 'new'
         env:
-          VERSION: ${{ steps.candidate.outputs.version }}
+          VERSION: ${{ needs.test-candidate.outputs.version }}
           GH_TOKEN: ${{ github.token }}
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add tools/native/xray-source-lock.json tools/release/core-lock.json tools/release/auto-core-release.json app/build.gradle "docs/releases/v$VERSION.md"
-          git commit -m "core: verified Xray update for v$VERSION"
-          git tag -a "v$VERSION" -m "Verified Xray core update v$VERSION; same permanent signing identity"
+          git add tools/native/engines-lock.json tools/native/xray-source-lock.json tools/release/core-lock.json tools/release/auto-core-release.json app/build.gradle "docs/releases/v$VERSION.md"
+          git commit -m "core: tested engine update for v$VERSION"
+          git tag -a "v$VERSION" -m "Tested engine update v$VERSION; unchanged signing identity"
           AUTH="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
           echo "::add-mask::$AUTH"
           git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $AUTH" push --atomic origin HEAD:refs/heads/main "refs/tags/v$VERSION"
-      - name: Publish verified APKs directly (token-created tags do not trigger another workflow)
-        if: steps.candidate.outputs.changed == 'true'
+      - name: Publish stable release without replacing previous assets
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ steps.candidate.outputs.version }}
+          VERSION: ${{ needs.test-candidate.outputs.version }}
         run: |
           if gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo 'Release already exists; refusing to replace its files.'
+            echo 'Existing release must never be overwritten.'
             exit 1
           fi
-          python3 tools/native/source_bundle.py
-          sha256sum release-artifacts/*-source.tar.gz | sed 's#release-artifacts/##' >> release-artifacts/SHA256SUMS.txt
-          gh release create "v$VERSION" release-artifacts/*-source.tar.gz release-artifacts/*.apk release-artifacts/SHA256SUMS.txt \
-            --repo "$GITHUB_REPOSITORY" --verify-tag --title "Parvaz $VERSION — Xray update" \
-            --notes-file "docs/releases/v$VERSION.md" --latest
+          gh release create "v$VERSION" release-artifacts/*.apk release-artifacts/*-source.tar.gz release-artifacts/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --verify-tag --title "Parvaz $VERSION — tested engine updates" --notes-file "docs/releases/v$VERSION.md" --latest

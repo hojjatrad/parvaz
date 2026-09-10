@@ -13,6 +13,8 @@ def version(value):
 def validate_order(candidate,previous):
     if version(candidate['version'])<=version(previous['version']):raise ValueError('Candidate must be newer than the published stable release')
     if candidate['code']<=previous['code']:raise ValueError('versionCode must increase over published stable release')
+    for name,tag in previous.get('native',{}).items():
+        if name not in candidate.get('native',{}) or version(candidate['native'][name])<version(tag):raise ValueError('Refusing native engine downgrade: '+name)
     if previous.get('core') and version(candidate['core'])<version(previous['core']):raise ValueError('Refusing a core downgrade from published stable release')
 
 def api(path):
@@ -32,6 +34,7 @@ def app(text):
 
 def main():
     candidate=app((ROOT/'app/build.gradle').read_text());candidate['core']=json.loads((ROOT/'tools/release/core-lock.json').read_text())['tag']
+    candidate['native']={e['name']:e['tag'] for e in json.loads((ROOT/'tools/native/engines-lock.json').read_text())}
     try:latest=api('/releases/latest')
     except urllib.error.HTTPError as error:
         if error.code==404:return
@@ -41,6 +44,9 @@ def main():
     previous=app(source('app/build.gradle',tag))
     if version(previous['version'])!=version(tag):raise ValueError('Published tag/source version mismatch')
     try:previous['core']=json.loads(source('tools/release/core-lock.json',tag))['tag']
+    except urllib.error.HTTPError as error:
+        if error.code!=404:raise
+    try:previous['native']={e['name']:e['tag'] for e in json.loads(source('tools/native/engines-lock.json',tag))}
     except urllib.error.HTTPError as error:
         if error.code!=404:raise
     validate_order(candidate,previous)

@@ -37,8 +37,8 @@ public final class UpdateChecker {
     private static final String KEY_LAST_CHECK = "last_check";
     private static final String KEY_SKIPPED = "skipped_version";
 
-    /** At most one automatic check per day. */
-    private static final long CHECK_INTERVAL_MS = 24L * 60 * 60 * 1000;
+    /** Automatic foreground checks are spaced by six hours. */
+    private static final long CHECK_INTERVAL_MS = 6L * 60 * 60 * 1000;
 
     private UpdateChecker() {
     }

@@ -4,6 +4,8 @@ import android.content.Context;
 import android.content.SharedPreferences;
 
 import com.parvaz.tunnel.model.Profile;
+import com.parvaz.tunnel.store.ProfileStore;
+import com.parvaz.tunnel.store.ProfileIdentity;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -51,9 +53,11 @@ public final class ServerMemory {
     public static final class Entry {
         public String profileId = "";
         public String context = "";
+        public String identity = "";
         public int successes = 0;
         public int failures = 0;
         public double avgLatency = -1;
+        public double jitter = 0;
         public long lastSuccess = 0;
 
         /**
@@ -82,6 +86,7 @@ public final class ServerMemory {
                     latencyScore = 20.0d * (1.0d - ((avgLatency - 150.0d) / 1350.0d));
                 }
                 score += latencyScore;
+                score -= Math.min(15,Math.max(0,jitter)/30);
             }
 
             if (lastSuccess > 0) {
@@ -103,21 +108,21 @@ public final class ServerMemory {
         JSONObject toJson() throws JSONException {
             JSONObject json = new JSONObject();
             json.put("p", profileId);
-            json.put("c", context);
+            json.put("c", context);json.put("identity",identity);
             json.put("s", successes);
             json.put("f", failures);
             json.put("l", avgLatency);
-            json.put("t", lastSuccess);
+            json.put("t", lastSuccess);json.put("j",jitter);
             return json;
         }
 
         static Entry fromJson(JSONObject json) {
             Entry entry = new Entry();
             entry.profileId = json.optString("p", "");
-            entry.context = json.optString("c", "");
+            entry.context = json.optString("c", "");entry.identity=json.optString("identity","");
             entry.successes = json.optInt("s", 0);
             entry.failures = json.optInt("f", 0);
-            entry.avgLatency = json.optDouble("l", -1);
+            entry.avgLatency = json.optDouble("l", -1);entry.jitter=Math.max(0,json.optDouble("j",0));
             entry.lastSuccess = json.optLong("t", 0);
             return entry;
         }
@@ -140,9 +145,11 @@ public final class ServerMemory {
             entry.context = ctx;
             all.add(entry);
         }
-        entry.successes++;
+        matchIdentity(entry,identity(context,profileId));
+        entry.successes=Math.min(1000000,entry.successes+1);
         entry.lastSuccess = System.currentTimeMillis();
         if (latencyMs > 0) {
+            if(entry.avgLatency>0)entry.jitter=EMA_ALPHA*Math.abs(latencyMs-entry.avgLatency)+(1-EMA_ALPHA)*entry.jitter;
             entry.avgLatency = entry.avgLatency <= 0
                     ? latencyMs
                     : (EMA_ALPHA * latencyMs) + ((1 - EMA_ALPHA) * entry.avgLatency);
@@ -165,7 +172,8 @@ public final class ServerMemory {
             entry.context = ctx;
             all.add(entry);
         }
-        entry.failures++;
+        matchIdentity(entry,identity(context,profileId));
+        entry.failures=Math.min(1000000,entry.failures+1);
         save(all);
     }
 
@@ -173,13 +181,14 @@ public final class ServerMemory {
 
     /** Score for one server in the current context, 0-100 (50 when never tried). */
     public int scoreFor(Context context, String profileId) {
-        Entry entry = find(load(), profileId, NetContext.key(context));
-        return entry == null ? 50 : entry.score();
+        Entry entry=entryFor(context,profileId);
+        return entry==null?50:entry.score();
     }
 
     /** The stored entry for one server in the current context, or null. */
     public Entry entryFor(Context context, String profileId) {
-        return find(load(), profileId, NetContext.key(context));
+        Entry entry=find(load(),profileId,NetContext.key(context));
+        return entry!=null&&entry.identity.equals(identity(context,profileId))?entry:null;
     }
 
     /**
@@ -196,6 +205,8 @@ public final class ServerMemory {
             public int compare(Profile a, Profile b) {
                 Entry ea = find(all, a.id, ctx);
                 Entry eb = find(all, b.id, ctx);
+                if(ea!=null&&!ea.identity.equals(ProfileIdentity.fingerprint(a)))ea=null;
+                if(eb!=null&&!eb.identity.equals(ProfileIdentity.fingerprint(b)))eb=null;
                 int sa = ea == null ? 50 : ea.score();
                 int sb = eb == null ? 50 : eb.score();
                 if (sa != sb) {
@@ -214,6 +225,9 @@ public final class ServerMemory {
     private void clearLocked() {
         prefs.edit().remove(KEY_DATA).apply();
     }
+
+    private static String identity(Context context,String id){Profile p=ProfileStore.f(context).getById(id);return p==null?"":ProfileIdentity.fingerprint(p);}
+    private static void matchIdentity(Entry e,String identity){if(!e.identity.equals(identity)){e.identity=identity;e.successes=0;e.failures=0;e.avgLatency=-1;e.jitter=0;e.lastSuccess=0;}}
 
     // ------------------------------------------------------------------- storage
 

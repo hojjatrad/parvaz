@@ -3,6 +3,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
+import java.util.function.ToDoubleBiFunction;
 
 /** At most three live measurements across races, including a native call which
  * ignores interruption. Never queues another batch behind abandoned native work. */
@@ -14,7 +15,10 @@ final class BoundedProbeRace {
  static final class Result<T>{T winner;long delay=-1,elapsedMs;int probed;Status status=Status.NO_RESPONSE;final List<T> failed=new ArrayList<>();}
  static final class Sample<T>{T candidate;long delay;boolean attempted;Sample(T c,long d,boolean a){candidate=c;delay=d;attempted=a;}}
  static <T> Result<T> run(List<T> candidates,int parallel,long timeoutMs,Probe<T> probe,BooleanSupplier current){
-  Result<T> result=new Result<>();long started=System.nanoTime();
+  return run(candidates,parallel,timeoutMs,probe,current,(candidate,delay)->delay,0);
+ }
+ static <T> Result<T> run(List<T> candidates,int parallel,long timeoutMs,Probe<T> probe,BooleanSupplier current,ToDoubleBiFunction<T,Long> cost,long settleMs){
+  Result<T> result=new Result<>();long started=System.nanoTime(),firstSuccess=0;double best=Double.POSITIVE_INFINITY;
   int count=Math.min(candidates.size(),Math.min(LIMIT,parallel<=0?LIMIT:parallel));
   if(!current.getAsBoolean()){result.status=Status.CANCELLED;return result;}
   if(count==0)return result;
@@ -39,13 +43,14 @@ final class BoundedProbeRace {
    for(int left=count;left>0;){
     if(!current.getAsBoolean()){result.status=Status.CANCELLED;break;}
     long remaining=TimeUnit.MILLISECONDS.toNanos(Math.max(0,timeoutMs))-(System.nanoTime()-started);
-    if(remaining<=0){result.status=Status.TIMEOUT;break;}
+    if(firstSuccess>0&&System.nanoTime()-firstSuccess>=TimeUnit.MILLISECONDS.toNanos(settleMs))break;
+    if(remaining<=0){if(result.winner==null)result.status=Status.TIMEOUT;break;}
     Future<Sample<T>> future=completed.poll(Math.min(remaining,TimeUnit.MILLISECONDS.toNanos(100)),TimeUnit.NANOSECONDS);
     if(future==null)continue;left--;
     Sample<T> sample;
     try{sample=future.get();}catch(ExecutionException failed){continue;}
-    if(!sample.attempted)continue;
-    if(sample.delay>0){result.winner=sample.candidate;result.delay=sample.delay;result.status=Status.SUCCESS;break;}
+    if(!sample.attempted||sample.delay==-2)continue;
+    if(sample.delay>0){double score=cost.applyAsDouble(sample.candidate,sample.delay);if(score<best){best=score;result.winner=sample.candidate;result.delay=sample.delay;result.status=Status.SUCCESS;}if(firstSuccess==0)firstSuccess=System.nanoTime();if(settleMs<=0)break;continue;}
     result.failed.add(sample.candidate);
    }
    if(!current.getAsBoolean()){result.winner=null;result.failed.clear();result.status=Status.CANCELLED;}

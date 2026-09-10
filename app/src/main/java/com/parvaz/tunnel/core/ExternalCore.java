@@ -79,7 +79,11 @@ public final class ExternalCore implements AutoCloseable {
  public Profile relay(Profile original){Profile p;try{p=Profile.fromJson(original.toJson());}catch(org.json.JSONException e){throw new IllegalArgumentException("Invalid relay profile",e);}p.protocol="socks";p.address="127.0.0.1";p.port=port;p.uuid=username;p.quicKey=password;p.security="";p.network="tcp";p.sni="";p.host="";p.rawJson="";return p;}
  private boolean alive(){try{process.exitValue();return false;}catch(IllegalThreadStateException stillRunning){return true;}}
  public boolean isRunning(){return !closed.get()&&process!=null&&alive();}
- @Override public synchronized void close(){if(closed.getAndSet(true))return;if(process!=null){process.destroy();if(android.os.Build.VERSION.SDK_INT>=26){try{if(!process.waitFor(1500,TimeUnit.MILLISECONDS))process.destroyForcibly();}catch(InterruptedException e){process.destroyForcibly();Thread.currentThread().interrupt();}}}erase(directory);if(permit){permit=false;CAPACITY.release();}password=null;}
+ @Override public synchronized void close(){
+  if(closed.getAndSet(true))return;
+  ChildProcessReaper.close(process,this::releaseResources);
+ }
+ private synchronized void releaseResources(){erase(directory);if(permit){permit=false;CAPACITY.release();}password=null;}
  private static void erase(File directory){if(directory==null)return;File[] files=directory.listFiles();if(files!=null)for(File file:files){try{if(file.getCanonicalFile().getParentFile().equals(directory.getCanonicalFile())){if(file.isDirectory())erase(file);else file.delete();}}catch(IOException ignored){}}directory.delete();}
  public static void cleanOrphans(Context context){File[] files=context.getNoBackupFilesDir().listFiles();if(files!=null)for(File file:files)if(file.isDirectory()&&file.getName().startsWith("engine-session-"))erase(file);}
 }

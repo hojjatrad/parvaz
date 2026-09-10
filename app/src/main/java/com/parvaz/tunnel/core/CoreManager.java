@@ -26,6 +26,16 @@ public final class CoreManager {
     private ExternalCore external;
     private final ReadinessMonitor startupWarmup=new ReadinessMonitor();
     private volatile long generation;
+    private volatile int verifiedPort;
+    private int activeTunFd;
+    synchronized void startIsolatedProbe(CoreController probe,String config)throws Exception {
+        // The wrapper writes a process-global TUN fd even for TUN-less probes.
+        // Preserve the active value and serialize with real core startup.
+        probe.startLoop(config,activeTunFd);
+    }
+    synchronized void markUnconfirmed(long owner){if(owner==generation&&diagnostics!=null)diagnostics.unconfirmed();}
+    synchronized void acceptVerifiedHealth(long owner,long delay){if(owner==generation&&running&&verifiedPort>0&&delay>0&&diagnostics!=null){diagnostics.probeFinished(true,delay);startupWarmup.confirmedExternally();}}
+    int verifiedPort(long owner){return owner==generation&&running?verifiedPort:0;}
     private volatile StartupDiagnostics.Attempt diagnostics;
     StartupDiagnostics.Attempt startupAttempt(){return diagnostics;}
 
@@ -158,9 +168,9 @@ public final class CoreManager {
             int readinessPort;
             try(java.net.ServerSocket reserved=new java.net.ServerSocket(0,1,java.net.InetAddress.getByName("127.0.0.1"))){readinessPort=reserved.getLocalPort();}
             com.parvaz.tunnel.config.ReadinessConfig.Plan readiness=com.parvaz.tunnel.config.ReadinessConfig.prepare(config,profile,external!=null&&external.readinessRemoteOnly,readinessPort);
-            config=readiness.config;trace.routeConfigured(readiness.pinned);
+            config=readiness.config;verifiedPort=readiness.pinned?readinessPort:0;trace.routeConfigured(readiness.pinned);
             trace.configDone();
-            controller=Libv2ray.newCoreController(new b(failure));controller.startLoop(config,tunFd);running=controller.getIsRunning()&&(external==null||external.isRunning());
+            activeTunFd=tunFd;controller=Libv2ray.newCoreController(new b(failure));controller.startLoop(config,tunFd);running=controller.getIsRunning()&&(external==null||external.isRunning());
             if(!running)throw new IllegalStateException("Core failed to start");
             trace.coreStarted();
             // Most proxy outbounds dial lazily. Prime the configured connectivity
@@ -178,7 +188,7 @@ public final class CoreManager {
     /* renamed from: d */
     public final synchronized void stop() {
         StartupDiagnostics.Attempt trace=diagnostics;if(trace!=null)trace.stop();
-        startupWarmup.cancel();
+        startupWarmup.cancel();verifiedPort=0;
         ++generation; // Invalidate callbacks before closing either core, including intentional restarts.
         HotspotProxyManager.stop();
         this.running = false;

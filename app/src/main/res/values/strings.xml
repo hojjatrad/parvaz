@@ -477,4 +477,8 @@ Tap + to paste a config link or add a subscription."</string>
     <string name="tunnel_unconfirmed">Local tunnel · communication unconfirmed</string>
     <string name="startup_report_title">Connection timing report</string>
     <string name="startup_report_help">Local, manual report only. A response through the local proxy does not prove the selected remote route or every application works. Received bytes include probes and DNS; application response and DNS timings are not yet instrumented. UNKNOWN is not a zero duration. No endpoint, credential or profile ID is included.</string>
+
+    <string name="background_updates">Check for app and engine updates automatically</string>
+    <string name="auto_download_wifi">Download updates on unmetered network while charging</string>
+    <string name="auto_download_help">Checks run approximately every six hours; Android may defer them. Installation still needs your approval. Downloads use the same strict hash and signature checks.</string>
 </resources>

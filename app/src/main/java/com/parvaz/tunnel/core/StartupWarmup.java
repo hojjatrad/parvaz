@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 final class StartupWarmup implements AutoCloseable {
     static final int CONNECT_TIMEOUT_MS=5000,READ_TIMEOUT_MS=6000,DEADLINE_MS=12000;
+    private static final Semaphore NETWORK_SLOTS=new Semaphore(6);
     interface Connections {HttpURLConnection open(URL url)throws Exception;}
     interface Result {void finished(boolean confirmed,long elapsedMs);}
     private final Connections connections;
@@ -41,13 +42,15 @@ final class StartupWarmup implements AutoCloseable {
         cancel();URL url=endpoint(endpoint);if(url==null||worker.isShutdown()){completion.finished(false,0);return;}
         Attempt attempt=new Attempt(url,route,completion);active.set(attempt);
         try{worker.execute(()->run(attempt));}
-        catch(RejectedExecutionException busy){finish(attempt,false,0);}
+        catch(RejectedExecutionException busy){finish(attempt,false,-1);}
     }
     void cancel(){Attempt attempt=active.getAndSet(null);if(attempt!=null)attempt.cancel();}
     private void run(Attempt attempt){
         long began=System.nanoTime();ScheduledFuture<?> deadline=null;boolean confirmed=false;
         try{
             if(attempt.cancelled||active.get()!=attempt)return;
+            if(!NETWORK_SLOTS.tryAcquire()){finish(attempt,false,-1);return;}
+            attempt.ownSlot();
             deadline=deadlines.schedule(()->finish(attempt,false,TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-began)),deadlineMs,TimeUnit.MILLISECONDS);
             HttpURLConnection connection=attempt.route.open(attempt.url);
             if(!attempt.attach(connection))return;
@@ -59,7 +62,8 @@ final class StartupWarmup implements AutoCloseable {
         }catch(Exception ignored){/* No URL/credentials in logs and no direct fallback. */}
         finally{
             if(deadline!=null)deadline.cancel(false);
-            finish(attempt,confirmed,TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-began));
+            try{finish(attempt,confirmed,TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-began));}
+            finally{attempt.workerDone();}
         }
     }
     private void finish(Attempt attempt,boolean confirmed,long elapsed){
@@ -73,14 +77,18 @@ final class StartupWarmup implements AutoCloseable {
     private static final class Attempt {
         final URL url;final Connections route;final Result result;volatile boolean cancelled;private HttpURLConnection connection;
         Attempt(URL url,Connections route,Result result){this.url=url;this.route=route;this.result=result;}
+        private boolean slot,done,released;private int closing;
+        synchronized void ownSlot(){slot=true;}
+        synchronized void workerDone(){done=true;releaseIfDone();}
+        private void releaseIfDone(){if(slot&&done&&closing==0&&!released){released=true;NETWORK_SLOTS.release();}}
         boolean attach(HttpURLConnection value){
             synchronized(this){if(!cancelled){connection=value;return true;}}
             value.disconnect();return false;
         }
         void cancel(){
             HttpURLConnection value;
-            synchronized(this){cancelled=true;value=connection;connection=null;}
-            if(value!=null)value.disconnect();
+            synchronized(this){cancelled=true;value=connection;connection=null;if(value!=null)closing++;}
+            if(value!=null)try{value.disconnect();}finally{synchronized(this){closing--;releaseIfDone();}}
             // Disconnect this socket, never interrupt a pool thread that may
             // already have been reused by a newer session.
         }

@@ -60,6 +60,8 @@ public class TunnelVpnService extends VpnService {
     public long dayFlushAtElapsed;
     final SerialConnectionQueue operations=new SerialConnectionQueue();
     public volatile m b;
+    private long nextAutoSearchAt,lastQualitySearch,lastSlowSample;
+    private int failedSearches,slowSamples;
     private final java.util.concurrent.atomic.AtomicBoolean healthProbeBusy=new java.util.concurrent.atomic.AtomicBoolean();
     public NetworkMonitor c;
 
@@ -620,32 +622,41 @@ public class TunnelVpnService extends VpnService {
                     // Observe the volatile publication flag before reading its controller.
                     boolean published=manager.running;CoreController controller=manager.controller;
                     final boolean alive=published&&controller!=null&&controller.getIsRunning();
-                    long delay=-1;
+                    final boolean trafficBefore=sessionDown>lastHealthBytes;
+                    long delay=VerifiedProbe.UNKNOWN;
                     // Do not spend a probe/radio wakeup when replies already arrived.
-                    if(alive&&sessionDown<=lastHealthBytes){
-                        try{delay=controller.measureDelay(f.f343a.getString("ping_url","https://www.gstatic.com/generate_204"));}
+                    if(alive&&(!trafficBefore||strikes>0)){
+                        try{delay=VerifiedProbe.measure(manager.verifiedPort(ownerSession),f.f343a.getString("ping_url","https://www.gstatic.com/generate_204"));}
                         catch(Exception ignored){/* Endpoint/credential-free diagnostics. */}
                     }
                     final long measured=delay;
                     handedOff=handler.post(()->{
                         try{
-                            final boolean[] restart={false};
+                            final boolean[] restart={false},quality={false};
                             operations.commit(ownerTicket,()->{
-                            if(!m.this.isCurrent())return;
-                            long receivedNow=sessionDown;boolean received=receivedNow>lastHealthBytes;lastHealthBytes=receivedNow;
+                            if(!m.this.isCurrent()||profile==null||HappyEyeballs.activeCandidates(java.util.Collections.singletonList(profile),ProfileStore.f(TunnelVpnService.this).activeProfiles()).isEmpty())return;
+                            long receivedNow=sessionDown;boolean received=trafficBefore&&measured==VerifiedProbe.UNKNOWN;lastHealthBytes=receivedNow;
                             int threshold=f.f343a.getInt("ping_threshold",1200);
                             HealthPolicy.Decision decision=HealthPolicy.evaluate(alive,received,measured,threshold,strikes,f.f343a.getInt("health_strikes",3));
                             strikes=decision.strikes;
-                            if(strikes==0)chainedSwitches=0;
-                            if(alive&&measured>=0&&measured<=threshold&&profile!=null){
+                            if(received||measured>0){chainedSwitches=0;failedSearches=0;}
+                            long sampleNow=android.os.SystemClock.elapsedRealtime();
+                            if(sampleNow-lastSlowSample>120000)slowSamples=0;
+                            if(measured>0){slowSamples=measured>threshold?Math.min(100,slowSamples+1):0;lastSlowSample=sampleNow;}
+                            else if(measured==-1)slowSamples=0;
+                            quality[0]=measured>threshold&&SwitchPolicy.qualityDue(sampleNow,beganElapsed,lastQualitySearch,slowSamples,trafficBefore);
+                            if(alive&&measured>0&&profile!=null){
+                                manager.acceptVerifiedHealth(ownerSession,measured);
                                 ProfileStore.f(TunnelVpnService.this).i(profile.id,(int)measured);
                                 new ServerMemory(TunnelVpnService.this).recordSuccess(TunnelVpnService.this,profile.id,(int)measured);
                                 Intent intent=new Intent("com.parvaz.tunnel.STATE");intent.setPackage(getPackageName());
                                 intent.putExtra("state",4);intent.putExtra("ping",(int)measured);intent.putExtra("profile_id",profile.id);sendBroadcast(intent);
                             }
                             restart[0]=decision.restart;
+                            if(decision.restart)manager.markUnconfirmed(ownerSession);
                             });
                             if(restart[0])autoSwitchOwned(ownerTicket);
+                            else if(quality[0])searchReplacement(ownerTicket,true,measured);
                         }finally{healthProbeBusy.set(false);}
                     });
                 }catch(Exception ignored){/* Stopped/replaced core: leave the newer session untouched. */}
@@ -901,6 +912,7 @@ public class TunnelVpnService extends VpnService {
     public final void lambda$lambda$autoSwitch$2$2(){coreStoppedOwned(operations.ticket());}
     private void coreStoppedOwned(long ticket){
         if(!operations.current(ticket)||!serviceRunning||switching)return;
+        CoreManager.b().markUnconfirmed(CoreManager.b().sessionId());
         if(f==null||!f.f343a.getBoolean("auto_switch",true))postFailure(ticket,getString(R.string.state_disconnected));
         else handler.post(()->{if(operations.current(ticket))autoSwitchOwned(ticket);});
     }
@@ -922,23 +934,25 @@ public class TunnelVpnService extends VpnService {
      * four chained switches we stop and report failure rather than loop forever.
      */
     public final void lambda$onCoreStopped$1(){autoSwitchOwned(operations.ticket());}
-    private void autoSwitchOwned(long ticket) {
+    private void autoSwitchOwned(long ticket) {searchReplacement(ticket,false,-1);}
+    private void searchReplacement(long ticket,boolean qualityOnly,long currentDelay) {
+        if(f==null||!f.f343a.getBoolean("auto_switch",true))return;
         if(!operations.current(ticket))return;
         if (this.switching || !serviceRunning) {
             return;
         }
-        if (this.chainedSwitches >= 4) {
-            Log.w("ParvazVpn", "too many chained switches, giving up");
-            failOwned(ticket,getString(R.string.no_alternative));
-            return;
-        }
-        LogBuffer.listener("health check failed, looking for a better server");
+        if(!PhysicalNetwork.available(this))return;
+        long elapsedNow=android.os.SystemClock.elapsedRealtime();
+        if(elapsedNow<nextAutoSearchAt)return;
+        nextAutoSearchAt=elapsedNow+SwitchPolicy.backoff(++failedSearches);
+        if(qualityOnly)lastQualitySearch=elapsedNow;
+        LogBuffer.listener(qualityOnly?"Sustained slow responses; comparing verified alternatives":"Repeated failures; comparing verified alternatives");
 
         Profile current = this.profile;
         String currentId = current == null ? "" : current.id;
 
         // Remember that the current server just let us down.
-        if (!currentId.isEmpty()) {
+        if (!qualityOnly&&!currentId.isEmpty()) {
             new ServerMemory(this).recordFailure(this, currentId);
         }
 
@@ -958,20 +972,11 @@ public class TunnelVpnService extends VpnService {
             candidates.add(candidate);
         }
 
-        // Everything is on cooldown: clear it and allow a second pass.
-        if (candidates.isEmpty()) {
-            this.p.clear();
-            for (int i = 0; i < all.size(); i++) {
-                Profile candidate = all.get(i);
-                if (candidate != null && !candidate.id.equals(currentId)) {
-                    candidates.add(candidate);
-                }
-            }
-        }
-
-        if (candidates.isEmpty()) {
-            failOwned(ticket,getString(R.string.no_alternative));
-            return;
+        // Never clear cooldowns to force a flapping server back into rotation.
+        if(candidates.isEmpty()){
+            if(!qualityOnly&&!CoreManager.b().running&&current!=null&&
+                !HappyEyeballs.activeCandidates(java.util.Collections.singletonList(current),all).isEmpty())new l(current,getString(R.string.state_switching)).run();
+            return; // Preserve a usable tunnel; next health tick observes backoff.
         }
 
         final long ownerSession=CoreManager.b().sessionId();
@@ -1001,15 +1006,16 @@ public class TunnelVpnService extends VpnService {
                             });
                             return;
                         }
-                        if (winner == null) {
-                            failOwned(ticket,getString(R.string.no_alternative));
+                        if(winner==null||(qualityOnly&&!SwitchPolicy.better(currentDelay,race.delayMs))){
+                            operations.commit(ticket,()->{switching=false;h("",previousState);startHealthTicker();});
+                            if(winner==null&&!qualityOnly&&!CoreManager.b().running&&current!=null)new l(current,getString(R.string.state_switching)).run();
                             return;
                         }
 
                         operations.commit(ticket,()->{
                             TunnelVpnService.this.p.put(winner.id,Long.valueOf(System.currentTimeMillis()));
                             ProfileStore.f(TunnelVpnService.this).i(winner.id,race.delayMs);
-                            LogBuffer.listener("switching to "+winner.remark);
+                            LogBuffer.listener("Switching to a repeatedly verified active-source candidate");
                             new l(winner,TunnelVpnService.this.getString(R.string.state_switching)).run();
                         });
                     }
@@ -1046,6 +1052,7 @@ public class TunnelVpnService extends VpnService {
         this.switching = false;
         this.strikes = 0;
         this.chainedSwitches = 0;
+        this.failedSearches=0;this.nextAutoSearchAt=0;this.lastQualitySearch=0;this.slowSamples=0;
         this.startedAt = 0L;
         this.sessionUp = 0L;
         this.sessionDown = 0L;
@@ -1102,10 +1109,31 @@ public class TunnelVpnService extends VpnService {
         }
     }
 
+    private final java.util.concurrent.atomic.AtomicBoolean handoverBusy=new java.util.concurrent.atomic.AtomicBoolean();
+    private long handoverRevision;
+    void verifyHandover(Runnable reconnect){
+        final long revision=++handoverRevision,ticket=operations.ticket(),session=CoreManager.b().sessionId();
+        bindUnderlyingNetwork();
+        if(CoreManager.b().verifiedPort(session)<=0){switching=true;new Thread(reconnect,"parvaz-handover-recovery").start();return;}
+        if(!handoverBusy.compareAndSet(false,true)){switching=true;new Thread(reconnect,"parvaz-handover-recovery").start();return;}
+        new Thread(()->{
+            long delay=-1;
+            try{delay=VerifiedProbe.measure(CoreManager.b().verifiedPort(session),f.f343a.getString("ping_url",ReadinessMonitor.GOOGLE));}
+            catch(Exception ignored){}
+            final boolean responded=delay>0;
+            handler.post(()->{
+                handoverBusy.set(false);
+                if(revision!=handoverRevision||!operations.current(ticket)||!serviceRunning||switching||CoreManager.b().sessionId()!=session)return;
+                if(responded){strikes=0;LogBuffer.listener("Transport recovered; keeping live core and its DNS cache");return;}
+                switching=true;new Thread(reconnect,"parvaz-handover-recovery").start();
+            });
+        },"parvaz-handover-check").start();
+    }
+
     public final void startHealthTicker() {
         stopHealthTicker();
         Prefs prefs = this.f;
-        if (prefs == null || !prefs.f343a.getBoolean("auto_switch", true)) {
+        if (prefs == null) {
             return;
         }
         long max = Math.max(5, this.f.f343a.getInt("health_interval", 15)) * 1000;

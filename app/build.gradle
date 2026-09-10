@@ -15,8 +15,8 @@ android {
         minSdk 24
         targetSdk 34
         resourceConfigurations += ['en', 'fa'] // The two languages actually offered by Settings.
-        versionCode 32
-        versionName "1.26.5"
+        versionCode 33
+        versionName "1.27.0"
         resValue "string", "bundled_core_version", new groovy.json.JsonSlurper().parse(rootProject.file('tools/release/core-lock.json')).tag
         resValue "string", "bundled_native_versions", new groovy.json.JsonSlurper().parse(rootProject.file('tools/native/engines-lock.json')).collect { it.name + ' ' + it.tag }.join(' • ')
         vectorDrawables.useSupportLibrary = true
@@ -50,7 +50,9 @@ android {
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.release
+            if (releaseSigningReady || System.getenv("PARVAZ_UNSIGNED_CANDIDATE") != "true") {
+                signingConfig signingConfigs.release
+            }
         }
     }
 
@@ -116,6 +118,7 @@ dependencies {
     implementation 'org.yaml:snakeyaml:2.4' // SafeConstructor + explicit resource limits
 
     testImplementation 'junit:junit:4.13.2'
+    testImplementation 'androidx.work:work-testing:2.9.0'
     testImplementation 'org.robolectric:robolectric:4.12.2'
     testImplementation 'androidx.test:core:1.5.0'
     testImplementation 'org.json:json:20240303'

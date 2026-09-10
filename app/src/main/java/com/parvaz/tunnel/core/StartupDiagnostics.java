@@ -21,7 +21,8 @@ public final class StartupDiagnostics {
  static final class Attempt {
   private final long began,tunMs;private final LongSupplier clock;
   private long cleanupMs=-1,configMs=-1,coreMs=-1,responseMs=-1,probeMs=-1,rxMs=-1;
-  private boolean stopped,routePinned;
+  private boolean stopped,routePinned,responseCurrent;
+  synchronized void unconfirmed(){if(owns())responseCurrent=false;}
   synchronized void routeConfigured(boolean pinned){if(owns())routePinned=pinned;}
   Attempt(long began,long tunMs,LongSupplier clock){this.began=began;this.tunMs=tunMs;this.clock=clock;}
   private boolean owns(){return !stopped&&latest.get()==this;}
@@ -29,12 +30,12 @@ public final class StartupDiagnostics {
   synchronized void cleanupDone(){if(owns())cleanupMs=elapsed();}
   synchronized void configDone(){if(owns())configMs=elapsed();}
   synchronized void coreStarted(){if(owns())coreMs=elapsed();}
-  synchronized void probeFinished(boolean ok,long duration){if(owns()){probeMs=Math.max(0,duration);if(ok&&routePinned&&responseMs<0)responseMs=elapsed();}}
+  synchronized void probeFinished(boolean ok,long duration){if(owns()){probeMs=Math.max(0,duration);if(ok&&routePinned){responseCurrent=true;if(responseMs<0)responseMs=elapsed();}}}
   synchronized void received(long bytes){if(owns()&&bytes>0&&rxMs<0)rxMs=elapsed();}
   synchronized void stop(){stopped=true;}
   synchronized Confirmation confirmation(){
    if(!owns())return Confirmation.UNCONFIRMED;
-   if(responseMs>=0)return Confirmation.RESPONSE_SEEN;
+   if(responseCurrent)return Confirmation.RESPONSE_SEEN;
    // Invalid endpoint, busy worker, deadline cancellation and lost callback all
    // expire honestly. None keeps an indefinite spinner or proves a failed VPN.
    if(coreMs>=0&&probeMs<0&&elapsed()-coreMs<=StartupWarmup.DEADLINE_MS)return Confirmation.CHECKING;
@@ -47,6 +48,6 @@ public final class StartupDiagnostics {
    +"\nlocal_core_started_from_entry_ms="+value(coreMs)+"\nfirst_proxy_http_response_from_entry_ms="+value(responseMs)
    +"\nprobe_duration_ms="+value(probeMs)+"\nfirst_proxy_rx_observed_from_entry_ms="+value(rxMs)
    +"\nconfirmation="+confirmation()+"\nsession="+(stopped?"STOPPED":"LATEST_CORE_ATTEMPT")
-   +"\nselected_remote_route="+(routePinned?(responseMs>=0?"PINNED_HTTPS_RESPONSE":"PINNED_AWAITING_RESPONSE"):"NOT_PROVEN")+"\ndns_ms=NOT_INSTRUMENTED\nfirst_application_response_ms=NOT_INSTRUMENTED\n";}
+   +"\nselected_remote_route="+(routePinned?(responseCurrent?"PINNED_HTTPS_RESPONSE":"PINNED_AWAITING_RESPONSE"):"NOT_PROVEN")+"\ndns_ms=NOT_INSTRUMENTED\nfirst_application_response_ms=NOT_INSTRUMENTED\n";}
  }
 }
