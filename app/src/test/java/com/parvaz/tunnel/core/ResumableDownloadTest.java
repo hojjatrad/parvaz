@@ -10,6 +10,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.Assert.*;
 
 public class ResumableDownloadTest {
+ @Test public void alreadyCancelledDoesNotOpenNetworkOrAlterPartial()throws Exception {
+  Files.write(partial.toPath(),new byte[]{1,2});Thread.currentThread().interrupt();
+  try{ResumableDownload.fetch(partial,data.length,hash,offset->{fail("Cancelled download opened network");return null;},null);fail("Expected cancellation");}
+  catch(InterruptedIOException expected){assertEquals(2,partial.length());}finally{Thread.interrupted();}
+ }
  @Rule public TemporaryFolder folder=new TemporaryFolder();
  final byte[] data="0123456789".getBytes(java.nio.charset.StandardCharsets.UTF_8);
  File partial;String hash;

@@ -61,7 +61,7 @@ public class TunnelVpnService extends VpnService {
     final SerialConnectionQueue operations=new SerialConnectionQueue();
     public volatile m b;
     private long nextAutoSearchAt,lastQualitySearch,lastSlowSample;
-    private int failedSearches,slowSamples;
+    private int failedSearches,slowSamples,neutralProbeOffset;
     private final java.util.concurrent.atomic.AtomicBoolean healthProbeBusy=new java.util.concurrent.atomic.AtomicBoolean();
     public NetworkMonitor c;
 
@@ -988,10 +988,11 @@ public class TunnelVpnService extends VpnService {
         }))return;
 
         final ArrayList<Profile> raceCandidates = candidates;
+        final int probeOffset=neutralProbeOffset;
         new Thread(new Runnable() {
             @Override
             public void run() {
-                final HappyEyeballs.Result race = HappyEyeballs.race(TunnelVpnService.this,raceCandidates,HappyEyeballs.DEFAULT_PARALLEL,owns);
+                final HappyEyeballs.Result race = HappyEyeballs.race(TunnelVpnService.this,raceCandidates,HappyEyeballs.DEFAULT_PARALLEL,owns,probeOffset);
                 TunnelVpnService.this.handler.post(new Runnable() {
                     @Override
                     public void run() {
@@ -1007,6 +1008,7 @@ public class TunnelVpnService extends VpnService {
                             });
                             return;
                         }
+                        operations.commit(ticket,()->{neutralProbeOffset=winner==null&&race.failed.isEmpty()&&race.probed>0?(probeOffset+HappyEyeballs.DEFAULT_PARALLEL)%Math.max(1,raceCandidates.size()):0;});
                         if(winner==null||(qualityOnly&&!SwitchPolicy.better(currentDelay,race.delayMs))){
                             operations.commit(ticket,()->{switching=false;h("",previousState);startHealthTicker();});
                             if(winner==null&&!qualityOnly&&!CoreManager.b().running&&current!=null)new l(current,getString(R.string.state_switching)).run();
@@ -1053,7 +1055,7 @@ public class TunnelVpnService extends VpnService {
         this.switching = false;
         this.strikes = 0;
         this.chainedSwitches = 0;
-        this.failedSearches=0;this.nextAutoSearchAt=0;this.lastQualitySearch=0;this.slowSamples=0;
+        this.failedSearches=0;this.neutralProbeOffset=0;this.nextAutoSearchAt=0;this.lastQualitySearch=0;this.slowSamples=0;
         this.startedAt = 0L;
         this.sessionUp = 0L;
         this.sessionDown = 0L;

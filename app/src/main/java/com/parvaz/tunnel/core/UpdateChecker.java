@@ -164,7 +164,14 @@ public final class UpdateChecker {
 
     /** Downloads/resumes an untrusted cache entry, then validates the complete APK.
      * Only the verified final name may be handed to the installer. */
-    public static synchronized File download(Context context, Release input, DownloadProgress progress)throws Exception {
+    private static final java.util.concurrent.locks.ReentrantLock DOWNLOAD_LOCK=new java.util.concurrent.locks.ReentrantLock();
+    public static File download(Context context,Release input,DownloadProgress progress)throws Exception {
+        // The UI's metadata claim must never share a monitor with network I/O.
+        DOWNLOAD_LOCK.lockInterruptibly();
+        try{return downloadLocked(context,input,progress);}finally{DOWNLOAD_LOCK.unlock();}
+    }
+    private static File downloadLocked(Context context, Release input, DownloadProgress progress)throws Exception {
+        if(Thread.currentThread().isInterrupted())throw new java.io.InterruptedIOException("UPDATE_CANCELLED");
         Release release=new Release();release.version=input.version;release.size=input.size;
         release.sha256=input.sha256;release.downloadUrl=input.downloadUrl;
         if(!release.valid())throw new IllegalArgumentException("INVALID_UPDATE_METADATA");

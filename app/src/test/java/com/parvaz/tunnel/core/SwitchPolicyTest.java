@@ -1,6 +1,7 @@
 package com.parvaz.tunnel.core;
 import org.junit.Test;import static org.junit.Assert.*;
 public class SwitchPolicyTest {
+ @Test public void neutralRotationLetsUntriedCandidatesRunWithoutFailurePenalty(){java.util.List<Integer> ranked=new java.util.ArrayList<>(java.util.Arrays.asList(1,2,3,4));SwitchPolicy.rotateUnconfirmed(ranked,2);assertEquals(java.util.Arrays.asList(3,4,1,2),ranked);}
  @Test public void tinyOrUnmeasuredImprovementsNeverSwitch(){assertFalse(SwitchPolicy.better(200,150));assertFalse(SwitchPolicy.better(1000,800));assertFalse(SwitchPolicy.better(-1,100));assertFalse(SwitchPolicy.better(1000,-1));}
  @Test public void meaningfulImprovementCanSwitch(){assertTrue(SwitchPolicy.better(1000,700));assertTrue(SwitchPolicy.better(400,300));}
  @Test public void qualitySearchNeedsAgeRepeatedSlownessCooldownAndIdleTraffic(){assertTrue(SwitchPolicy.qualityDue(600000,0,0,3,false));assertFalse(SwitchPolicy.qualityDue(600000,550000,0,3,false));assertFalse(SwitchPolicy.qualityDue(600000,0,500000,3,false));assertFalse(SwitchPolicy.qualityDue(600000,0,0,2,false));assertFalse(SwitchPolicy.qualityDue(600000,0,0,3,true));}

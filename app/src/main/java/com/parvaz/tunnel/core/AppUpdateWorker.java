@@ -32,7 +32,7 @@ public final class AppUpdateWorker extends Worker {
   try{
    if(!context.getSharedPreferences("parvaz_prefs",0).getBoolean("background_updates",true)||isStopped())return Result.success();
    UpdateChecker.Release release=UpdateChecker.check(context);
-   if(release==null||UpdateChecker.isSkipped(context,release.version))return Result.success();
+   if(isStopped()||!context.getSharedPreferences("parvaz_prefs",0).getBoolean("background_updates",true)||release==null||UpdateChecker.isSkipped(context,release.version))return Result.success();
    boolean download=getInputData().getBoolean("download",false);
    if(!download){
     notifyUpdate(context,release,null);
@@ -51,7 +51,7 @@ public final class AppUpdateWorker extends Worker {
  }
  @Override public void onStopped(){Thread thread=running;if(thread!=null)thread.interrupt();super.onStopped();}
  private void notifyUpdate(Context context,UpdateChecker.Release release,File file){
-  if(isStopped())return;
+  if(isStopped()||!context.getSharedPreferences("parvaz_prefs",0).getBoolean("background_updates",true)||(file!=null&&!context.getSharedPreferences("parvaz_prefs",0).getBoolean("auto_download_wifi",true)))return;
   try{
    NotificationManager manager=(NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);if(manager==null)return;
    String channel="parvaz_updates";

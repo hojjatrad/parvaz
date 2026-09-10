@@ -90,7 +90,7 @@ public final class ServerMemory {
             }
 
             if (lastSuccess > 0) {
-                long age = System.currentTimeMillis() - lastSuccess;
+                long age = Math.max(0,System.currentTimeMillis() - lastSuccess);
                 if (age < RECENT_WINDOW_MS) {
                     score += 10.0d * (1.0d - ((double) age / RECENT_WINDOW_MS));
                 }
@@ -120,9 +120,11 @@ public final class ServerMemory {
             Entry entry = new Entry();
             entry.profileId = json.optString("p", "");
             entry.context = json.optString("c", "");entry.identity=json.optString("identity","");
-            entry.successes = json.optInt("s", 0);
-            entry.failures = json.optInt("f", 0);
-            entry.avgLatency = json.optDouble("l", -1);entry.jitter=Math.max(0,json.optDouble("j",0));
+            entry.successes = Math.max(0,Math.min(1000000,json.optInt("s",0)));
+            entry.failures = Math.max(0,Math.min(1000000,json.optInt("f",0)));
+            entry.avgLatency = json.optDouble("l", -1);entry.jitter=json.optDouble("j",0);
+            if(!Double.isFinite(entry.avgLatency)||entry.avgLatency<=0)entry.avgLatency=-1;
+            if(!Double.isFinite(entry.jitter)||entry.jitter<0)entry.jitter=0;
             entry.lastSuccess = json.optLong("t", 0);
             return entry;
         }

@@ -17,6 +17,7 @@ final class ResumableDownload {
     }
     private ResumableDownload(){}
     static void fetch(File partial,long expected,String hash,Source source,Progress progress)throws Exception {
+        if(Thread.currentThread().isInterrupted())throw new InterruptedIOException("UPDATE_CANCELLED");
         if(expected<=0||expected>MAX_BYTES||hash==null||!hash.matches("[0-9a-f]{64}"))throw new IllegalArgumentException("INVALID_UPDATE_METADATA");
         try{
             if(partial.length()>expected)throw new InvalidTransfer("UPDATE_PARTIAL_TOO_LARGE");
@@ -24,6 +25,7 @@ final class ResumableDownload {
             long deadline=System.nanoTime()+300_000_000_000L;
             for(int attempt=0;attempt<2;attempt++){
                 long offset=partial.isFile()?partial.length():0;
+                if(Thread.currentThread().isInterrupted())throw new InterruptedIOException("UPDATE_CANCELLED");
                 HttpURLConnection connection=source.open(offset);
                 try{
                     int status=connection.getResponseCode();
@@ -69,7 +71,7 @@ final class ResumableDownload {
     private static void verifyHash(File file,String expected)throws Exception {
         MessageDigest hash=MessageDigest.getInstance("SHA-256");
         try(InputStream input=new FileInputStream(file)){
-            byte[] bytes=new byte[65536];int n;while((n=input.read(bytes))!=-1)hash.update(bytes,0,n);
+            byte[] bytes=new byte[65536];int n;while((n=input.read(bytes))!=-1){if(Thread.currentThread().isInterrupted())throw new InterruptedIOException("UPDATE_CANCELLED");hash.update(bytes,0,n);}
         }
         StringBuilder hex=new StringBuilder();for(byte value:hash.digest())hex.append(String.format(java.util.Locale.ROOT,"%02x",value&255));
         if(!hex.toString().equals(expected))throw new InvalidTransfer("UPDATE_CHECKSUM_MISMATCH");

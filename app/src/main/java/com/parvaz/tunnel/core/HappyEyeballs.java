@@ -20,11 +20,15 @@ public final class HappyEyeballs {
  public static Result race(Context context,List<Profile> profiles){return race(context,profiles,DEFAULT_PARALLEL);}
  public static Result race(Context context,List<Profile> profiles,int parallel){return race(context,profiles,parallel,()->true);}
  static Result race(Context context,List<Profile> profiles,int parallel,BooleanSupplier current){
+  return race(context,profiles,parallel,current,0);
+ }
+ static Result race(Context context,List<Profile> profiles,int parallel,BooleanSupplier current,int neutralOffset){
   Context app=context.getApplicationContext();ProfileStore store=ProfileStore.f(app);
   String source=store.primarySubscription();
   ArrayList<Profile> allowed=activeCandidates(profiles,store.activeProfiles());
   ServerMemory history=new ServerMemory(app);
   ArrayList<Profile> ranked=history.rank(app,allowed);
+  SwitchPolicy.rotateUnconfirmed(ranked,neutralOffset);
   Map<String,Integer> scores=new HashMap<>();Map<String,Double> jitter=new HashMap<>();
   for(Profile p:ranked){ServerMemory.Entry entry=history.entryFor(app,p.id);scores.put(p.id,entry==null?50:entry.score());jitter.put(p.id,entry==null?0:entry.jitter);}
   String pingUrl=new Prefs(app).f343a.getString("ping_url","https://www.gstatic.com/generate_204");
