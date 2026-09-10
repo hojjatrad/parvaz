@@ -9,6 +9,12 @@ import org.junit.runner.RunWith;
 import static org.junit.Assert.*;
 @RunWith(AndroidJUnit4.class)
 public class NativeEngineTest {
+ @BeforeClass public static void initializeBundledXrayLikeApplication()throws Exception {
+  Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+  go.Seq.setContext(context);
+  libv2ray.Libv2ray.initCoreEnv(context.getFilesDir().getAbsolutePath(),"");
+ }
+
  // Loopback-only protocol fixtures, not selected-remote readiness or a live VPN.
  private libv2ray.CoreController newXray() {
   return libv2ray.Libv2ray.newCoreController(new libv2ray.CoreCallbackHandler(){
