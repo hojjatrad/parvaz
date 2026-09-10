@@ -4,6 +4,7 @@ import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
+import android.net.LinkProperties;
 import android.os.Handler;
 import android.os.Looper;
 import com.parvaz.tunnel.core.LogBuffer;
@@ -35,6 +36,15 @@ public final class NetworkMonitor {
     /* renamed from: i */
     public boolean f6253i = false;
     public final b j = new b();
+    private String observedLinks,observedDns;
+    boolean pendingDnsChange;
+    static String dnsKey(LinkProperties p){
+        if(p==null)return null;
+        String key=p.getDnsServers().toString()+"\n"+p.getDomains();
+        if(android.os.Build.VERSION.SDK_INT>=28)key+="\n"+p.isPrivateDnsActive()+"\n"+p.getPrivateDnsServerName();
+        return key; // In-memory only. Never log resolver addresses or names.
+    }
+    private void queueCheck(){f6248c.removeCallbacks(j);f6248c.postDelayed(j,1200L);}
 
     /* JADX WARN: Can't change package for inner class: com.parvaz.tunnel.core.a.a to com.parvaz.tunnel.core.NetworkMonitor$C0073b */
     /* renamed from: com.parvaz.tunnel.core.a$a */
@@ -52,6 +62,16 @@ public final class NetworkMonitor {
         @Override public void onCapabilitiesChanged(Network network,NetworkCapabilities caps){
             synchronized(NetworkMonitor.this){if(live())observeDefault(network,caps);}
         }
+        @Override public void onLinkPropertiesChanged(Network network,LinkProperties properties){
+            synchronized(NetworkMonitor.this){
+                if(!live()||properties==null||!isCurrentDefault(network,f6249d.getNetworkCapabilities(network))||network.getNetworkHandle()!=g)return;
+                String next=properties.toString(),dns=dnsKey(properties);
+                if(observedLinks!=null&&!observedLinks.equals(next)){
+                    pendingDnsChange|=!java.util.Objects.equals(observedDns,dns);NetworkEpoch.changed();queueCheck();
+                }
+                observedLinks=next;observedDns=dns;
+            }
+        }
         @Override public void onLost(Network network){
             synchronized(NetworkMonitor.this){
                 if(!live()||network==null||network.getNetworkHandle()!=g)return;
@@ -60,7 +80,7 @@ public final class NetworkMonitor {
                 // Own/other VPN notifications are not proof that the physical
                 // transport was lost. Do not restart a just-created tunnel for it.
                 if(caps!=null&&caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN))return;
-                f6253i=true;
+                f6253i=true;NetworkEpoch.changed();
                 if(b!=null&&TunnelVpnService.serviceRunning){
                     LogBuffer.listener("default network lost - waiting");
                     TunnelVpnService service=b.outer();
@@ -78,12 +98,19 @@ public final class NetworkMonitor {
     private void observeDefault(Network network,NetworkCapabilities caps){
         if(!isCurrentDefault(network,caps))return;
         long handle=network.getNetworkHandle();boolean changed=g!=-1&&g!=handle;
+        if(g!=handle){
+            LinkProperties next=f6249d.getLinkProperties(network);
+            String dns=dnsKey(next);
+            pendingDnsChange|=changed&&(observedDns==null||dns==null||!observedDns.equals(dns));
+            observedDns=dns;observedLinks=next==null?null:next.toString();
+            if(changed)NetworkEpoch.changed();
+        }
         g=handle;
         f6252h=caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)?1:
             caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)?0:
             caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)?3:-1;
         if(changed||f6253i){
-            f6253i=false;f6248c.removeCallbacks(j);f6248c.postDelayed(j,1200L);
+            f6253i=false;queueCheck();
         }
     }
 
@@ -105,10 +132,12 @@ public final class NetworkMonitor {
             c cVar = monitor.b;
             if (cVar != null && TunnelVpnService.serviceRunning) {
                 TunnelVpnService tunnelVpnService = cVar.outer();
+                if(tunnelVpnService.switching){monitor.queueCheck();return;}
                 if (!tunnelVpnService.switching) {
                     LogBuffer.listener("Network changed; checking live transport before restarting");
                     if (tunnelVpnService.profile != null && !tunnelVpnService.switching) {
-                        tunnelVpnService.verifyHandover(cVar.newReconnect());
+                        boolean resetDns=monitor.pendingDnsChange;monitor.pendingDnsChange=false;
+                        tunnelVpnService.verifyHandover(cVar.newReconnect(),resetDns);
                     }
                 }
             }
@@ -166,7 +195,7 @@ public final class NetworkMonitor {
             }
         }
         this.f6251f = false;
-        this.g = -1L;
+        this.g = -1L;this.observedLinks=null;this.observedDns=null;this.pendingDnsChange=false;
         this.f6252h = -1;
         this.f6253i = false;
     }

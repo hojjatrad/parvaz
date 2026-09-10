@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicReference;
 final class ReadinessMonitor implements AutoCloseable {
     static final String GOOGLE="https://www.gstatic.com/generate_204";
     static final String CLOUDFLARE="https://cp.cloudflare.com/generate_204";
+    interface ObservedResult {void finished(boolean ok,long ms,long network);}
     interface Probe {void start(String endpoint,int port,StartupWarmup.Result result);void cancel();}
     interface Pending {void cancel();}
     interface Timer {Pending later(Runnable work,long delayMs);}
@@ -34,6 +35,9 @@ final class ReadinessMonitor implements AutoCloseable {
     }
     synchronized void start(String configured,StartupWarmup.Result result){start(configured,-1,result);}
     synchronized void start(String configured,int port,StartupWarmup.Result result){
+        startObserved(configured,port,(ok,ms,epoch)->result.finished(ok,ms));
+    }
+    synchronized void startObserved(String configured,int port,ObservedResult result){
         cancel();Session session=new Session(endpoints(configured),port,result);active.set(session);attempt(session);
     }
     private synchronized void attempt(Session session){
@@ -42,14 +46,15 @@ final class ReadinessMonitor implements AutoCloseable {
         String endpoint=session.endpoints[session.nextEndpoint];
         session.nextEndpoint=(session.nextEndpoint+1)%session.endpoints.length;
         session.attempts=Math.min(6,session.attempts+1);
-        long round=++session.round;
+        long round=++session.round;session.network=NetworkEpoch.current();
         probe.start(endpoint,session.port,(ok,ms)->finished(session,round,ok,ms));
     }
     private synchronized void finished(Session session,long round,boolean ok,long ms){
         if(active.get()!=session)return;
         if(session.round!=round||session.reportedRound==round)return;
         session.reportedRound=round;
-        session.result.finished(ok,ms);
+        if(!NetworkEpoch.owns(session.network)){ok=false;ms=-1;}
+        session.result.finished(ok,ms,session.network);
         if(active.get()!=session)return;
         if(ok){active.set(null);return;}
         session.pending=timer.later(()->attempt(session),delayAfter(session.attempts));
@@ -65,7 +70,7 @@ final class ReadinessMonitor implements AutoCloseable {
     synchronized void cancel(){Session previous=active.getAndSet(null);if(previous!=null&&previous.pending!=null)previous.pending.cancel();probe.cancel();}
     @Override public synchronized void close(){cancel();if(network!=null)network.close();if(executor!=null)executor.shutdownNow();}
     private static final class Session {
-        final String[] endpoints;final int port;final StartupWarmup.Result result;int attempts,nextEndpoint;long round,reportedRound;Pending pending;
-        Session(String[] endpoints,int port,StartupWarmup.Result result){this.endpoints=endpoints;this.port=port;this.result=result;}
+        final String[] endpoints;final int port;final ObservedResult result;int attempts,nextEndpoint;long round,reportedRound,network;Pending pending;
+        Session(String[] endpoints,int port,ObservedResult result){this.endpoints=endpoints;this.port=port;this.result=result;}
     }
 }

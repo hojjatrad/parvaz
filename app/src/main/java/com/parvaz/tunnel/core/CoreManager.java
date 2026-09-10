@@ -36,7 +36,9 @@ public final class CoreManager {
         probe.startLoop(config,activeTunFd);
     }
     synchronized void markUnconfirmed(long owner){if(owner==generation&&diagnostics!=null)diagnostics.unconfirmed();}
-    synchronized void acceptVerifiedHealth(long owner,long delay){if(owner==generation&&running&&verifiedPort>0&&delay>0&&diagnostics!=null){diagnostics.probeFinished(true,delay);startupWarmup.confirmedExternally();}}
+    synchronized boolean healthProofDue(long owner){return owner!=generation||diagnostics==null||diagnostics.proofDue();}
+    synchronized void acceptVerifiedHealth(long owner,long delay){acceptVerifiedHealth(owner,delay,NetworkEpoch.current());}
+    synchronized void acceptVerifiedHealth(long owner,long delay,long network){if(owner==generation&&running&&verifiedPort>0&&delay>0&&diagnostics!=null&&NetworkEpoch.owns(network)){diagnostics.probeFinished(true,delay,network);startupWarmup.confirmedExternally();}}
     int verifiedPort(long owner){return owner==generation&&running?verifiedPort:0;}
     private volatile StartupDiagnostics.Attempt diagnostics;
     StartupDiagnostics.Attempt startupAttempt(){return diagnostics;}
@@ -179,7 +181,7 @@ public final class CoreManager {
             trace.coreStarted();
             // Most proxy outbounds dial lazily. Prime the configured connectivity
             // endpoint through the new local proxy without holding up user traffic.
-            if(readiness.pinned)startupWarmup.start(prefs.f343a.getString("ping_url","https://www.gstatic.com/generate_204"),readinessPort,trace::probeFinished);
+            if(readiness.pinned)startupWarmup.startObserved(prefs.f343a.getString("ping_url","https://www.gstatic.com/generate_204"),readinessPort,trace::probeFinished);
         }catch(Exception error){stop();throw new IllegalStateException("Core start failed: "+error.getMessage(),error);}
     }
 

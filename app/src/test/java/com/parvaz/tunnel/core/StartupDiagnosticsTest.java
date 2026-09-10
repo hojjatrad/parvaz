@@ -3,6 +3,8 @@ import org.junit.Test;
 import java.util.concurrent.atomic.AtomicLong;
 import static org.junit.Assert.*;
 public class StartupDiagnosticsTest {
+ @Test public void trafficCannotKeepExpiredProofGreen(){AtomicLong now=new AtomicLong();StartupDiagnostics.Attempt a=StartupDiagnostics.begin(0,0,now::get);a.routeConfigured(true);a.coreStarted();a.probeFinished(true,10);assertTrue(a.proofFresh());assertFalse(a.proofDue());now.set(60_000_000_000L);assertTrue(a.proofDue());assertTrue(a.proofFresh());now.set(120_000_000_000L);a.received(100000);assertFalse(a.proofFresh());assertEquals(StartupDiagnostics.Confirmation.UNCONFIRMED,a.confirmation());a.probeFinished(true,15);assertTrue(a.proofFresh());}
+ @Test public void networkRevisionRevokesProofAndRejectsOldPositiveSample(){AtomicLong now=new AtomicLong();StartupDiagnostics.Attempt a=StartupDiagnostics.begin(0,0,now::get);a.routeConfigured(true);a.coreStarted();long old=NetworkEpoch.current();a.probeFinished(true,10,old);NetworkEpoch.changed();assertFalse(a.proofFresh());a.probeFinished(true,20,old);assertFalse(a.proofFresh());a.probeFinished(true,25,NetworkEpoch.current());assertTrue(a.proofFresh());}
  @Test public void monotonicPhasesAreSeparateAndUnknownsAreNotZero(){
   AtomicLong now=new AtomicLong();StartupDiagnostics.Attempt a=StartupDiagnostics.begin(0,17,now::get);
   now.set(5_000_000);a.cleanupDone();now.set(12_000_000);a.configDone();now.set(20_000_000);a.coreStarted();

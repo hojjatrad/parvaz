@@ -32,6 +32,21 @@ public class NetworkMonitorRegressionTest {
   Shadows.shadowOf(caps).addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
   Shadows.shadowOf(caps).addTransportType(transport);return caps;
  }
+ static LinkProperties links(String ip)throws Exception {
+  LinkProperties p=new LinkProperties();org.robolectric.util.ReflectionHelpers.callInstanceMethod(p,"addDnsServer",org.robolectric.util.ReflectionHelpers.ClassParameter.from(java.net.InetAddress.class,java.net.InetAddress.getByName(ip)));return p;
+ }
+ @Test public void changedDnsOnSameNetworkInvalidatesProofAndSchedulesOneCheck()throws Exception {
+  monitor.d.onLinkPropertiesChanged(wifi,links("1.1.1.1"));long epoch=NetworkEpoch.current();
+  monitor.d.onLinkPropertiesChanged(wifi,links("8.8.8.8"));assertFalse(NetworkEpoch.owns(epoch));assertTrue(monitor.pendingDnsChange);assertTrue(monitor.f6248c.hasCallbacks(monitor.j));
+  long changed=NetworkEpoch.current();monitor.d.onLinkPropertiesChanged(wifi,links("8.8.8.8"));assertTrue(NetworkEpoch.owns(changed));
+ }
+ @Test public void firstDnsSnapshotAndUnrelatedDnsChangeDoNotRestart()throws Exception {
+  long epoch=NetworkEpoch.current();monitor.d.onLinkPropertiesChanged(wifi,links("1.1.1.1"));monitor.d.onLinkPropertiesChanged(cell,links("8.8.8.8"));assertTrue(NetworkEpoch.owns(epoch));assertFalse(monitor.f6248c.hasCallbacks(monitor.j));
+ }
+ @Test public void oldDnsCallbackCannotAffectRestartedMonitor()throws Exception {
+  NetworkMonitor.a old=monitor.d;monitor.stop();monitor.start();long epoch=NetworkEpoch.current();old.onLinkPropertiesChanged(wifi,links("1.1.1.1"));assertTrue(NetworkEpoch.owns(epoch));assertFalse(monitor.pendingDnsChange);
+ }
+ @Test public void lossRevokesPreviouslyObservedNetworkRevision(){long epoch=NetworkEpoch.current();monitor.d.onLost(wifi);assertFalse(NetworkEpoch.owns(epoch));}
  @After public void cleanup(){monitor.stop();}
  @Test public void secondaryAvailableMustNotRestartNewTunnel(){
   monitor.d.onAvailable(cell);monitor.d.onCapabilitiesChanged(cell,cellCaps);

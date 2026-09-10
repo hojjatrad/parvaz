@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.*;
 import static org.junit.Assert.*;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class BoundedProbeRaceTest {
+ @Test public void changedNetworkCannotWinOrPoisonHistory(){long epoch=NetworkEpoch.current();BoundedProbeRace.Result<Integer> r=BoundedProbeRace.run(Collections.singletonList(1),1,1000,c->{NetworkEpoch.changed();return 12;},()->NetworkEpoch.owns(epoch));assertEquals(BoundedProbeRace.Status.CANCELLED,r.status);assertNull(r.winner);assertTrue(r.failed.isEmpty());}
  @Test public void allFailuresFinishWithoutWaitingForWholeDeadline(){
   BoundedProbeRace.Result<Integer> r=BoundedProbeRace.run(Arrays.asList(1,2,3),3,12000,c->-1,()->true);
   assertEquals(BoundedProbeRace.Status.NO_RESPONSE,r.status);assertEquals(3,r.probed);assertEquals(3,r.failed.size());assertTrue(r.elapsedMs<3000);

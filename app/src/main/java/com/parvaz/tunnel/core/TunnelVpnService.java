@@ -623,9 +623,11 @@ public class TunnelVpnService extends VpnService {
                     boolean published=manager.running;CoreController controller=manager.controller;
                     final boolean alive=published&&controller!=null&&controller.getIsRunning();
                     final boolean trafficBefore=sessionDown>lastHealthBytes;
+                    final long network=NetworkEpoch.current();
                     long delay=VerifiedProbe.UNKNOWN;
-                    // Do not spend a probe/radio wakeup when replies already arrived.
-                    if(alive&&(!trafficBefore||strikes>0)){
+                    // RX may defer checks briefly, never renew a remote HTTPS proof.
+                    final boolean shouldProbe=alive&&(!trafficBefore||strikes>0||manager.healthProofDue(ownerSession));
+                    if(shouldProbe){
                         try{delay=VerifiedProbe.measure(manager.verifiedPort(ownerSession),f.f343a.getString("ping_url","https://www.gstatic.com/generate_204"));}
                         catch(Exception ignored){/* Endpoint/credential-free diagnostics. */}
                     }
@@ -634,8 +636,8 @@ public class TunnelVpnService extends VpnService {
                         try{
                             final boolean[] restart={false},quality={false};
                             operations.commit(ownerTicket,()->{
-                            if(!m.this.isCurrent()||profile==null||!com.parvaz.tunnel.store.ProfileIdentity.fingerprint(profile).equals(manager.liveIdentity(ownerSession))||HappyEyeballs.activeCandidates(java.util.Collections.singletonList(profile),ProfileStore.f(TunnelVpnService.this).activeProfiles()).isEmpty())return;
-                            long receivedNow=sessionDown;boolean received=trafficBefore&&measured==VerifiedProbe.UNKNOWN;lastHealthBytes=receivedNow;
+                            if(!m.this.isCurrent()||!NetworkEpoch.owns(network)||profile==null||!com.parvaz.tunnel.store.ProfileIdentity.fingerprint(profile).equals(manager.liveIdentity(ownerSession))||HappyEyeballs.activeCandidates(java.util.Collections.singletonList(profile),ProfileStore.f(TunnelVpnService.this).activeProfiles()).isEmpty())return;
+                            long receivedNow=sessionDown;boolean received=trafficBefore&&!shouldProbe;lastHealthBytes=receivedNow;
                             int threshold=f.f343a.getInt("ping_threshold",1200);
                             HealthPolicy.Decision decision=HealthPolicy.evaluate(alive,received,measured,threshold,strikes,f.f343a.getInt("health_strikes",3));
                             strikes=decision.strikes;
@@ -646,7 +648,7 @@ public class TunnelVpnService extends VpnService {
                             else if(measured==-1)slowSamples=0;
                             quality[0]=measured>threshold&&SwitchPolicy.qualityDue(sampleNow,beganElapsed,lastQualitySearch,slowSamples,trafficBefore);
                             if(alive&&measured>0&&profile!=null){
-                                manager.acceptVerifiedHealth(ownerSession,measured);
+                                manager.acceptVerifiedHealth(ownerSession,measured,network);
                                 ProfileStore.f(TunnelVpnService.this).i(profile.id,(int)measured);
                                 new ServerMemory(TunnelVpnService.this).recordSuccess(TunnelVpnService.this,profile,(int)measured);
                                 Intent intent=new Intent("com.parvaz.tunnel.STATE");intent.setPackage(getPackageName());
@@ -997,9 +999,9 @@ public class TunnelVpnService extends VpnService {
                     @Override
                     public void run() {
                         if(!owns.getAsBoolean())return;
-                        operations.commit(ticket,()->{for(Profile failed:race.failed)TunnelVpnService.this.p.put(failed.id,Long.valueOf(android.os.SystemClock.elapsedRealtime()));});
+                        operations.commit(ticket,()->{if(race.currentNetwork(TunnelVpnService.this))for(Profile failed:HappyEyeballs.activeCandidates(race.failed,ProfileStore.f(TunnelVpnService.this).activeProfiles()))TunnelVpnService.this.p.put(failed.id,Long.valueOf(android.os.SystemClock.elapsedRealtime()));});
                         Profile winner = race.winner;
-                        if(race.cancelled||race.deferred||(winner!=null&&HappyEyeballs.activeCandidates(java.util.Collections.singletonList(winner),ProfileStore.f(TunnelVpnService.this).activeProfiles()).isEmpty())){
+                        if(race.cancelled||race.deferred||!race.currentNetwork(TunnelVpnService.this)||(winner!=null&&HappyEyeballs.activeCandidates(java.util.Collections.singletonList(winner),ProfileStore.f(TunnelVpnService.this).activeProfiles()).isEmpty())){
                             operations.commit(ticket,()->{
                                 TunnelVpnService.this.switching=false;
                                 TunnelVpnService.this.chainedSwitches=Math.max(0,TunnelVpnService.this.chainedSwitches-1);
@@ -1114,20 +1116,34 @@ public class TunnelVpnService extends VpnService {
 
     private final java.util.concurrent.atomic.AtomicBoolean handoverBusy=new java.util.concurrent.atomic.AtomicBoolean();
     private long handoverRevision;
-    void verifyHandover(Runnable reconnect){
+    private Runnable pendingHandover;
+    private boolean pendingDnsReset;
+    void verifyHandover(Runnable reconnect){verifyHandover(reconnect,false);}
+    void verifyHandover(Runnable reconnect,boolean resetDns){
         final long revision=++handoverRevision,ticket=operations.ticket(),session=CoreManager.b().sessionId();
         bindUnderlyingNetwork();
-        if(CoreManager.b().verifiedPort(session)<=0){switching=true;new Thread(reconnect,"parvaz-handover-recovery").start();return;}
-        if(!handoverBusy.compareAndSet(false,true)){switching=true;new Thread(reconnect,"parvaz-handover-recovery").start();return;}
+        if(!handoverBusy.compareAndSet(false,true)){pendingHandover=reconnect;pendingDnsReset|=resetDns;return;}
+        pendingHandover=null;pendingDnsReset=false;
+        if(resetDns||CoreManager.b().verifiedPort(session)<=0){
+            handoverBusy.set(false);CoreManager.b().markUnconfirmed(session);
+            if(resetDns)LogBuffer.listener("Resolver policy changed; rebuilding core without importing old DNS cache");
+            switching=true;new Thread(reconnect,"parvaz-handover-recovery").start();return;
+        }
+        final long network=NetworkEpoch.current();
         new Thread(()->{
-            long delay=-1;
+            long delay=VerifiedProbe.UNKNOWN;
             try{delay=VerifiedProbe.measure(CoreManager.b().verifiedPort(session),f.f343a.getString("ping_url",ReadinessMonitor.GOOGLE));}
+            catch(InterruptedException interrupted){Thread.currentThread().interrupt();}
             catch(Exception ignored){}
-            final boolean responded=delay>0;
+            final long measured=delay;
             handler.post(()->{
                 handoverBusy.set(false);
-                if(revision!=handoverRevision||!operations.current(ticket)||!serviceRunning||switching||CoreManager.b().sessionId()!=session)return;
-                if(responded){strikes=0;LogBuffer.listener("Transport recovered; keeping live core and its DNS cache");return;}
+                if(!operations.current(ticket)||!serviceRunning||switching||CoreManager.b().sessionId()!=session){pendingHandover=null;pendingDnsReset=false;return;}
+                if(pendingHandover!=null){Runnable next=pendingHandover;boolean dns=pendingDnsReset;pendingHandover=null;pendingDnsReset=false;verifyHandover(next,dns);return;}
+                if(revision!=handoverRevision||!NetworkEpoch.owns(network))return;
+                if(measured>0){strikes=0;CoreManager.b().acceptVerifiedHealth(session,measured,network);LogBuffer.listener("Transport recovered; retaining live core within unchanged resolver policy");return;}
+                CoreManager.b().markUnconfirmed(session);
+                if(measured==VerifiedProbe.UNKNOWN){startHealthTicker();return;}
                 switching=true;new Thread(reconnect,"parvaz-handover-recovery").start();
             });
         },"parvaz-handover-check").start();

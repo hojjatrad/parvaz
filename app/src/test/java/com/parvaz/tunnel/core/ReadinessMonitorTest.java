@@ -17,6 +17,8 @@ public class ReadinessMonitorTest {
   void outcome(boolean ok){callbacks.get(callbacks.size()-1).finished(ok,100);}
   void advance(){Task t=tasks.remove();if(!t.cancelled)t.run.run();}
  }
+ @Test public void networkChangeDuringStartupRejectsOldReplyAndRetries(){Fake f=new Fake();List<Boolean> results=new ArrayList<>();try(ReadinessMonitor m=new ReadinessMonitor(f,f)){m.start(ReadinessMonitor.GOOGLE,(ok,ms)->results.add(ok));NetworkEpoch.changed();f.outcome(true);assertEquals(Collections.singletonList(false),results);assertEquals(1,f.tasks.size());f.advance();f.outcome(true);assertEquals(Arrays.asList(false,true),results);}}
+ @Test public void observedResultKeepsItsOriginatingRevision(){Fake f=new Fake();List<Long> epochs=new ArrayList<>();try(ReadinessMonitor m=new ReadinessMonitor(f,f)){long epoch=NetworkEpoch.current();m.startObserved(ReadinessMonitor.GOOGLE,10080,(ok,ms,n)->epochs.add(n));NetworkEpoch.changed();f.outcome(true);assertEquals(Collections.singletonList(epoch),epochs);}}
  @Test public void initialFailureThenOtherEndpointSuccessTurnsCurrentDiagnosticsGreen(){
   Fake f=new Fake();AtomicLong now=new AtomicLong();StartupDiagnostics.Attempt trace=StartupDiagnostics.begin(0,0,now::get);trace.routeConfigured(true);trace.coreStarted();
   try(ReadinessMonitor m=new ReadinessMonitor(f,f)){
