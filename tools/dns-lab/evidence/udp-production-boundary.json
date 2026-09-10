@@ -1,0 +1,12 @@
+{
+  "stable_version": "1.28.2",
+  "main_unchanged": true,
+  "main_commit": "93ece6535c25722aaba6161f53ff3e9c59463055",
+  "release_tag_commit": "a9ed66a4769fa87324778dd06f0a88f162b35b9a",
+  "release_tag_unchanged": true,
+  "tested_experiment_commit": "406dccb062b1165f4784e8d56505ec3278ad8d77",
+  "app_and_production_build_pins_and_publication_workflows_unchanged": true,
+  "promotion_allowed": false,
+  "verified_at_utc": "2026-09-10T23:04:31.983196+00:00",
+  "native_or_apk_promotion_performed": false
+}

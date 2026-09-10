@@ -91,3 +91,11 @@ Runner اکنون سه مرحلهٔ مستقل دارد؛ **دو کنترل من
 **هنوز BLOCKED:** API/توقف و lifecycle واقعی wrapper Android، reload سیاست resolver، cacheهای دیگر Xray و sing-box/Mihomo/system/fake-DNS و انتقال TTL کامل نشده‌اند. این مرحله تغییر APK، تضمین سرعت یا آزمون گوشی نیست.
 
 شواهد محلی مرحلهٔ دوم: [سه مرحلهٔ کامل](evidence/udp-local-result.json) با graph وابستگی یکسان و SHA ورودی‌ها؛ [اجرای فشار تصادفی](evidence/udp-stress-result.json)، 20 آزمون UDP × 30 = 600 اجرای سطح اول با race detector و بدون failure/skip. این عدد شامل canary محدودیتِ مسیر جدید هم هست. نتیجهٔ CI باید جداگانه برای commit دقیق ثبت شود؛ اجرای محلی جای آن نیست.
+
+### نتیجهٔ تأییدشدهٔ مرحلهٔ دوم
+
+- commit کد و ورودی‌های آزمایش‌شده: `406dccb062b1165f4784e8d56505ec3278ad8d77`.
+- [CI آزمایشگاه](https://github.com/hojjatrad/parvaz/actions/runs/34540082889)، [ساخت/387 آزمون واحد Android](https://github.com/hojjatrad/parvaz/actions/runs/34540082902) و [رگرسیون subscription](https://github.com/hojjatrad/parvaz/actions/runs/34540082905) برای همین commit موفق شدند؛ annotation عمومی آزمایشگاه `baseline=1 patched=54 udp-isolated=117` و **PROMOTION_BLOCKED** را تأیید کرد.
+- [خلاصهٔ CI](evidence/udp-ci-summary.json) و [مرز production](evidence/udp-production-boundary.json) ثبت شدند. main/تگ و نام/حجم/digest تمام assetهای آخرین پایدار با شواهد تأیید کامل قبلی برابر ماندند؛ این مرحله APKها را دوباره دانلود یا روی گوشی نصب نکرد.
+- [لاگ‌های فشردهٔ اجرای محلی و فشار](evidence/udp-local-logs.tar.gz)، 96,365 بایت، SHA-256: `71506b3f405fdaf4f60a36e64bb55b69b336b7d6441a5452ad40dba556cb4156`. hash فایل‌های بازشده با گزارش‌های JSON قابل تطبیق است؛ وابستگی‌ها/ابزارهای حجیم وارد Git نشده‌اند.
+- callback مسیر قدیمی در این مرز آزمایش‌شده جدا شد؛ تزریق پاسخ به خود مسیر جدید، پوشش سایر cacheها، lifecycle/bridge واقعی Android و اعتبارسنجی گوشی هنوز از ادعای تکمیل خارج‌اند. **هیچ APK، تگ انتشار یا امضایی تغییر نکرد.**

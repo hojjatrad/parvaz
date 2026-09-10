@@ -1,0 +1,87 @@
+{
+  "tested_commit": "406dccb062b1165f4784e8d56505ec3278ad8d77",
+  "verified_at_utc": "2026-09-10T23:04:57.109477+00:00",
+  "promotion_allowed": false,
+  "latest_stable": "v1.28.2",
+  "stable_release_id": 386624584,
+  "stable_asset_names_sizes_digests_unchanged": true,
+  "local_test_input_hashes_match_commit": true,
+  "runs": [
+    {
+      "id": 34540082905,
+      "name": "Subscription regression tests",
+      "head_sha": "406dccb062b1165f4784e8d56505ec3278ad8d77",
+      "conclusion": "success",
+      "html_url": "https://github.com/hojjatrad/parvaz/actions/runs/34540082905"
+    },
+    {
+      "id": 34540082889,
+      "name": "Experimental DNS cache generation laboratory (no release)",
+      "head_sha": "406dccb062b1165f4784e8d56505ec3278ad8d77",
+      "conclusion": "success",
+      "html_url": "https://github.com/hojjatrad/parvaz/actions/runs/34540082889"
+    },
+    {
+      "id": 34540082902,
+      "name": "Android compilation and unit tests",
+      "head_sha": "406dccb062b1165f4784e8d56505ec3278ad8d77",
+      "conclusion": "success",
+      "html_url": "https://github.com/hojjatrad/parvaz/actions/runs/34540082902"
+    }
+  ],
+  "jobs": [
+    {
+      "run": 34540082905,
+      "workflow": "Subscription regression tests",
+      "job": "jvm-regressions",
+      "conclusion": "success",
+      "annotations": [
+        {
+          "title": "",
+          "message": "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-java@v4, actions/upload-artifact@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/"
+        },
+        {
+          "title": "",
+          "message": "setup-java v4 is deprecated and will no longer receive updates. Please migrate to actions/setup-java@v5."
+        }
+      ]
+    },
+    {
+      "run": 34540082889,
+      "workflow": "Experimental DNS cache generation laboratory (no release)",
+      "job": "source-laboratory",
+      "conclusion": "success",
+      "annotations": [
+        {
+          "title": "",
+          "message": "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-python@v5, actions/upload-artifact@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/"
+        },
+        {
+          "title": "DNS_CACHE_LAB_RESULT",
+          "message": "Cache source tests/reproductions succeeded; PROMOTION_BLOCKED; baseline=1 patched=54 udp-isolated=117 top-level PASS events; no APK publication"
+        }
+      ]
+    },
+    {
+      "run": 34540082902,
+      "workflow": "Android compilation and unit tests",
+      "job": "android-debug",
+      "conclusion": "success",
+      "annotations": [
+        {
+          "title": "",
+          "message": "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/upload-artifact@v4, android-actions/setup-android@v3, gradle/actions/setup-gradle@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/"
+        },
+        {
+          "title": "UNIT_TEST_TOTALS",
+          "message": "{'tests': 387, 'failures': 0, 'errors': 0, 'skipped': 0} selected={'com.parvaz.tunnel.V115RegressionTest': {'tests': 15, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.BoundedProbeRaceTest': {'tests': 9, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.DnsReconnectPolicyRegressionTest': {'tests': 10, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.HealthPolicyTest': {'tests': 8, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.NetworkMonitorRegressionTest': {'tests': 36, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.ProbeOwnershipRegressionTest': {'tests': 12, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.ReadinessConfigTest': {'tests': 20, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.ReadinessMonitorTest': {'tests': 11, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.ReconnectOwnershipTest': {'tests': 6, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.ResolverIdentityTest': {'tests': 5, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.ResumableDownloadTest': {'tests': 12, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.SerialConnectionQueueTest': {'tests': 8, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.StartupDiagnosticsTest': {'tests': 13, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.StartupWarmupTest': {'tests': 12, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.TrafficSamplingTest': {'tests': 5, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.store.BackupPreservationTest': {'tests': 22, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.store.RestoreCrashRecoveryTest': {'tests': 12, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.store.RestoreJournalTest': {'tests': 14, 'failures': 0, 'errors': 0, 'skipped': 0}}"
+        },
+        {
+          "title": "FIXTURE_ISOLATION",
+          "message": "V115_STALE_STORE_NAMESPACE=true"
+        }
+      ]
+    }
+  ],
+  "note": "Exact-commit public CI annotations verified. Negative controls and new-link UDP replay boundary are expected reproductions, not production approval. APK assets were compared to previous full-stream verification; not redownloaded or installed in this step."
+}
