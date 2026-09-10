@@ -30,6 +30,13 @@ jobs:
           bash tools/audit/run.sh
           sdkmanager 'platforms;android-34' 'build-tools;34.0.0'
           bash tools/release/fetch_core.sh
+      - name: Check both ordinary fail-closed and explicit unsigned build guards before native builds
+        run: |
+          if env -u PARVAZ_UNSIGNED_CANDIDATE ./gradlew --no-daemon :app:requireReleaseSigning > .cache/expected-signing-denial.log 2>&1; then
+            echo 'Ordinary uncredentialed packaging must fail'; exit 1
+          fi
+          grep -q 'Release signing secrets are missing' .cache/expected-signing-denial.log
+          PARVAZ_UNSIGNED_CANDIDATE=true ./gradlew --no-daemon :app:requireReleaseSigning
       - name: Check lint against reviewed legacy baseline
         run: ./gradlew --no-daemon --max-workers=2 :app:lintDebug :app:lintRelease
       - name: Run Android unit tests

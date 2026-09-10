@@ -45,6 +45,11 @@ class Engines(unittest.TestCase):
   for native in [{},{'sing-box':'v1.14.0','mihomo':'v1.19.30'},{'sing-box':'v1.14.1','mihomo':'v1.19.29'}]:
    with self.assertRaises(ValueError):validate_order({'version':'1.27.1','code':34,'native':native},old)
   validate_order({'version':'1.27.1','code':34,'native':old['native']},old)
+ def test_unsigned_mode_does_not_remove_normal_release_guard(self):
+  root=Path(__file__).resolve().parents[2];text=(root/'app/build.gradle').read_text()
+  self.assertIn('if (!releaseSigningReady && !unsignedCandidate)',text)
+  self.assertIn('if (unsignedCandidate && releaseSigningReady)',text)
+  self.assertIn('System.getenv("PARVAZ_UNSIGNED_CANDIDATE") == "true"',text)
  def test_signer_does_not_execute_candidate_engines_or_gradle(self):
   root=Path(__file__).resolve().parents[2]
   text=(root/'.github/workflows/maintain-xray-core.yml').read_text();sign=text.split('  sign-and-publish:')[1]

@@ -4,6 +4,7 @@ apply plugin: 'com.android.application'
 def signingValues = ['PARVAZ_KEYSTORE_PATH', 'PARVAZ_KEYSTORE_PASSWORD',
                      'PARVAZ_KEY_ALIAS', 'PARVAZ_KEY_PASSWORD'].collect { System.getenv(it) }
 def releaseSigningReady = signingValues.every { it != null && !it.isEmpty() }
+def unsignedCandidate = System.getenv("PARVAZ_UNSIGNED_CANDIDATE") == "true"
 
 
 android {
@@ -50,7 +51,7 @@ android {
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            if (releaseSigningReady || System.getenv("PARVAZ_UNSIGNED_CANDIDATE") != "true") {
+            if (releaseSigningReady || !unsignedCandidate) {
                 signingConfig signingConfigs.release
             }
         }
@@ -138,10 +139,14 @@ tasks.register('dumpCp') {
     }
 }
 
-// Debug/test/lint class jars need no release keys. APK/AAB packaging must fail closed.
+// Normal APK/AAB packaging fails closed. Only the explicit secret-free candidate
+// mode may produce unsigned artifacts; separate pinned-key verification gates publication.
 def requireReleaseSigning = tasks.register('requireReleaseSigning') {
     doLast {
-        if (!releaseSigningReady) {
+        if (unsignedCandidate && releaseSigningReady) {
+            throw new GradleException("Unsigned candidate builds must not receive signing credentials")
+        }
+        if (!releaseSigningReady && !unsignedCandidate) {
             throw new GradleException('Release signing secrets are missing. See docs/BUILD-SECURITY.md')
         }
     }
