@@ -26,6 +26,8 @@ public final class CoreManager {
     private ExternalCore external;
     private final StartupWarmup startupWarmup=new StartupWarmup();
     private volatile long generation;
+    private volatile StartupDiagnostics.Attempt diagnostics;
+    StartupDiagnostics.Attempt startupAttempt(){return diagnostics;}
 
     /* JADX WARN: Can't change package for inner class: R1.a.a to com.parvaz.tunnel.core.CoreManager$1 */
     /* renamed from: R1.a$a */
@@ -134,8 +136,10 @@ public final class CoreManager {
     public long sessionId(){return generation;}
 
     /* renamed from: c */
-    public final synchronized void start(Context context,Profile profile,int tunFd,Runnable failure) {
-        stop();
+    public final synchronized void start(Context context,Profile profile,int tunFd,Runnable failure) {start(context,profile,tunFd,failure,-1);}
+    public final synchronized void start(Context context,Profile profile,int tunFd,Runnable failure,long tunSetupMs) {
+        final StartupDiagnostics.Attempt trace=StartupDiagnostics.begin(System.nanoTime(),tunSetupMs);
+        stop();diagnostics=trace;trace.cleanupDone();
         final long ownerGeneration = generation;
         try{
             Prefs prefs=new Prefs(context);String chainId=prefs.f343a.getString("chain_profile","");
@@ -151,11 +155,13 @@ public final class CoreManager {
                 Profile dummy=new Profile();dummy.protocol="socks";dummy.address="127.0.0.1";dummy.port=10810;
                 config=com.parvaz.tunnel.config.ManagedConfig.xray(profile,dummy,prefs,0,true,true);
             }else config=XrayConfigBuilder.b(profile,prefs,chain,true,true);
+            trace.configDone();
             controller=Libv2ray.newCoreController(new b(failure));controller.startLoop(config,tunFd);running=controller.getIsRunning()&&(external==null||external.isRunning());
             if(!running)throw new IllegalStateException("Core failed to start");
+            trace.coreStarted();
             // Most proxy outbounds dial lazily. Prime the configured connectivity
             // endpoint through the new local proxy without holding up user traffic.
-            startupWarmup.start(prefs.f343a.getString("ping_url","https://www.gstatic.com/generate_204"));
+            startupWarmup.start(prefs.f343a.getString("ping_url","https://www.gstatic.com/generate_204"),trace::probeFinished);
         }catch(Exception error){stop();throw new IllegalStateException("Core start failed: "+error.getMessage(),error);}
     }
 
@@ -167,6 +173,7 @@ public final class CoreManager {
 
     /* renamed from: d */
     public final synchronized void stop() {
+        StartupDiagnostics.Attempt trace=diagnostics;if(trace!=null)trace.stop();
         startupWarmup.cancel();
         ++generation; // Invalidate callbacks before closing either core, including intentional restarts.
         HotspotProxyManager.stop();

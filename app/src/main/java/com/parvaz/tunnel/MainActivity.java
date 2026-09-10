@@ -302,6 +302,7 @@ public class MainActivity extends AppCompatActivity {
             String string;
             MainActivity mainActivity = MainActivity.this;
             mainActivity.getClass();
+            if(i==14){mainActivity.showStartupReport();return;}
             if(i==7){mainActivity.removeDuplicateConnections();return;}
             if(i==8){mainActivity.showLastImportReport();return;}
             if(i==9){mainActivity.showStoredReport("last_refresh_report",R.string.last_refresh_report,R.string.refresh_report_help);return;}
@@ -717,6 +718,7 @@ public class MainActivity extends AppCompatActivity {
                         mainActivity.sparkline.push(longExtra2, longExtra);
                         mainActivity.sparkline.setVisibility(View.VISIBLE);
                     }
+                    mainActivity.updateReadinessLabel();
                     if(intent.getBooleanExtra("refresh_quota",true))mainActivity.renderQuota();
                 }
                 int intExtra2 = intent.getIntExtra("ping", 0);
@@ -1466,6 +1468,23 @@ public class MainActivity extends AppCompatActivity {
         this.favFilter.setTextColor(this.favOnly ? -415707 : 1720223880);
     }
 
+    private void updateReadinessLabel(){
+        if(state!=2||!TunnelVpnService.serviceRunning||statusText==null||connectButton==null)return;
+        int label=com.parvaz.tunnel.core.StartupDiagnostics.labelResource();String text=getString(label);
+        if(!text.contentEquals(statusText.getText())){
+            statusText.setText(text);connectButton.setContentDescription(text);
+            connectButton.setBackgroundResource(label==R.string.tunnel_response_seen?R.drawable.bg_button_connected:R.drawable.bg_button_connecting);
+        }
+    }
+    private void showStartupReport(){
+        final String report="Parvaz "+com.parvaz.tunnel.core.UpdateChecker.currentVersion(this)+"; SDK_"+android.os.Build.VERSION.SDK_INT+"\n"+com.parvaz.tunnel.core.StartupDiagnostics.safeReport();
+        new MaterialAlertDialogBuilder(this).setTitle(R.string.startup_report_title).setMessage(getString(R.string.startup_report_help)+"\n\n"+report)
+            .setPositiveButton(R.string.ok,null).setNeutralButton(R.string.copy_safe_report,(dialog,which)->{
+                android.content.ClipboardManager clipboard=(android.content.ClipboardManager)getSystemService(Context.CLIPBOARD_SERVICE);
+                if(clipboard!=null)clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Parvaz startup diagnostics",report));
+            }).show();
+    }
+
     /* renamed from: J */
     public final void renderQuota() {
         if (this.quotaUsedText == null) {
@@ -1655,8 +1674,8 @@ public class MainActivity extends AppCompatActivity {
         int statusRes;
         int background;
         if (connected) {
-            statusRes = R.string.state_connected;
-            background = R.drawable.bg_button_connected;
+            statusRes = com.parvaz.tunnel.core.StartupDiagnostics.labelResource();
+            background = statusRes==R.string.tunnel_response_seen?R.drawable.bg_button_connected:R.drawable.bg_button_connecting;
         } else if (busy) {
             statusRes = (state == 5) ? R.string.state_switching : R.string.state_connecting;
             background = R.drawable.bg_button_connecting;
@@ -1798,7 +1817,7 @@ public class MainActivity extends AppCompatActivity {
 
     /* renamed from: N */
     public final void showAddDialog() {
-        String[] strArr = {getString(R.string.scan_qr), getString(R.string.add_from_clipboard), getString(R.string.add_manual_link), getString(R.string.add_raw_json), getString(R.string.add_subscription), getString(R.string.update_subscriptions), getString(R.string.backup_restore), getString(R.string.remove_duplicates),getString(R.string.last_import_report),getString(R.string.last_refresh_report),getString(R.string.last_duplicate_report),getString(R.string.primary_subscription),getString(R.string.import_file),getString(R.string.import_full_config)};
+        String[] strArr = {getString(R.string.scan_qr), getString(R.string.add_from_clipboard), getString(R.string.add_manual_link), getString(R.string.add_raw_json), getString(R.string.add_subscription), getString(R.string.update_subscriptions), getString(R.string.backup_restore), getString(R.string.remove_duplicates),getString(R.string.last_import_report),getString(R.string.last_refresh_report),getString(R.string.last_duplicate_report),getString(R.string.primary_subscription),getString(R.string.import_file),getString(R.string.import_full_config),getString(R.string.startup_report_title)};
         MaterialAlertDialogBuilder materialAlertDialogBuilder = new MaterialAlertDialogBuilder(this);
         materialAlertDialogBuilder.setTitle(R.string.add_server);
         materialAlertDialogBuilder.setItems(strArr, new F());
@@ -1900,7 +1919,7 @@ public class MainActivity extends AppCompatActivity {
     public final void toggle() {
         haptic(this.connectButton);
         int i = this.state;
-        if (i != 2 && i != 1) {
+        if (i != 2 && i != 1 && i != 5) {
             String str = "";
             if (this.b0.getActiveById(this.L.f343a.getString("selected_profile", "")) == null) {
                 ArrayList e = this.b0.activeProfiles();
@@ -2519,13 +2538,9 @@ public class MainActivity extends AppCompatActivity {
         }
         ContextCompat.registerReceiver(this, this.p0,
                 new IntentFilter("com.parvaz.tunnel.STATE"), ContextCompat.RECEIVER_NOT_EXPORTED);
-        if (TunnelVpnService.serviceRunning) {
-            i = 2;
-        } else {
-            i = TunnelVpnService.currentState;
-        }
+        i = TunnelVpnService.currentState;
         this.state = i;
-        if (!TunnelVpnService.serviceRunning && this.state != 1) {
+        if (!TunnelVpnService.serviceRunning && this.state != 1 && this.state != 5) {
             this.state = 0;
         }
         reload();

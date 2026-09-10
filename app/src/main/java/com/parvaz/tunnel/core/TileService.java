@@ -27,7 +27,7 @@ public class TileService extends android.service.quicksettings.TileService {
         qsTile.setState(i);
         qsTile.setLabel(getString(R.string.app_name));
         if (z) {
-            i2 = R.string.state_connected;
+            i2 = StartupDiagnostics.labelResource();
         } else {
             i2 = R.string.state_disconnected;
         }
@@ -38,7 +38,7 @@ public class TileService extends android.service.quicksettings.TileService {
     @Override // android.service.quicksettings.TileService
     public final void onClick() {
         super.onClick();
-        if (TunnelVpnService.serviceRunning) {
+        if (TunnelVpnService.serviceRunning||TunnelVpnService.currentState==1||TunnelVpnService.currentState==5) {
             Intent intent = new Intent(this, (Class<?>) TunnelVpnService.class);
             intent.setAction("com.parvaz.tunnel.STOP");
             startService(intent);

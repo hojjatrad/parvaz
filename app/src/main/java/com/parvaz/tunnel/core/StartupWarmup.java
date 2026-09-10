@@ -29,9 +29,10 @@ final class StartupWarmup implements AutoCloseable {
             return url;
         }catch(Exception invalid){return null;}
     }
-    void start(String endpoint){
+    void start(String endpoint){start(endpoint,result);}
+    void start(String endpoint,Result completion){
         cancel();URL url=endpoint(endpoint);if(url==null||worker.isShutdown())return;
-        Attempt attempt=new Attempt(url);active.set(attempt);
+        Attempt attempt=new Attempt(url,completion);active.set(attempt);
         try{worker.execute(()->run(attempt));}
         catch(RejectedExecutionException busy){active.compareAndSet(attempt,null);attempt.cancel();}
     }
@@ -55,13 +56,13 @@ final class StartupWarmup implements AutoCloseable {
             boolean owned=active.compareAndSet(attempt,null);
             boolean report=!attempt.cancelled&&owned;
             attempt.cancel();
-            if(report)result.finished(confirmed,TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-began));
+            if(report)attempt.result.finished(confirmed,TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-began));
         }
     }
     @Override public void close(){cancel();worker.shutdownNow();deadlines.shutdownNow();}
     private static final class Attempt {
-        final URL url;volatile boolean cancelled;volatile Thread thread;private HttpURLConnection connection;
-        Attempt(URL url){this.url=url;}
+        final URL url;final Result result;volatile boolean cancelled;volatile Thread thread;private HttpURLConnection connection;
+        Attempt(URL url,Result result){this.url=url;this.result=result;}
         boolean attach(HttpURLConnection value){
             synchronized(this){if(!cancelled){connection=value;return true;}}
             value.disconnect();return false;

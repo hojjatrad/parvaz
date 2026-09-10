@@ -38,7 +38,7 @@ public class ParvazWidget extends AppWidgetProvider {
         int i3 = TunnelVpnService.currentState;
         if (i3 != 1 && i3 != 5) {
             if (z) {
-                string = context.getString(R.string.state_connected);
+                string = context.getString(StartupDiagnostics.labelResource());
                 i2 = -16725933;
             } else {
                 string = context.getString(R.string.state_disconnected);

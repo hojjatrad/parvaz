@@ -249,7 +249,7 @@ public class TunnelVpnService extends VpnService {
                 tunnelVpnService.switching = false;
                 TunnelVpnService.serviceRunning = true;
                 tunnelVpnService.h(tunnelVpnService.profile.remark, 2);
-                tunnelVpnService.updateNotification(tunnelVpnService.profile.remark, tunnelVpnService.getString(R.string.reconnected));
+                tunnelVpnService.updateNotification(tunnelVpnService.profile.remark, tunnelVpnService.getString(StartupDiagnostics.labelResource()));
                 tunnelVpnService.handler.post(new b());
             } catch (Throwable th) {
                 Log.e("ParvazVpn", "reconnect failed", th);
@@ -291,12 +291,14 @@ public class TunnelVpnService extends VpnService {
                 } else if (VpnService.prepare(tunnelVpnService) != null) {
                     string = tunnelVpnService.getString(R.string.err_no_permission);
                 } else {
+                    long tunBegan=System.nanoTime();
                     ParcelFileDescriptor c = tunnelVpnService.c(tunnelVpnService.f);
+                    long tunSetupMs=java.util.concurrent.TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-tunBegan);
                     tunnelVpnService.tunInterface = c;
                     if (c == null) {
                         string = tunnelVpnService.getString(R.string.err_tun);
                     } else {
-                        CoreManager.b().start(tunnelVpnService, tunnelVpnService.profile, tunnelVpnService.tunInterface.getFd(), new h());
+                        CoreManager.b().start(tunnelVpnService, tunnelVpnService.profile, tunnelVpnService.tunInterface.getFd(), new h(),tunSetupMs);
                         TunnelVpnService.serviceRunning = true;
                         // LAN sharing is explicitly enabled per session from Settings.
                         HotspotProxyManager.stop();
@@ -308,7 +310,7 @@ public class TunnelVpnService extends VpnService {
                         tunnelVpnService.switching = false;
                         tunnelVpnService.h(tunnelVpnService.profile.remark, 2);
                         LogBuffer.listener("connected: " + tunnelVpnService.profile.remark + " (" + tunnelVpnService.profile.protocol + " " + tunnelVpnService.profile.displayAddress() + ")");
-                        tunnelVpnService.updateNotification(tunnelVpnService.profile.remark, tunnelVpnService.getString(R.string.state_connected));
+                        tunnelVpnService.updateNotification(tunnelVpnService.profile.remark, tunnelVpnService.getString(StartupDiagnostics.labelResource()));
                         tunnelVpnService.stopStatsTicker();
                         i iVar = new i();
                         tunnelVpnService.h = iVar;
@@ -356,6 +358,8 @@ public class TunnelVpnService extends VpnService {
     /* loaded from: classes.dex */
     public class i implements Runnable {
         private final TrafficSampling sampling;
+        private final StartupDiagnostics.Attempt trace=CoreManager.b().startupAttempt();
+        private int lastReadinessLabel;
         public i() {
             long now=android.os.SystemClock.elapsedRealtime();
             sampling=new TrafficSampling(now);
@@ -422,6 +426,7 @@ public class TunnelVpnService extends VpnService {
                 dDown = 0;
             }
 
+            if(trace!=null)trace.received(dDown);
             long sampleAt=android.os.SystemClock.elapsedRealtime();
             TrafficSampling.Sample rates=sampling.sample(sampleAt,dUp,dDown);
             svc.sessionUp += dUp;
@@ -469,7 +474,12 @@ public class TunnelVpnService extends VpnService {
             if (p != null && rates.updateNotification) {
                 svc.updateNotification(
                         p.remark,
-                        "↓ " + fmtSpeed(rates.downPerSecond) + "    ↑ " + fmtSpeed(rates.upPerSecond));
+                        svc.getString(StartupDiagnostics.labelResource())+" · ↓ " + fmtSpeed(rates.downPerSecond) + "    ↑ " + fmtSpeed(rates.upPerSecond));
+                int label=StartupDiagnostics.labelResource();
+                if(label!=lastReadinessLabel){
+                    lastReadinessLabel=label;ParvazWidget.a(svc);
+                    try{android.service.quicksettings.TileService.requestListeningState(svc,new ComponentName(svc,TileService.class));}catch(Exception ignored){}
+                }
             }
 
             if(serviceRunning&&svc.h==this)svc.handler.postDelayed(this, rates.nextDelayMs);
@@ -546,7 +556,7 @@ public class TunnelVpnService extends VpnService {
                 tunnelVpnService.switching = false;
                 TunnelVpnService.serviceRunning = true;
                 tunnelVpnService.h(tunnelVpnService.profile.remark, 2);
-                tunnelVpnService.updateNotification(tunnelVpnService.profile.remark, tunnelVpnService.getString(R.string.switched_to, str));
+                tunnelVpnService.updateNotification(tunnelVpnService.profile.remark, tunnelVpnService.getString(StartupDiagnostics.labelResource()));
                 tunnelVpnService.handler.post(new b());
             } catch (Throwable th) {
                 Log.e("ParvazVpn", "auto-switch failed", th);
