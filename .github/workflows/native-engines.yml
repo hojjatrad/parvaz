@@ -20,6 +20,7 @@ jobs:
         with: {gradle-version: '8.9', cache-disabled: true}
       - name: Prepare native compiler and build pinned engines
         run: |
+          bash tools/release/fetch_core.sh
           sdkmanager 'platforms;android-34' 'build-tools;34.0.0' 'ndk;27.2.12479018'
           python3 tools/native/build.py --probe
           python3 tools/native/build.py --host

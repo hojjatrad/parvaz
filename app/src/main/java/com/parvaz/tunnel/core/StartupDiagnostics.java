@@ -52,7 +52,7 @@ public final class StartupDiagnostics {
   private static String value(long ms){return ms<0?"UNKNOWN":Long.toString(ms);}
   synchronized String report(){return "STARTUP_DIAGNOSTICS_V1\nclock=MONOTONIC\n"
    +"vpn_setup_ms="+value(tunMs)+"\nvpn_setup="+(tunMs<0?"REUSED_OR_UNMEASURED":"MEASURED")
-   +"\nprevious_core_cleanup_ms="+value(cleanupMs)+"\nconfig_ready_from_core_entry_ms="+value(configMs)
+   +"\nprevious_core_cleanup_ms="+value(cleanupMs)+"\nprevious_core_cleanup_scope=STOP_CALL_RETURN_NOT_CHILD_EXIT\nreconnect_fixed_delay_ms=0\nconfig_ready_from_core_entry_ms="+value(configMs)
    +"\nlocal_core_started_from_entry_ms="+value(coreMs)+"\nfirst_proxy_http_response_from_entry_ms="+value(responseMs)
    +"\nproof_clock=ELAPSED_REALTIME\nproof_age_ms="+value(proofAge())+"\nproof_revalidation_due="+proofDue()
    +"\nprobe_duration_ms="+value(probeMs)+"\nfirst_proxy_rx_observed_from_entry_ms="+value(rxMs)

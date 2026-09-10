@@ -152,8 +152,20 @@ public final class CoreManager {
     /* renamed from: c */
     public final synchronized void start(Context context,Profile profile,int tunFd,Runnable failure) {start(context,profile,tunFd,failure,-1);}
     public final synchronized void start(Context context,Profile profile,int tunFd,Runnable failure,long tunSetupMs) {
+        startInternal(context,profile,tunFd,failure,tunSetupMs,()->true);
+    }
+    /** Only called by the serialized lifecycle worker. Cancellation is checked
+     * again after synchronous Xray stop and before allocating its replacement.
+     * External children retain their permits until actual exit; no sleep guesses
+     * that a child has exited, and new children use private ports/directories. */
+    synchronized boolean startOwned(Context context,Profile profile,int tunFd,Runnable failure,java.util.function.BooleanSupplier current) {
+        return startInternal(context,profile,tunFd,failure,-1,current);
+    }
+    private boolean startInternal(Context context,Profile profile,int tunFd,Runnable failure,long tunSetupMs,java.util.function.BooleanSupplier current) {
+        if(!current.getAsBoolean())return false;
         final StartupDiagnostics.Attempt trace=StartupDiagnostics.begin(System.nanoTime(),tunSetupMs);
         stop();diagnostics=trace;trace.cleanupDone();
+        if(!current.getAsBoolean()){trace.stop();return false;}
         final long ownerGeneration = generation;
         profile=com.parvaz.tunnel.store.ProfileIdentity.copy(profile);
         liveIdentity=com.parvaz.tunnel.store.ProfileIdentity.fingerprint(profile);
@@ -176,12 +188,14 @@ public final class CoreManager {
             com.parvaz.tunnel.config.ReadinessConfig.Plan readiness=com.parvaz.tunnel.config.ReadinessConfig.prepare(config,profile,external!=null&&external.readinessRemoteOnly,readinessPort);
             config=readiness.config;verifiedPort=readiness.pinned?readinessPort:0;trace.routeConfigured(readiness.pinned);
             trace.configDone();
+            if(!current.getAsBoolean()){stop();return false;}
             activeTunFd=tunFd;controller=Libv2ray.newCoreController(new b(failure));controller.startLoop(config,tunFd);running=controller.getIsRunning()&&(external==null||external.isRunning());
             if(!running)throw new IllegalStateException("Core failed to start");
             trace.coreStarted();
             // Most proxy outbounds dial lazily. Prime the configured connectivity
             // endpoint through the new local proxy without holding up user traffic.
             if(readiness.pinned)startupWarmup.startObserved(prefs.f343a.getString("ping_url","https://www.gstatic.com/generate_204"),readinessPort,trace::probeFinished);
+            return true;
         }catch(Exception error){stop();throw new IllegalStateException("Core start failed: "+error.getMessage(),error);}
     }
 

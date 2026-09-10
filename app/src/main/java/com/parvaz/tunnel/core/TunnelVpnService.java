@@ -246,15 +246,10 @@ public class TunnelVpnService extends VpnService {
                 // The network just changed underneath us -- re-pin before the core
                 // dials out again, otherwise it reconnects over the old interface.
                 tunnelVpnService.bindUnderlyingNetwork();
-                CoreManager.b().stop();
-                try {
-                    Thread.sleep(300L);
-                } catch (InterruptedException unused) {
-                    android.util.Log.w("Parvaz/TunnelVpnService", "InterruptedException ignored", unused);
-                }
+                // CoreManager owns stop -> start serially; no guessed 300 ms sleep.
                 if(!operations.current(ticket))return;
                 ParcelFileDescriptor parcelFileDescriptor = tunnelVpnService.tunInterface;
-                CoreManager.b().start(tunnelVpnService, tunnelVpnService.profile, parcelFileDescriptor == null ? 0 : parcelFileDescriptor.getFd(), ()->postCoreFailure(ticket));
+                if(!CoreManager.b().startOwned(tunnelVpnService, tunnelVpnService.profile, parcelFileDescriptor == null ? 0 : parcelFileDescriptor.getFd(), ()->postCoreFailure(ticket), ()->operations.current(ticket)))return;
                 operations.commit(ticket,()->{
                 tunnelVpnService.lastConnectAt = System.currentTimeMillis();
                 tunnelVpnService.switching = false;
@@ -563,12 +558,7 @@ public class TunnelVpnService extends VpnService {
             String str = this.f6238c;
             tunnelVpnService.stopStatsTicker();
             tunnelVpnService.stopHealthTicker();
-            CoreManager.b().stop();
-            try {
-                Thread.sleep(300L);
-            } catch (InterruptedException unused) {
-                android.util.Log.w("Parvaz/TunnelVpnService", "InterruptedException ignored", unused);
-            }
+            // CoreManager owns stop -> start serially; no guessed 300 ms sleep.
             try {
                 tunnelVpnService.profile = profile;
                 CoreManager b = CoreManager.b();
@@ -580,7 +570,7 @@ public class TunnelVpnService extends VpnService {
                     fd = parcelFileDescriptor.getFd();
                 }
                 if(!operations.current(ticket))return;
-                b.start(tunnelVpnService,profile2,fd,()->postCoreFailure(ticket));
+                if(!b.startOwned(tunnelVpnService,profile2,fd,()->postCoreFailure(ticket),()->operations.current(ticket)))return;
                 operations.commit(ticket,()->{
                 if(tunnelVpnService.f!=null)tunnelVpnService.f.f343a.edit().putString("selected_profile",profile.id).apply();
                 tunnelVpnService.lastConnectAt = System.currentTimeMillis();

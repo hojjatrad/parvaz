@@ -9,6 +9,55 @@ import org.junit.runner.RunWith;
 import static org.junit.Assert.*;
 @RunWith(AndroidJUnit4.class)
 public class NativeEngineTest {
+ // Loopback-only protocol fixtures, not selected-remote readiness or a live VPN.
+ private libv2ray.CoreController newXray() {
+  return libv2ray.Libv2ray.newCoreController(new libv2ray.CoreCallbackHandler(){
+   public long startup(){return 0;}public long shutdown(){return 0;}
+   public long onEmitStatus(long code,String message){return 0;}
+  });
+ }
+ private String xrayFixture(int port,ExternalCore relay)throws Exception {
+  org.json.JSONObject inbound=new org.json.JSONObject().put("listen","127.0.0.1").put("port",port).put("protocol","socks")
+   .put("settings",new org.json.JSONObject().put("auth","password").put("udp",true)
+    .put("accounts",new org.json.JSONArray().put(new org.json.JSONObject().put("user","fixture").put("pass","fixture-only-password"))));
+  org.json.JSONObject outbound=new org.json.JSONObject().put("protocol","freedom");
+  if(relay!=null)outbound=new org.json.JSONObject().put("protocol","socks").put("settings",new org.json.JSONObject().put("servers",new org.json.JSONArray().put(new org.json.JSONObject()
+   .put("address","127.0.0.1").put("port",relay.port).put("users",new org.json.JSONArray().put(new org.json.JSONObject().put("user",relay.username).put("pass",relay.password))))));
+  return new org.json.JSONObject().put("log",new org.json.JSONObject().put("loglevel","none"))
+   .put("inbounds",new org.json.JSONArray().put(inbound)).put("outbounds",new org.json.JSONArray().put(outbound)).toString();
+ }
+ private int reservePort()throws Exception {try(java.net.ServerSocket socket=new java.net.ServerSocket(0,1,java.net.InetAddress.getByName("127.0.0.1"))){return socket.getLocalPort();}}
+ @Test public void xraySamePortRestartsWithoutFixedSleep()throws Exception {
+  int port=reservePort();libv2ray.CoreController previous=null;
+  for(int cycle=0;cycle<8;cycle++){
+   libv2ray.CoreController core=newXray();
+   try{
+    core.startLoop(xrayFixture(port,null),0);assertTrue(core.getIsRunning());
+    if(previous!=null)previous.stopLoop(); // Late idempotent close must not stop the new listener.
+    exchangeTcp(port,"fixture","fixture-only-password");
+   }finally{core.stopLoop();}
+   assertFalse(core.getIsRunning());previous=core;
+   // Intentionally NO sleep or bind-retry between stopLoop and the next startLoop.
+  }
+  android.util.Log.i("ParvazProbe","XRAY_SAME_PORT_RESTART_8_CYCLES_NO_SLEEP_OK SDK="+android.os.Build.VERSION.SDK_INT);
+ }
+ @Test public void xraySingboxRelayRestartsWithoutFixedSleep()throws Exception {assertRelayRestart("full-singbox");}
+ @Test public void xrayMihomoRelayRestartsWithoutFixedSleep()throws Exception {assertRelayRestart("full-clash");}
+ private void assertRelayRestart(String kind)throws Exception {
+  Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();int port=reservePort();
+  for(int cycle=0;cycle<4;cycle++){
+   ExternalCore relay=ExternalCore.start(context,directProfile(kind),null);libv2ray.CoreController core=newXray();
+   try{
+    core.startLoop(xrayFixture(port,relay),0);assertTrue(core.getIsRunning());
+    exchangeTcp(port,"fixture","fixture-only-password");
+   }finally{
+    // Production order: close child asynchronously, then stop Xray synchronously.
+    // Capacity is NOT returned early; next child may wait for genuine cleanup.
+    relay.close();core.stopLoop();
+   }
+  }
+  android.util.Log.i("ParvazProbe","XRAY_NATIVE_RELAY_RESTART_4_CYCLES_NO_SLEEP_OK "+kind+" SDK="+android.os.Build.VERSION.SDK_INT);
+ }
  private void fixtureDiagnostics(Context context,Profile profile)throws Exception {
   boolean mihomo=profile.protocol.equals("full-clash");
   java.io.File directory=new java.io.File(context.getNoBackupFilesDir(),"fixture-diagnostics");directory.mkdirs();

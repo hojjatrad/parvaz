@@ -38,6 +38,8 @@ def prepareProbeSources=tasks.register('prepareProbeSources',Sync){
 }
 tasks.named('preBuild').configure { dependsOn prepareProbeSources }
 if(project.hasProperty('nativeProbe')){
+    dependencies { implementation files('../../app/libs/libv2ray.aar') }
+    android.defaultConfig.ndk.abiFilters 'x86_64'
     android.sourceSets.main.manifest.srcFile 'src/native/AndroidManifest.xml'
     android.sourceSets.main.java.srcDir 'src/native/java'
     android.sourceSets.main.res.srcDirs=['src/native/res','../../.cache/native-test-res']
