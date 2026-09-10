@@ -1,0 +1,20 @@
+[
+  {
+    "version": "1.26.4",
+    "release_id": 386172888,
+    "all_previous_asset_hashes_unchanged": true,
+    "asset_names_and_sizes_unchanged": true
+  },
+  {
+    "version": "1.26.5",
+    "release_id": 386303307,
+    "all_previous_asset_hashes_unchanged": true,
+    "asset_names_and_sizes_unchanged": true
+  },
+  {
+    "version": "1.27.0",
+    "release_id": 386519374,
+    "all_previous_asset_hashes_unchanged": true,
+    "asset_names_and_sizes_unchanged": true
+  }
+]
