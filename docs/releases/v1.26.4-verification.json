@@ -1,0 +1,67 @@
+{
+  "version": "1.26.4",
+  "version_code": 31,
+  "tag_commit": "8440a15df251ab3a5fc075854342f5196853266b",
+  "release_id": 386172888,
+  "stable_latest_verified": true,
+  "anonymous_api_verified": true,
+  "api_verification_method": "fetch_page latest API, chunks 0 and 1; selected fields saved separately",
+  "direct_sandbox_api": "rate limited, not claimed successful",
+  "latest_redirect_verified": true,
+  "assets": [
+    {
+      "name": "Parvaz-1.26.4-arm64.apk",
+      "bytes": 45388560,
+      "sha256": "c086e1149400df2d62c58e007b896da04185b8a01ea31360cf6a9b0662a5b3f1",
+      "github_digest_match": true,
+      "whole_file_streamed": true,
+      "signature_verified": true,
+      "certificate_sha256": "d1383b8f34da5d3299b13634de421487289d82c1bb47ec3bc7f20ae8d02fe500",
+      "v2": true,
+      "v3": false,
+      "package": "com.parvaz.tunnel",
+      "version_name": "1.26.4",
+      "version_code": 31,
+      "abis": [
+        "arm64-v8a"
+      ]
+    },
+    {
+      "name": "Parvaz-1.26.4-source.tar.gz",
+      "bytes": 477469243,
+      "sha256": "435b752974f5eb8f785f9f898d761fe1de51d0bf811886bbca5b95ebe79beb4c",
+      "github_digest_match": true,
+      "whole_file_streamed": true
+    },
+    {
+      "name": "Parvaz-1.26.4.apk",
+      "bytes": 88667302,
+      "sha256": "da557552f0ff84d53a874d300dc2ff8d8498299836da3c9f0919498f426b4d55",
+      "github_digest_match": true,
+      "whole_file_streamed": true,
+      "signature_verified": true,
+      "certificate_sha256": "d1383b8f34da5d3299b13634de421487289d82c1bb47ec3bc7f20ae8d02fe500",
+      "v2": true,
+      "v3": false,
+      "package": "com.parvaz.tunnel",
+      "version_name": "1.26.4",
+      "version_code": 31,
+      "abis": [
+        "arm64-v8a",
+        "armeabi-v7a"
+      ]
+    },
+    {
+      "name": "SHA256SUMS.txt",
+      "bytes": 268,
+      "sha256": "e31f9d766529e628e25c3fc5fc200f9f2afff0e7b430c56646b9b219652cf1eb",
+      "github_digest_match": true,
+      "whole_file_streamed": true
+    }
+  ],
+  "phone_installation": "NOT_RUN",
+  "signature_verifier": {
+    "library": "com.android.tools.build:apksig:8.5.2",
+    "jar_sha256": "c4f6fdf2148490296f422a7eb37647ea11d1c3b02f1f2349c33ce257f3c29b1f"
+  }
+}
