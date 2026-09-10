@@ -1,0 +1,76 @@
+{
+  "version": "1.28.2",
+  "version_code": 36,
+  "tag_commit": "a9ed66a4769fa87324778dd06f0a88f162b35b9a",
+  "tested_executable": "67187e7772bd67d8d2e41d740fa1838bf99ff49d",
+  "release_id": 386624584,
+  "stable_latest_verified": true,
+  "anonymous_api_verified": true,
+  "latest_redirect_verified": true,
+  "assets": [
+    {
+      "name": "Parvaz-1.28.2-arm64.apk",
+      "bytes": 45407872,
+      "sha256": "96645bc4011d0265e603099c4c8bf6b999184ce7f85236e075698e1b77bcaeae",
+      "github_digest_match": true,
+      "whole_file_streamed": true,
+      "signature_verified": true,
+      "certificate_sha256": "d1383b8f34da5d3299b13634de421487289d82c1bb47ec3bc7f20ae8d02fe500",
+      "v2": true,
+      "v3": false,
+      "package": "com.parvaz.tunnel",
+      "version_name": "1.28.2",
+      "version_code": 36,
+      "abis": [
+        "arm64-v8a"
+      ],
+      "native_engines_verified": [
+        "Xray",
+        "sing-box",
+        "Mihomo"
+      ]
+    },
+    {
+      "name": "Parvaz-1.28.2-source.tar.gz",
+      "bytes": 477555511,
+      "sha256": "044b5b6fd917148f975fe8213695bfe860d612434aabb93c842df92381947bb6",
+      "github_digest_match": true,
+      "whole_file_streamed": true
+    },
+    {
+      "name": "Parvaz-1.28.2.apk",
+      "bytes": 88686614,
+      "sha256": "76ad6df9135888b4f6442757267bd63c0ced49aa6c5237f2b4316511cde3727f",
+      "github_digest_match": true,
+      "whole_file_streamed": true,
+      "signature_verified": true,
+      "certificate_sha256": "d1383b8f34da5d3299b13634de421487289d82c1bb47ec3bc7f20ae8d02fe500",
+      "v2": true,
+      "v3": false,
+      "package": "com.parvaz.tunnel",
+      "version_name": "1.28.2",
+      "version_code": 36,
+      "abis": [
+        "arm64-v8a",
+        "armeabi-v7a"
+      ],
+      "native_engines_verified": [
+        "Xray",
+        "sing-box",
+        "Mihomo"
+      ]
+    },
+    {
+      "name": "SHA256SUMS.txt",
+      "bytes": 268,
+      "sha256": "2762a63ac5f78ca0f7e8aca26d44e5a0d5fb0cb528850acab5e749fd54810bb8",
+      "github_digest_match": true,
+      "whole_file_streamed": true
+    }
+  ],
+  "phone_installation": "NOT_RUN",
+  "signature_verifier": {
+    "library": "com.android.tools.build:apksig:8.5.2",
+    "jar_sha256": "c4f6fdf2148490296f422a7eb37647ea11d1c3b02f1f2349c33ce257f3c29b1f"
+  }
+}
