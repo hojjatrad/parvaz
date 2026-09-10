@@ -472,8 +472,8 @@ Tap + to paste a config link or add a subscription."</string>
     <string name="recovery_body">An interrupted backup could not be completed. Connections are blocked to avoid using mixed records and settings. Free storage or wait until device storage is available, then retry. If the encrypted journal or device key is damaged, retry may not help. Do not clear app data: the encrypted recovery file has been retained.</string>
     <string name="recovery_retry">Retry recovery</string>
     <string name="recovery_close">Close</string>
-    <string name="tunnel_checking">Local tunnel · checking response</string>
-    <string name="tunnel_response_seen">Local tunnel · response observed</string>
+    <string name="tunnel_checking">Verifying server connection…</string>
+    <string name="tunnel_response_seen">Connected · server verified</string>
     <string name="tunnel_unconfirmed">Local tunnel · communication unconfirmed</string>
     <string name="startup_report_title">Connection timing report</string>
     <string name="startup_report_help">Local, manual report only. A response through the local proxy does not prove the selected remote route or every application works. Received bytes include probes and DNS; application response and DNS timings are not yet instrumented. UNKNOWN is not a zero duration. No endpoint, credential or profile ID is included.</string>

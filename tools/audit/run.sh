@@ -14,7 +14,7 @@ echo 'ef779af5d29a9dde8cc70ce0341f5c6f7735e23edff9685ceaa9d35359b7bb7f  .cache/a
 javac -encoding UTF-8 -cp .cache/audit/json.jar:.cache/audit/snakeyaml.jar -d .cache/audit/classes \
  $(find tools/audit/stubs -name '*.java') \
  app/src/main/java/com/parvaz/tunnel/model/{Profile,Subscription}.java \
- app/src/main/java/com/parvaz/tunnel/config/{LinkParser,ClashParser,SingBoxParser,ProtocolNames,CustomOutbound,XrayConfigBuilder,ConfigFields,ImportResult,JsonInput,SubscriptionUrl,ImportInput,FullConfig,EngineConfig,ManagedConfig}.java \
+ app/src/main/java/com/parvaz/tunnel/config/{LinkParser,ClashParser,SingBoxParser,ProtocolNames,CustomOutbound,XrayConfigBuilder,ConfigFields,ImportResult,JsonInput,SubscriptionUrl,ImportInput,FullConfig,EngineConfig,ManagedConfig,ReadinessConfig}.java \
  app/src/main/java/com/parvaz/tunnel/store/{DuplicateReport,ProfileStore,ProfileIdentity,SubscriptionReconciler,ProfileDuplicates}.java \
  app/src/main/java/com/parvaz/tunnel/core/{AppNetwork,ProtocolSupport,SubscriptionHttpClient,SmartImport,QuotaState,SubscriptionRefresh,SubscriptionUpdater,SubscriptionUpdater_4,SubscriptionUpdater_5,SubscriptionWorker}.java tools/audit/ParserAudit.java tools/audit/SubscriptionHttpClientTest.java tools/audit/PanelRefreshTest.java tools/audit/SmartImportAudit.java tools/audit/SubscriptionFormatAudit.java tools/audit/AppNetworkAudit.java tools/audit/RefreshDedupAudit.java
 java -cp .cache/audit/classes:.cache/audit/json.jar:.cache/audit/snakeyaml.jar ParserAudit

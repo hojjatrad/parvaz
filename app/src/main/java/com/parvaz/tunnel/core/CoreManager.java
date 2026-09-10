@@ -24,7 +24,7 @@ public final class CoreManager {
     /* renamed from: b */
     public volatile boolean running = false;
     private ExternalCore external;
-    private final StartupWarmup startupWarmup=new StartupWarmup();
+    private final ReadinessMonitor startupWarmup=new ReadinessMonitor();
     private volatile long generation;
     private volatile StartupDiagnostics.Attempt diagnostics;
     StartupDiagnostics.Attempt startupAttempt(){return diagnostics;}
@@ -155,13 +155,17 @@ public final class CoreManager {
                 Profile dummy=new Profile();dummy.protocol="socks";dummy.address="127.0.0.1";dummy.port=10810;
                 config=com.parvaz.tunnel.config.ManagedConfig.xray(profile,dummy,prefs,0,true,true);
             }else config=XrayConfigBuilder.b(profile,prefs,chain,true,true);
+            int readinessPort;
+            try(java.net.ServerSocket reserved=new java.net.ServerSocket(0,1,java.net.InetAddress.getByName("127.0.0.1"))){readinessPort=reserved.getLocalPort();}
+            com.parvaz.tunnel.config.ReadinessConfig.Plan readiness=com.parvaz.tunnel.config.ReadinessConfig.prepare(config,profile,external!=null&&external.readinessRemoteOnly,readinessPort);
+            config=readiness.config;trace.routeConfigured(readiness.pinned);
             trace.configDone();
             controller=Libv2ray.newCoreController(new b(failure));controller.startLoop(config,tunFd);running=controller.getIsRunning()&&(external==null||external.isRunning());
             if(!running)throw new IllegalStateException("Core failed to start");
             trace.coreStarted();
             // Most proxy outbounds dial lazily. Prime the configured connectivity
             // endpoint through the new local proxy without holding up user traffic.
-            startupWarmup.start(prefs.f343a.getString("ping_url","https://www.gstatic.com/generate_204"),trace::probeFinished);
+            if(readiness.pinned)startupWarmup.start(prefs.f343a.getString("ping_url","https://www.gstatic.com/generate_204"),readinessPort,trace::probeFinished);
         }catch(Exception error){stop();throw new IllegalStateException("Core start failed: "+error.getMessage(),error);}
     }
 

@@ -21,6 +21,7 @@ public final class ExternalCore implements AutoCloseable {
  });
  private final AtomicBoolean closed=new AtomicBoolean();
  private Process process;private File directory;private boolean permit;
+ public boolean readinessRemoteOnly;
  public int port,dnsPort;public String username="parvaz",password;
  public static ExternalCore start(Context context,Profile profile,Runnable failure)throws Exception {
   ExternalCore session=new ExternalCore();
@@ -36,7 +37,9 @@ public final class ExternalCore implements AutoCloseable {
    configureSystemTrust(builder,session.directory);
    LAUNCHER.submit(()->{session.launch(builder);return null;}).get();
    Thread drain=new Thread(()->{try(InputStream in=session.process.getInputStream()){byte[] buffer=new byte[4096];while(in.read(buffer)!=-1){/* Private engine logs are deliberately not published. */}}catch(IOException ignored){}},"parvaz-engine-output");drain.setDaemon(true);drain.start();
-   try(OutputStream input=session.process.getOutputStream()){input.write(EngineConfig.serialize(EngineConfig.build(profile,session.port,session.dnsPort,session.username,session.password),profile.protocol).getBytes(StandardCharsets.UTF_8));}
+   org.json.JSONObject nativeConfig=EngineConfig.build(profile,session.port,session.dnsPort,session.username,session.password);
+   session.readinessRemoteOnly=ReadinessConfig.nativeRemoteOnly(nativeConfig,profile.protocol);
+   try(OutputStream input=session.process.getOutputStream()){input.write(EngineConfig.serialize(nativeConfig,profile.protocol).getBytes(StandardCharsets.UTF_8));}
    long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(30);boolean ready=false;
    while(System.nanoTime()<deadline){if(!session.alive())throw new IOException("Native configuration rejected (exit "+session.process.exitValue()+")");
     try{session.authenticate();ready=true;break;}catch(IOException unavailable){Thread.sleep(100);}

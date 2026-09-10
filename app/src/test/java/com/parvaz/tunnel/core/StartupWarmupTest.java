@@ -49,10 +49,11 @@ public class StartupWarmupTest {
   }finally{connection.release.countDown();}
  }
  @Test public void watchdogDisconnectsEvenWithoutResponse()throws Exception {
-  Connection connection=new Connection();connection.blocking=true;AtomicInteger reports=new AtomicInteger();
-  try(StartupWarmup warmup=new StartupWarmup(url->connection,(ok,ms)->reports.incrementAndGet())){
+  Connection connection=new Connection();connection.blocking=true;AtomicInteger reports=new AtomicInteger();CountDownLatch reported=new CountDownLatch(1);
+  try(StartupWarmup warmup=new StartupWarmup(url->connection,(ok,ms)->{assertFalse(ok);reports.incrementAndGet();reported.countDown();},100)){
    warmup.start("https://fixture.invalid/check");assertTrue(connection.entered.await(3,TimeUnit.SECONDS));
-   assertTrue(connection.disconnected.await(StartupWarmup.DEADLINE_MS+2000,TimeUnit.MILLISECONDS));assertEquals(0,reports.get());
+   assertTrue(connection.disconnected.await(3,TimeUnit.SECONDS));
+   assertTrue(reported.await(3,TimeUnit.SECONDS));assertEquals(1,reports.get());
   }
  }
  @Test public void redirectDoesNotCountAsConfirmedOrOpenAnotherConnection()throws Exception {
@@ -80,6 +81,39 @@ public class StartupWarmupTest {
    assertSame(javax.net.ssl.HttpsURLConnection.getDefaultHostnameVerifier(),https.getHostnameVerifier());
    assertSame(javax.net.ssl.HttpsURLConnection.getDefaultSSLSocketFactory(),https.getSSLSocketFactory());
   }finally{raw.disconnect();}
+ }
+ @Test public void invalidEndpointReportsFailureInsteadOfAbandoningRetryOwner(){
+  AtomicInteger reports=new AtomicInteger();try(StartupWarmup warmup=new StartupWarmup(url->{throw new AssertionError("Invalid URL opened");},(ok,ms)->{assertFalse(ok);reports.incrementAndGet();})){
+   warmup.start("http://fixture.invalid/");assertEquals(1,reports.get());
+  }
+ }
+ @Test public void busyWorkerReportsFailureWithoutQueueingOrOpeningDirectly()throws Exception {
+  Connection connection=new Connection();connection.blocking=true;connection.releaseOnDisconnect=false;AtomicInteger reports=new AtomicInteger(),opened=new AtomicInteger();
+  try(StartupWarmup warmup=new StartupWarmup(url->{opened.incrementAndGet();return connection;},(ok,ms)->{assertFalse(ok);reports.incrementAndGet();})){
+   warmup.start("https://fixture.invalid/first");assertTrue(connection.entered.await(3,TimeUnit.SECONDS));
+   warmup.start("https://fixture.invalid/second");assertEquals(1,reports.get());assertEquals(1,opened.get());
+  }finally{connection.release.countDown();}
+ }
+ @Test public void deadlineLateSuccessCannotTurnGreen()throws Exception {
+  Connection connection=new Connection();connection.blocking=true;connection.releaseOnDisconnect=false;java.util.List<Boolean> results=new java.util.concurrent.CopyOnWriteArrayList<>();CountDownLatch reported=new CountDownLatch(1);
+  try(StartupWarmup warmup=new StartupWarmup(url->connection,(ok,ms)->{results.add(ok);reported.countDown();},100)){
+   warmup.start("https://fixture.invalid/check");assertTrue(connection.entered.await(3,TimeUnit.SECONDS));assertTrue(reported.await(3,TimeUnit.SECONDS));
+   connection.release.countDown();warmup.close();assertEquals(java.util.Collections.singletonList(false),results);
+  }finally{connection.release.countDown();}
+ }
+ @Test public void pinnedFactoryUsesOnlySessionPortAndDefaultTls()throws Exception {
+  AtomicReference<Proxy> selected=new AtomicReference<>();HttpURLConnection original=(HttpURLConnection)new URL("https://fixture.invalid/check").openConnection();
+  URL observed=new URL(null,"https://fixture.invalid/check",new URLStreamHandler(){
+   @Override protected URLConnection openConnection(URL url){throw new AssertionError("Direct fallback");}
+   @Override protected URLConnection openConnection(URL url,Proxy proxy){selected.set(proxy);return original;}
+  });
+  HttpURLConnection result=StartupWarmup.pinnedConnection(observed,23111);try{
+   assertSame(original,result);assertEquals(Proxy.Type.HTTP,selected.get().type());InetSocketAddress address=(InetSocketAddress)selected.get().address();assertEquals("127.0.0.1",address.getHostString());assertEquals(23111,address.getPort());
+   javax.net.ssl.HttpsURLConnection https=(javax.net.ssl.HttpsURLConnection)result;assertSame(javax.net.ssl.HttpsURLConnection.getDefaultHostnameVerifier(),https.getHostnameVerifier());assertSame(javax.net.ssl.HttpsURLConnection.getDefaultSSLSocketFactory(),https.getSSLSocketFactory());
+  }finally{result.disconnect();}
+ }
+ @Test public void missingPinnedPortCannotFallBackToNormalProxyOrSystem()throws Exception {
+  for(int port:new int[]{-1,0,65536})try{StartupWarmup.pinnedConnection(new URL("https://fixture.invalid/"),port);fail("Missing route accepted");}catch(IOException expected){}
  }
  @Test public void plaintextCredentialAndMalformedEndpointsAreSkipped(){
   for(String value:new String[]{"http://fixture.invalid/","https://user:secret@fixture.invalid/","https://fixture.invalid/#fragment","file:///tmp/test","invalid",""})assertNull(StartupWarmup.endpoint(value));
