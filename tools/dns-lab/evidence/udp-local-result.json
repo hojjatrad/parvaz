@@ -1,0 +1,140 @@
+{
+  "tested_inputs_sha256": {
+    "tools/dns-lab/run.py": "2888891f2bd66d88c9825c5a1f4bb1eddd04b84065de774196ad0a91cf3f82f5",
+    "tools/dns-lab/source-pin.json": "98480381e81c6f170d6b8e68180dc99cd72ad4a9610e011149f3879b4e5f1346",
+    "tools/dns-lab/wrapper-source-pin.json": "18c144ec7b5712ed1fd202e8f751d46f2b0d471c8c230a3ce5330fecd2098819",
+    "tools/dns-lab/xray-cache-generation.patch": "7fce2e455311fd8c887444f3756e9b2dba9532be51c2f89b1e3a67998e01ef23",
+    "tools/dns-lab/xray-udp-transport.patch": "6ad9fe9a43d87b89abd39060d01f6c864e1b33790c9afdf501fd01712bd86959",
+    "tools/dns-lab/xray-udp-loopback-fixture.patch": "69084859b9fd213665fd9f45ed98b6de518bdb18a73ada3246116da2856c2254",
+    "tools/dns-lab/tests/parvaz_cache_generation_test.go": "27ade2f7cb4b5524e38b379d3cb7dea911ff4eeb43de112f2b8f058b092d7d0a",
+    "tools/dns-lab/tests/parvaz_naive_flush_test.go": "928b4466544c36d276c8a464383976d02ba7b93d1217a521ebb5fd2759ce3e02",
+    "tools/dns-lab/tests/parvaz_transport_limit_test.go": "b162b51b53a78a3a48b1dcbb6527a967019a9711d29b53858e634d6606cfd99e",
+    "tools/dns-lab/tests/parvaz_udp_transport_test.go": "386e11c59e9fd8e11724b6ce386b7037a4f278907fb4d4cbbc694008faba766d"
+  },
+  "ci_commit": null,
+  "experiment": "Xray cache generation and DNS-local UDP transport ownership",
+  "promotion_allowed": false,
+  "production_apk_changed": false,
+  "source": {
+    "repository": "XTLS/Xray-core",
+    "commit": "52a412d9e2f5c2a5142b1b4e2ab3771dacb8b120",
+    "url": "https://codeload.github.com/XTLS/Xray-core/tar.gz/52a412d9e2f5c2a5142b1b4e2ab3771dacb8b120",
+    "sha256": "a31a4fd9f42d49b23910d72395f77c4bc840968c1f2a37389cf7f270d95691e5"
+  },
+  "wrapper_source": {
+    "repository": "2dust/AndroidLibXrayLite",
+    "tag": "v26.9.9",
+    "commit": "d0c6c4ae1b09c912070c8288bd0dbcc2e492ac29",
+    "url": "https://codeload.github.com/2dust/AndroidLibXrayLite/tar.gz/d0c6c4ae1b09c912070c8288bd0dbcc2e492ac29",
+    "sha256": "29d48db71e6e3ab08fe8d62f791a7f77c090d1a0dad623585da43f88a0069323"
+  },
+  "patch_sha256": "7fce2e455311fd8c887444f3756e9b2dba9532be51c2f89b1e3a67998e01ef23",
+  "transport_patch_sha256": "6ad9fe9a43d87b89abd39060d01f6c864e1b33790c9afdf501fd01712bd86959",
+  "test_fixture_patch_sha256": "69084859b9fd213665fd9f45ed98b6de518bdb18a73ada3246116da2856c2254",
+  "go_version": "go version go1.27.0 linux/amd64",
+  "stages": [
+    {
+      "stage": "baseline",
+      "top_level_pass_events": 1,
+      "unique_top_level_tests": [
+        "TestParvazNaiveFlushRepopulatesFromLateReply"
+      ],
+      "repetitions": 1,
+      "race_detector": true,
+      "module_graph_sha256": "60f02c3a5976ec1791fd314fafd77b403239ac7831ea1a94627b6900f924c690",
+      "effective_go_mod_sha256": "6b766478e4f7aae4e1e48cbd7ac59d3952381adb415c85f09250c9faead36dd7",
+      "log_sha256": "64315a482efb5fead8adff84ad237cb77e6cba98f18c877eb0c46260bc4af485"
+    },
+    {
+      "stage": "patched",
+      "top_level_pass_events": 54,
+      "unique_top_level_tests": [
+        "TestFqdn",
+        "TestParvazCacheAndMigrationDoNotExtendExpiry",
+        "TestParvazConcurrentFlushLookupUpdateAndCleanup",
+        "TestParvazDisabledCacheStillSeparatesSubscribers",
+        "TestParvazFlushCancelsInflightAndSeparatesSingleflight",
+        "TestParvazFlushClearsBothFamiliesAndDirtyMap",
+        "TestParvazKnownLimitReusedUDPTransactionID",
+        "TestParvazLateNegativeReplyCannotPoisonNewGeneration",
+        "TestParvazLateReplyCannotWriteOrPublish",
+        "TestParvazOldCleanupCannotDeleteNewGeneration",
+        "TestParvazOldMigrationCannotResurrectOrClearNewMigration",
+        "TestParvazRecordSlotSnapshotIsDetached",
+        "TestParvazStaleBackgroundRefreshCannotReenterNewGeneration",
+        "TestParvazUnstampedAndOtherControllerRepliesRejected",
+        "TestStaticHosts",
+        "Test_buildReqMsgs",
+        "Test_genEDNS0Options",
+        "Test_parseResponse"
+      ],
+      "repetitions": 3,
+      "race_detector": true,
+      "module_graph_sha256": "60f02c3a5976ec1791fd314fafd77b403239ac7831ea1a94627b6900f924c690",
+      "effective_go_mod_sha256": "90edc2bfcf5858c47e3968e547ab71676fc4ccb796935762a53a0d9e0aadb804",
+      "log_sha256": "6c41b4ea48ed2b32d7d862425e2e75c95cb601767493c9b22254d2708acd20ac"
+    },
+    {
+      "stage": "udp-isolated",
+      "top_level_pass_events": 117,
+      "unique_top_level_tests": [
+        "TestFqdn",
+        "TestParvazCacheAndMigrationDoNotExtendExpiry",
+        "TestParvazConcurrentFlushLookupUpdateAndCleanup",
+        "TestParvazDisabledCacheStillSeparatesSubscribers",
+        "TestParvazFlushCancelsInflightAndSeparatesSingleflight",
+        "TestParvazFlushClearsBothFamiliesAndDirtyMap",
+        "TestParvazKnownLimitReplayInjectedIntoNewTransport",
+        "TestParvazLateNegativeReplyCannotPoisonNewGeneration",
+        "TestParvazLateReplyCannotWriteOrPublish",
+        "TestParvazOldCleanupCannotDeleteNewGeneration",
+        "TestParvazOldMigrationCannotResurrectOrClearNewMigration",
+        "TestParvazRecordSlotSnapshotIsDetached",
+        "TestParvazStaleBackgroundRefreshCannotReenterNewGeneration",
+        "TestParvazUDPCancelledInitializationWaiterReturnsBeforeNativeExit",
+        "TestParvazUDPCleanupErrorDoesNotClaimReleasedCapacity",
+        "TestParvazUDPCompletedCallerDoesNotOwnSharedTransport",
+        "TestParvazUDPConcurrentFlushAdmissionAndRetirement",
+        "TestParvazUDPExpiredResponseCannotPopulateCache",
+        "TestParvazUDPIdleTimerDoesNotRetireFreshActivity",
+        "TestParvazUDPInitializationErrorReleasesCapacity",
+        "TestParvazUDPLastTransactionIDDoesNotWrapInLiveTransport",
+        "TestParvazUDPOldTruncationCannotStartFreshRetry",
+        "TestParvazUDPPendingAndWriteAdmissionAreBounded",
+        "TestParvazUDPQuestionAndHeaderMismatchCannotConsumeRequest",
+        "TestParvazUDPRejectsOldTransportWithReusedID",
+        "TestParvazUDPSecondTruncationFailsWithoutRetryLoop",
+        "TestParvazUDPTransactionExhaustionRotatesInsteadOfReusing",
+        "TestParvazUDPTruncationRetryUsesFreshIDAndSameOwner",
+        "TestParvazUDPUncooperativeCleanupKeepsLeaseUntilExit",
+        "TestParvazUDPUncooperativeInitializationKeepsCapacityBounded",
+        "TestParvazUDPUncooperativeReaderKeepsLeaseUntilExit",
+        "TestParvazUDPUncooperativeWriterKeepsLeaseUntilExit",
+        "TestParvazUnstampedAndOtherControllerRepliesRejected",
+        "TestStaticHosts",
+        "TestUDPServer",
+        "TestUDPServerSubnet",
+        "Test_buildReqMsgs",
+        "Test_genEDNS0Options",
+        "Test_parseResponse"
+      ],
+      "repetitions": 3,
+      "race_detector": true,
+      "module_graph_sha256": "60f02c3a5976ec1791fd314fafd77b403239ac7831ea1a94627b6900f924c690",
+      "effective_go_mod_sha256": "ddb33e10c13d93fc896b7906a7109e24cb6c3f7f6e9218d6824a2362744dbda1",
+      "log_sha256": "e1ce855a9686e0549b3191953833c2aae2b601a8b5001307f92b04ae905301f9"
+    }
+  ],
+  "historical_reproductions": [
+    "NAIVE_CLEAR_REPOPULATES_CACHE",
+    "CACHE_ONLY_UDP_ID_REUSE_BINDS_OLD_CALLBACK_TO_NEW_REQUEST"
+  ],
+  "transport_boundary_tested": "Retired routing-link callbacks cannot access fresh pending requests, including same ID and same question. New-link wire authenticity is outside this primitive.",
+  "blocked_by": [
+    "UDP_REPLAY_INJECTED_INTO_NEW_TRANSPORT_NOT_AUTHENTICATED",
+    "NO_ENGINE_WIDE_RESOLVER_RELOAD",
+    "OTHER_ENGINE_AND_SYSTEM_CACHES_NOT_COVERED",
+    "NO_ANDROID_WRAPPER_BRIDGE_OR_NATIVE_VPN_TEST"
+  ],
+  "scope": "Real pinned upstream DNS source, wrapper-root dependency resolution, synthetic/in-memory DNS fixtures plus two upstream loopback UDP integration cases with RFC-conforming test replies; not the shipped AAR, not Android, not physical DNS/leak/battery validation."
+}

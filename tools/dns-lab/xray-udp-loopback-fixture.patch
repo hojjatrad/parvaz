@@ -1,0 +1,11 @@
+--- a/app/dns/dns_test.go
++++ b/app/dns/dns_test.go
+@@ -26,7 +26,7 @@
+ 
+ func (*staticHandler) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
+ 	ans := new(dns.Msg)
+-	ans.Id = r.Id
++	ans.SetReply(r)
+ 
+ 	var clientIP net.IP
+ 

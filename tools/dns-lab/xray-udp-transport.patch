@@ -1,0 +1,565 @@
+--- a/app/dns/nameserver_udp.go
++++ b/app/dns/nameserver_udp.go
+@@ -1,200 +1,400 @@
++// SPDX-License-Identifier: MPL-2.0
++// Experimental DNS-local transport ownership. Not wired into the Android APK.
+ package dns
+ 
+ import (
+ 	"context"
++	"errors"
+ 	"strings"
+ 	"sync"
+-	"sync/atomic"
+ 	"time"
+ 
+ 	"github.com/xtls/xray-core/common"
+-	"github.com/xtls/xray-core/common/errors"
++	"github.com/xtls/xray-core/common/buf"
+ 	"github.com/xtls/xray-core/common/net"
+-	"github.com/xtls/xray-core/common/protocol/dns"
+-	udp_proto "github.com/xtls/xray-core/common/protocol/udp"
++	dnswire "github.com/xtls/xray-core/common/protocol/dns"
+ 	"github.com/xtls/xray-core/common/task"
+-	dns_feature "github.com/xtls/xray-core/features/dns"
++	dnsfeature "github.com/xtls/xray-core/features/dns"
+ 	"github.com/xtls/xray-core/features/routing"
+-	"github.com/xtls/xray-core/transport/internet/udp"
++	"github.com/xtls/xray-core/transport"
+ 	"golang.org/x/net/dns/dnsmessage"
+ )
+ 
+-// ClassicNameServer implemented traditional UDP DNS.
++var errUDPTransportBusy = errors.New("DNS transport capacity busy")
++var errUDPTransportRetired = errors.New("DNS transport retired")
++var errUDPRequestSpace = errors.New("DNS transaction space exhausted")
++var errUDPTruncated = errors.New("truncated DNS response after EDNS retry")
++
++const dnsMaxPending = 256
++
++// A transport lease survives logical retirement until initialization, reads,
++// writes and cleanup have actually returned. Two leases bound stuck resources.
+ type ClassicNameServer struct {
+-	sync.RWMutex
++	sync.Mutex
+ 	cacheController *CacheController
+ 	address         *net.Destination
+-	requests        map[uint16]*udpDnsRequest
+-	udpServer       *udp.Dispatcher
++	dispatcher      routing.Dispatcher
++	current         *dnsTransportEpoch
++	slots           chan struct{}
+ 	requestsCleanup *task.Periodic
+-	reqID           uint32
+ 	clientIP        net.IP
+ }
+-
+ type udpDnsRequest struct {
+ 	dnsRequest
+-	ctx context.Context
+-}
+-
+-// NewClassicNameServer creates udp server object for remote resolving.
+-func NewClassicNameServer(address net.Destination, dispatcher routing.Dispatcher, disableCache bool, serveStale bool, serveExpiredTTL uint32, clientIP net.IP) *ClassicNameServer {
+-	// default to 53 if unspecific
++	ctx     context.Context
++	failure chan<- error
++}
++type dnsTransportEpoch struct {
++	mu                             sync.Mutex
++	server                         *ClassicNameServer
++	scope                          cacheScope
++	ctx                            context.Context
++	cancel                         context.CancelFunc
++	stopGeneration                 func() bool
++	timer                          *time.Timer
++	lastActivity                   time.Time
++	ready                          chan struct{}
++	writes                         chan struct{}
++	link                           *transport.Link
++	openErr                        error
++	cleanupErr                     error
++	retired, cleanupDone, released bool
++	active                         int
++	nextID                         uint32
++	requests                       map[uint16]*udpDnsRequest
++}
++
++func NewClassicNameServer(address net.Destination, dispatcher routing.Dispatcher, disableCache, serveStale bool, serveExpiredTTL uint32, clientIP net.IP) *ClassicNameServer {
+ 	if address.Port == 0 {
+ 		address.Port = net.Port(53)
+ 	}
+-
+-	s := &ClassicNameServer{
+-		cacheController: NewCacheController(strings.ToUpper(address.String()), disableCache, serveStale, serveExpiredTTL),
+-		address:         &address,
+-		requests:        make(map[uint16]*udpDnsRequest),
+-		clientIP:        clientIP,
+-	}
+-	s.requestsCleanup = &task.Periodic{
+-		Interval: time.Minute,
+-		Execute:  s.RequestsCleanup,
+-	}
+-	s.udpServer = udp.NewDispatcher(dispatcher, s.HandleResponse)
+-
+-	errors.LogInfo(context.Background(), "DNS: created UDP client initialized for ", address.NetAddr())
++	s := &ClassicNameServer{cacheController: NewCacheController(strings.ToUpper(address.String()), disableCache, serveStale, serveExpiredTTL), address: &address, dispatcher: dispatcher, slots: make(chan struct{}, 2), clientIP: clientIP}
++	s.requestsCleanup = &task.Periodic{Interval: time.Minute, Execute: s.RequestsCleanup}
+ 	return s
+ }
+-
+-// Name implements Server.
+-func (s *ClassicNameServer) Name() string {
+-	return s.cacheController.name
+-}
+-
+-// IsDisableCache implements Server.
+-func (s *ClassicNameServer) IsDisableCache() bool {
+-	return s.cacheController.disableCache
+-}
+-
+-// RequestsCleanup clears expired items from cache
++func (s *ClassicNameServer) Name() string                         { return s.cacheController.name }
++func (s *ClassicNameServer) IsDisableCache() bool                 { return s.cacheController.disableCache }
++func (s *ClassicNameServer) getCacheController() *CacheController { return s.cacheController }
++func (s *ClassicNameServer) QueryIP(ctx context.Context, domain string, option dnsfeature.IPOption) ([]net.IP, uint32, error) {
++	return queryIP(ctx, s, domain, option)
++}
+ func (s *ClassicNameServer) RequestsCleanup() error {
++	s.Lock()
++	e := s.current
++	s.Unlock()
++	if e == nil {
++		return errUDPTransportRetired
++	}
++	e.mu.Lock()
++	defer e.mu.Unlock()
+ 	now := time.Now()
++	for id, r := range e.requests {
++		if r.expire.Before(now) {
++			delete(e.requests, id)
++			notifyDNS(r.failure, context.DeadlineExceeded)
++		}
++	}
++	if len(e.requests) == 0 {
++		return errors.New("no pending DNS requests")
++	}
++	return nil
++}
++func notifyDNS(ch chan<- error, err error) {
++	if ch != nil {
++		select {
++		case ch <- err:
++		default:
++		}
++	}
++}
++func (s *ClassicNameServer) transportFor(ctx context.Context, scope cacheScope) (*dnsTransportEpoch, error) {
+ 	s.Lock()
+ 	defer s.Unlock()
+-
+-	if len(s.requests) == 0 {
+-		return errors.New(s.Name(), " nothing to do. stopping...")
+-	}
+-
+-	for id, req := range s.requests {
+-		if req.expire.Before(now) {
+-			delete(s.requests, id)
+-		}
+-	}
+-
+-	if len(s.requests) == 0 {
+-		s.requests = make(map[uint16]*udpDnsRequest)
+-	}
+-
+-	return nil
+-}
+-
+-// HandleResponse handles udp response packet from remote DNS server.
+-func (s *ClassicNameServer) HandleResponse(ctx context.Context, packet *udp_proto.Packet) {
+-	payload := packet.Payload
+-	ipRec, err := parseResponse(payload.Bytes())
+-	payload.Release()
++	if !s.cacheController.owns(scope) {
++		return nil, errCacheGenerationChanged
++	}
++	if e := s.current; e != nil {
++		e.mu.Lock()
++		usable := !e.retired && e.scope.id == scope.id && e.nextID < 65536
++		e.mu.Unlock()
++		if usable {
++			return e, nil
++		}
++		e.retire()
++		s.current = nil
++	}
++	select {
++	case s.slots <- struct{}{}:
++	default:
++		return nil, errUDPTransportBusy
++	}
++	// Preserve routing/session values, but one caller's timeout must not own the
++	// shared transport. Generation retirement and an idle timeout own it.
++	base, cancel := context.WithCancel(context.WithoutCancel(toDnsContext(ctx, s.address.String())))
++	e := &dnsTransportEpoch{server: s, scope: scope, ctx: base, cancel: cancel, ready: make(chan struct{}), writes: make(chan struct{}, 1), requests: make(map[uint16]*udpDnsRequest), active: 1, lastActivity: time.Now()}
++	e.mu.Lock()
++	e.stopGeneration = context.AfterFunc(scope.context, e.retire)
++	e.timer = time.AfterFunc(time.Minute, e.expireIdle)
++	e.mu.Unlock()
++	s.current = e
++	go e.open()
++	return e, nil
++}
++func (e *dnsTransportEpoch) releaseLocked() {
++	if e.retired && e.cleanupDone && e.active == 0 && !e.released {
++		e.released = true
++		<-e.server.slots
++	}
++}
++func (e *dnsTransportEpoch) done() { e.mu.Lock(); e.active--; e.releaseLocked(); e.mu.Unlock() }
++func (e *dnsTransportEpoch) open() {
++	link, err := e.server.dispatcher.Dispatch(e.ctx, *e.server.address)
++	if err == nil && (link == nil || link.Reader == nil || link.Writer == nil) {
++		err = errors.New("incomplete DNS transport")
++	}
++	e.mu.Lock()
++	e.link = link
++	e.openErr = err
++	read := err == nil && !e.retired && e.ctx.Err() == nil
++	if read {
++		e.active++
++	}
++	close(e.ready)
++	e.mu.Unlock()
++	if read {
++		go e.read()
++	} else {
++		e.retire()
++	}
++	e.done()
++}
++
++// Never wait for routing.Dispatch, ReadMultiBuffer or WriteMultiBuffer while
++// holding the server/epoch lock. A bounded reaper owns late initialization.
++func (e *dnsTransportEpoch) retireLocked() bool {
++	if e.retired {
++		return false
++	}
++	e.retired = true
++	e.cancel()
++	if e.stopGeneration != nil {
++		e.stopGeneration()
++	}
++	if e.timer != nil {
++		e.timer.Stop()
++	}
++	for id, r := range e.requests {
++		delete(e.requests, id)
++		notifyDNS(r.failure, errUDPTransportRetired)
++	}
++	return true
++}
++func (e *dnsTransportEpoch) reap() {
++	<-e.ready
++	e.mu.Lock()
++	link := e.link
++	e.mu.Unlock()
++	var closeErr error
++	if link != nil {
++		closeErr = errors.Join(common.Interrupt(link.Reader), common.Interrupt(link.Writer))
++	}
++	e.mu.Lock()
++	e.cleanupErr = closeErr
++	// An explicit cleanup error cannot be treated as a successful release.
++	e.cleanupDone = closeErr == nil
++	e.releaseLocked()
++	e.mu.Unlock()
++}
++func (e *dnsTransportEpoch) retire() {
++	e.mu.Lock()
++	retire := e.retireLocked()
++	e.mu.Unlock()
++	if retire {
++		go e.reap()
++	}
++}
++func (e *dnsTransportEpoch) expireIdle() {
++	e.mu.Lock()
++	if e.retired {
++		e.mu.Unlock()
++		return
++	}
++	if remaining := time.Minute - time.Since(e.lastActivity); remaining > 0 {
++		e.timer.Reset(remaining)
++		e.mu.Unlock()
++		return
++	}
++	// Atomic with new write admission: a delayed timer cannot retire a newly
++	// active transport based on an old snapshot of its last activity.
++	retire := e.retireLocked()
++	e.mu.Unlock()
++	if retire {
++		go e.reap()
++	}
++}
++func (e *dnsTransportEpoch) read() {
++	defer e.done()
++	defer e.retire()
++	for {
++		if e.ctx.Err() != nil {
++			return
++		}
++		mb, err := e.link.Reader.ReadMultiBuffer()
++		for _, payload := range mb {
++			e.handle(payload)
++		}
++		if err != nil {
++			return
++		}
++	}
++}
++func (e *dnsTransportEpoch) send(ctx context.Context, req *dnsRequest, ch chan<- error) error {
++	select {
++	case <-ctx.Done():
++		return ctx.Err()
++	case <-e.ctx.Done():
++		return errUDPTransportRetired
++	case <-e.ready:
++	}
++	select {
++	case e.writes <- struct{}{}:
++	default:
++		return errUDPTransportBusy
++	}
++	defer func() { <-e.writes }()
++	e.mu.Lock()
++	if e.retired || e.ctx.Err() != nil || ctx.Err() != nil || (req.cacheScope.owner != e.scope.owner || req.cacheScope.id != e.scope.id) || !e.server.cacheController.owns(e.scope) {
++		e.mu.Unlock()
++		return errUDPTransportRetired
++	}
++	if e.openErr != nil {
++		err := e.openErr
++		e.mu.Unlock()
++		return err
++	}
++	if e.nextID >= 65536 {
++		e.mu.Unlock()
++		return errUDPRequestSpace
++	}
++	if len(e.requests) >= dnsMaxPending {
++		e.mu.Unlock()
++		return errUDPTransportBusy
++	}
++	id := uint16(e.nextID)
++	e.nextID++
++	req.msg.ID = id
++	payload, err := dnswire.PackMessage(req.msg)
+ 	if err != nil {
+-		errors.LogErrorInner(ctx, err, s.Name(), " fail to parse responded DNS udp")
+-		return
+-	}
+-
+-	s.Lock()
+-	id := ipRec.ReqID
+-	req, ok := s.requests[id]
+-	if ok {
+-		// remove the pending request
+-		delete(s.requests, id)
+-	}
+-	s.Unlock()
+-	if !ok {
+-		errors.LogErrorInner(ctx, err, s.Name(), " cannot find the pending request")
+-		return
+-	}
+-
+-	// if truncated, retry with EDNS0 option(udp payload size: 1350)
+-	if ipRec.RawHeader.Truncated {
+-		// if already has EDNS0 option, no need to retry
+-		if len(req.msg.Additionals) == 0 {
+-			// copy necessary meta data from original request
+-			// and add EDNS0 option
+-			opt := new(dnsmessage.Resource)
+-			common.Must(opt.Header.SetEDNS0(1350, 0xfe00, true))
+-			opt.Body = &dnsmessage.OPTResource{}
+-			newMsg := *req.msg
+-			newReq := *req
+-			newMsg.Additionals = append(newMsg.Additionals, *opt)
+-			newMsg.ID = s.newReqID()
+-			newReq.msg = &newMsg
+-			s.addPendingRequest(&newReq)
+-			b, _ := dns.PackMessage(newReq.msg)
+-			s.udpServer.Dispatch(toDnsContext(newReq.ctx, s.address.String()), *s.address, b)
++		e.mu.Unlock()
++		return err
++	}
++	r := &udpDnsRequest{dnsRequest: *req, ctx: ctx, failure: ch}
++	r.expire = time.Now().Add(8 * time.Second)
++	e.requests[id] = r
++	e.lastActivity = time.Now()
++	e.active++
++	link := e.link
++	e.mu.Unlock()
++	stop := context.AfterFunc(ctx, e.retire)
++	err = link.Writer.WriteMultiBuffer(buf.MultiBuffer{payload}) // writer owns buffers, including errors
++	stop()
++	if err != nil {
++		e.retire()
++	}
++	e.done()
++	_ = e.server.requestsCleanup.Start()
++	return err
++}
++
++// Called only by the reader closure of THIS epoch, never by looking up the
++// server's latest transport. Old bytes must not acquire the newest request map.
++func (e *dnsTransportEpoch) handle(payload *buf.Buffer) {
++	defer payload.Release()
++	var parser dnsmessage.Parser
++	header, err := parser.Start(payload.Bytes())
++	if err != nil || !header.Response || header.OpCode != 0 {
++		return
++	}
++	question, err := parser.Question()
++	if err != nil {
++		return
++	}
++	if _, err = parser.Question(); err != dnsmessage.ErrSectionDone {
++		return
++	}
++	answer, err := parseResponse(payload.Bytes())
++	if err != nil {
++		return
++	}
++	e.mu.Lock()
++	if e.retired || e.ctx.Err() != nil || !e.server.cacheController.owns(e.scope) {
++		e.mu.Unlock()
++		return
++	}
++	req := e.requests[header.ID]
++	if req == nil || len(req.msg.Questions) != 1 {
++		e.mu.Unlock()
++		return
++	}
++	expected := req.msg.Questions[0]
++	if !strings.EqualFold(question.Name.String(), expected.Name.String()) || question.Type != expected.Type || question.Class != expected.Class {
++		e.mu.Unlock()
++		return
++	}
++	delete(e.requests, header.ID)
++	e.lastActivity = time.Now()
++	if req.expire.Before(time.Now()) || req.ctx.Err() != nil {
++		e.mu.Unlock()
++		notifyDNS(req.failure, context.DeadlineExceeded)
++		return
++	}
++	if header.Truncated {
++		if len(req.msg.Additionals) != 0 {
++			e.mu.Unlock()
++			notifyDNS(req.failure, errUDPTruncated)
+ 			return
+ 		}
+-	}
+-
+-	s.cacheController.updateRecord(&req.dnsRequest, ipRec)
+-}
+-
+-func (s *ClassicNameServer) newReqID() uint16 {
+-	return uint16(atomic.AddUint32(&s.reqID, 1))
+-}
+-
+-func (s *ClassicNameServer) addPendingRequest(req *udpDnsRequest) {
+-	s.Lock()
+-	id := req.msg.ID
+-	req.expire = time.Now().Add(time.Second * 8)
+-	s.requests[id] = req
+-	s.Unlock()
+-	common.Must(s.requestsCleanup.Start())
+-}
+-
+-// getCacheController implements CachedNameserver.
+-func (s *ClassicNameServer) getCacheController() *CacheController {
+-	return s.cacheController
+-}
+-
+-// sendQuery implements CachedNameserver.
+-func (s *ClassicNameServer) sendQuery(ctx context.Context, noResponseErrCh chan<- error, fqdn string, option dns_feature.IPOption, scope cacheScope) {
+-	errors.LogInfo(ctx, s.Name(), " querying DNS for: ", fqdn)
+-
+-	reqs, err := buildReqMsgs(fqdn, option, s.newReqID, genEDNS0Options(s.clientIP, 0))
++		opt := new(dnsmessage.Resource)
++		err = opt.Header.SetEDNS0(1350, 0xfe00, true)
++		opt.Body = &dnsmessage.OPTResource{}
++		msg := *req.msg
++		msg.Additionals = []dnsmessage.Resource{*opt}
++		retry := req.dnsRequest
++		retry.msg = &msg
++		e.mu.Unlock()
++		if err == nil {
++			err = e.send(req.ctx, &retry, req.failure)
++		}
++		if err != nil {
++			notifyDNS(req.failure, err)
++		}
++		return
++	}
++	// Retirement is serialized with publication. The cache additionally checks
++	// its own generation, covering a policy flush racing this callback.
++	e.server.cacheController.updateRecord(&req.dnsRequest, answer)
++	e.mu.Unlock()
++}
++func (s *ClassicNameServer) sendQuery(ctx context.Context, ch chan<- error, fqdn string, option dnsfeature.IPOption, scope cacheScope) {
++	requests, err := buildReqMsgs(fqdn, option, func() uint16 { return 0 }, genEDNS0Options(s.clientIP, 0))
+ 	if err != nil {
+-		errors.LogErrorInner(ctx, err, "failed to build dns query for ", fqdn)
+-		if noResponseErrCh != nil {
+-			if option.IPv4Enable {
+-				noResponseErrCh <- err
+-			}
+-			if option.IPv6Enable {
+-				noResponseErrCh <- err
+-			}
+-		}
+-		return
+-	}
+-
+-	for _, req := range reqs {
++		if option.IPv4Enable {
++			notifyDNS(ch, err)
++		}
++		if option.IPv6Enable {
++			notifyDNS(ch, err)
++		}
++		return
++	}
++	epoch, err := s.transportFor(ctx, scope)
++	for _, req := range requests {
+ 		req.cacheScope = scope
+-		udpReq := &udpDnsRequest{
+-			dnsRequest: *req,
+-			ctx:        ctx,
+-		}
+-		s.addPendingRequest(udpReq)
+-		b, err := dns.PackMessage(req.msg)
+ 		if err != nil {
+-			errors.LogErrorInner(ctx, err, "failed to pack dns query")
+-			if noResponseErrCh != nil {
+-				noResponseErrCh <- err
+-			}
+-			return
+-		}
+-		s.udpServer.Dispatch(toDnsContext(ctx, s.address.String()), *s.address, b)
+-	}
+-}
+-
+-// QueryIP implements Server.
+-func (s *ClassicNameServer) QueryIP(ctx context.Context, domain string, option dns_feature.IPOption) ([]net.IP, uint32, error) {
+-	return queryIP(ctx, s, domain, option)
+-}
++			notifyDNS(ch, err)
++			continue
++		}
++		if sendErr := epoch.send(ctx, req, ch); sendErr != nil {
++			notifyDNS(ch, sendErr)
++		}
++	}
++}

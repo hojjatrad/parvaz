@@ -1,0 +1,49 @@
+{
+  "kind": "additional local randomized-order source stress run",
+  "ci_commit": null,
+  "race_detector": true,
+  "repetitions": 30,
+  "unique_top_level_tests": [
+    "TestParvazKnownLimitReplayInjectedIntoNewTransport",
+    "TestParvazUDPCancelledInitializationWaiterReturnsBeforeNativeExit",
+    "TestParvazUDPCleanupErrorDoesNotClaimReleasedCapacity",
+    "TestParvazUDPCompletedCallerDoesNotOwnSharedTransport",
+    "TestParvazUDPConcurrentFlushAdmissionAndRetirement",
+    "TestParvazUDPExpiredResponseCannotPopulateCache",
+    "TestParvazUDPIdleTimerDoesNotRetireFreshActivity",
+    "TestParvazUDPInitializationErrorReleasesCapacity",
+    "TestParvazUDPLastTransactionIDDoesNotWrapInLiveTransport",
+    "TestParvazUDPOldTruncationCannotStartFreshRetry",
+    "TestParvazUDPPendingAndWriteAdmissionAreBounded",
+    "TestParvazUDPQuestionAndHeaderMismatchCannotConsumeRequest",
+    "TestParvazUDPRejectsOldTransportWithReusedID",
+    "TestParvazUDPSecondTruncationFailsWithoutRetryLoop",
+    "TestParvazUDPTransactionExhaustionRotatesInsteadOfReusing",
+    "TestParvazUDPTruncationRetryUsesFreshIDAndSameOwner",
+    "TestParvazUDPUncooperativeCleanupKeepsLeaseUntilExit",
+    "TestParvazUDPUncooperativeInitializationKeepsCapacityBounded",
+    "TestParvazUDPUncooperativeReaderKeepsLeaseUntilExit",
+    "TestParvazUDPUncooperativeWriterKeepsLeaseUntilExit"
+  ],
+  "top_level_pass_events": 600,
+  "failures": 0,
+  "skips": 0,
+  "shuffle_seed_output": [
+    "-test.shuffle 1789081070509972825"
+  ],
+  "log_sha256": "2cece5898ee9acbb8630d8be1046a35b94be06c1566d3eb93840b43fbe3887f1",
+  "executable_inputs_sha256": {
+    "tools/dns-lab/source-pin.json": "98480381e81c6f170d6b8e68180dc99cd72ad4a9610e011149f3879b4e5f1346",
+    "tools/dns-lab/wrapper-source-pin.json": "18c144ec7b5712ed1fd202e8f751d46f2b0d471c8c230a3ce5330fecd2098819",
+    "tools/dns-lab/xray-cache-generation.patch": "7fce2e455311fd8c887444f3756e9b2dba9532be51c2f89b1e3a67998e01ef23",
+    "tools/dns-lab/xray-udp-transport.patch": "6ad9fe9a43d87b89abd39060d01f6c864e1b33790c9afdf501fd01712bd86959",
+    "tools/dns-lab/xray-udp-loopback-fixture.patch": "69084859b9fd213665fd9f45ed98b6de518bdb18a73ada3246116da2856c2254",
+    "tools/dns-lab/tests/parvaz_cache_generation_test.go": "27ade2f7cb4b5524e38b379d3cb7dea911ff4eeb43de112f2b8f058b092d7d0a",
+    "tools/dns-lab/tests/parvaz_naive_flush_test.go": "928b4466544c36d276c8a464383976d02ba7b93d1217a521ebb5fd2759ce3e02",
+    "tools/dns-lab/tests/parvaz_transport_limit_test.go": "b162b51b53a78a3a48b1dcbb6527a967019a9711d29b53858e634d6606cfd99e",
+    "tools/dns-lab/tests/parvaz_udp_transport_test.go": "386e11c59e9fd8e11724b6ce386b7037a4f278907fb4d4cbbc694008faba766d"
+  },
+  "module_graph_sha256": "60f02c3a5976ec1791fd314fafd77b403239ac7831ea1a94627b6900f924c690",
+  "promotion_allowed": false,
+  "includes_expected_new_channel_replay_boundary": true
+}
