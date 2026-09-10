@@ -1,0 +1,68 @@
+{
+  "head": "72f8db89a8424d1d96c25b98329713459e2b7ba7",
+  "runs": [
+    {
+      "id": 34478856148,
+      "name": "Subscription regression tests",
+      "head_sha": "72f8db89a8424d1d96c25b98329713459e2b7ba7",
+      "head_branch": "ci/platform-update-probe",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/hojjatrad/parvaz/actions/runs/34478856148"
+    },
+    {
+      "id": 34478856209,
+      "name": "Subscription regression tests",
+      "head_sha": "72f8db89a8424d1d96c25b98329713459e2b7ba7",
+      "head_branch": "fix/readiness-recovery",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/hojjatrad/parvaz/actions/runs/34478856209"
+    },
+    {
+      "id": 34478856226,
+      "name": "Subscription regression tests",
+      "head_sha": "72f8db89a8424d1d96c25b98329713459e2b7ba7",
+      "head_branch": "release/signing-validation-v3",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/hojjatrad/parvaz/actions/runs/34478856226"
+    },
+    {
+      "id": 34478856154,
+      "name": "Android archive and backup security probes",
+      "head_sha": "72f8db89a8424d1d96c25b98329713459e2b7ba7",
+      "head_branch": "ci/platform-update-probe",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/hojjatrad/parvaz/actions/runs/34478856154"
+    },
+    {
+      "id": 34478856121,
+      "name": "Android compilation and unit tests",
+      "head_sha": "72f8db89a8424d1d96c25b98329713459e2b7ba7",
+      "head_branch": "ci/platform-update-probe",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/hojjatrad/parvaz/actions/runs/34478856121"
+    },
+    {
+      "id": 34478856206,
+      "name": "Android compilation and unit tests",
+      "head_sha": "72f8db89a8424d1d96c25b98329713459e2b7ba7",
+      "head_branch": "release/signing-validation-v3",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/hojjatrad/parvaz/actions/runs/34478856206"
+    },
+    {
+      "id": 34478856213,
+      "name": "Validate permanent signing and release APKs without publication",
+      "head_sha": "72f8db89a8424d1d96c25b98329713459e2b7ba7",
+      "head_branch": "release/signing-validation-v3",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/hojjatrad/parvaz/actions/runs/34478856213"
+    }
+  ]
+}

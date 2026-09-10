@@ -1,0 +1,18 @@
+{
+  "run_id": 34478856206,
+  "head": "72f8db89a8424d1d96c25b98329713459e2b7ba7",
+  "annotations": [
+    {
+      "path": ".github",
+      "blob_href": "https://github.com/hojjatrad/parvaz/blob/72f8db89a8424d1d96c25b98329713459e2b7ba7/.github",
+      "start_line": 33,
+      "start_column": null,
+      "end_line": 33,
+      "end_column": null,
+      "annotation_level": "notice",
+      "title": "UNIT_TEST_TOTALS",
+      "message": "{'tests': 311, 'failures': 0, 'errors': 0, 'skipped': 0} selected={'com.parvaz.tunnel.V115RegressionTest': {'tests': 15, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.BoundedProbeRaceTest': {'tests': 6, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.DnsReconnectPolicyRegressionTest': {'tests': 10, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.HealthPolicyTest': {'tests': 7, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.NetworkMonitorRegressionTest': {'tests': 16, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.ProbeOwnershipRegressionTest': {'tests': 12, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.ReadinessConfigTest': {'tests': 20, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.ReadinessMonitorTest': {'tests': 9, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.ResumableDownloadTest': {'tests': 11, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.SerialConnectionQueueTest': {'tests': 8, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.StartupDiagnosticsTest': {'tests': 8, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.StartupWarmupTest': {'tests': 12, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.TrafficSamplingTest': {'tests': 5, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.store.BackupPreservationTest': {'tests': 22, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.store.RestoreCrashRecoveryTest': {'tests': 12, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.store.RestoreJournalTest': {'tests': 14, 'failures': 0, 'errors': 0, 'skipped': 0}}",
+      "raw_details": ""
+    }
+  ]
+}
