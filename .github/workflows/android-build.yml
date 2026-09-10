@@ -55,7 +55,7 @@ jobs:
               root=ET.parse(path).getroot()
               counts={k:int(root.get(k,'0')) for k in totals}
               for k in totals:totals[k]+=counts[k]
-              if any(x in root.get('name','') for x in ['Restore','BackupPreservation','V115Regression','StartupWarmup','TrafficSampling']):selected[root.get('name','')]=counts
+              if any(x in root.get('name','') for x in ['Restore','BackupPreservation','V115Regression','StartupWarmup','TrafficSampling','NetworkMonitorRegression']):selected[root.get('name','')]=counts
               if root.get('name','').endswith('V115RegressionTest'):
                   for output in root.iter('system-out'):
                       for line in (output.text or '').splitlines():

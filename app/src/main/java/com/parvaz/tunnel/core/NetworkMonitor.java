@@ -4,7 +4,6 @@ import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
-import android.net.NetworkRequest;
 import android.os.Handler;
 import android.os.Looper;
 import com.parvaz.tunnel.core.LogBuffer;
@@ -41,88 +40,50 @@ public final class NetworkMonitor {
     /* renamed from: com.parvaz.tunnel.core.a$a */
     /* loaded from: classes.dex */
     public class a extends ConnectivityManager.NetworkCallback {
-        public a() {
-        }
-
-        @Override // android.net.ConnectivityManager.NetworkCallback
-        public final void onAvailable(Network network) {
-            long networkHandle;
-            boolean z;
-            NetworkMonitor networkMonitor = NetworkMonitor.this;
-            networkMonitor.getClass();
-            if (network == null) {
-                networkHandle = -1;
-            } else {
-                networkHandle = network.getNetworkHandle();
-            }
-            long j = networkMonitor.g;
-            if (j != -1 && networkHandle != j) {
-                z = true;
-            } else {
-                z = false;
-            }
-            networkMonitor.g = networkHandle;
-            if (z || networkMonitor.f6253i) {
-                networkMonitor.f6253i = false;
-                Handler handler = networkMonitor.f6248c;
-                b bVar = networkMonitor.j;
-                handler.removeCallbacks(bVar);
-                handler.postDelayed(bVar, 1200L);
+        private boolean live(){return f6251f&&NetworkMonitor.this.d==this;}
+        @Override public void onAvailable(Network network){
+            synchronized(NetworkMonitor.this){
+                if(!live()||network==null)return;
+                // Capabilities can be absent at onAvailable; the following
+                // onCapabilitiesChanged supplies them without assuming readiness.
+                observeDefault(network,f6249d.getNetworkCapabilities(network));
             }
         }
-
-        @Override // android.net.ConnectivityManager.NetworkCallback
-        public final void onCapabilitiesChanged(Network network, NetworkCapabilities networkCapabilities) {
-            long networkHandle;
-            if (networkCapabilities != null && networkCapabilities.hasCapability(12)) {
-                int i = 1;
-                if (!networkCapabilities.hasTransport(1)) {
-                    i = 0;
-                    if (!networkCapabilities.hasTransport(0)) {
-                        i = 3;
-                        if (!networkCapabilities.hasTransport(3)) {
-                            i = -1;
-                        }
-                    }
+        @Override public void onCapabilitiesChanged(Network network,NetworkCapabilities caps){
+            synchronized(NetworkMonitor.this){if(live())observeDefault(network,caps);}
+        }
+        @Override public void onLost(Network network){
+            synchronized(NetworkMonitor.this){
+                if(!live()||network==null||network.getNetworkHandle()!=g)return;
+                Network active=f6249d.getActiveNetwork();
+                NetworkCapabilities caps=active==null?null:f6249d.getNetworkCapabilities(active);
+                // Own/other VPN notifications are not proof that the physical
+                // transport was lost. Do not restart a just-created tunnel for it.
+                if(caps!=null&&caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN))return;
+                f6253i=true;
+                if(b!=null&&TunnelVpnService.serviceRunning){
+                    LogBuffer.listener("default network lost - waiting");
+                    TunnelVpnService service=b.outer();
+                    service.updateNotification(service.getString(R.string.state_connecting),service.getString(R.string.network_lost));
                 }
-                if (network == null) {
-                    networkHandle = -1;
-                } else {
-                    networkHandle = network.getNetworkHandle();
-                }
-                NetworkMonitor networkMonitor = NetworkMonitor.this;
-                int i2 = networkMonitor.f6252h;
-                if (i2 != -1 && i != -1 && i != i2) {
-                    networkMonitor.f6252h = i;
-                    networkMonitor.g = networkHandle;
-                    Handler handler = networkMonitor.f6248c;
-                    b bVar = networkMonitor.j;
-                    handler.removeCallbacks(bVar);
-                    handler.postDelayed(bVar, 1200L);
-                    return;
-                }
-                networkMonitor.f6252h = i;
             }
         }
+    }
 
-        @Override // android.net.ConnectivityManager.NetworkCallback
-        public final void onLost(Network network) {
-            long networkHandle;
-            if (network == null) {
-                networkHandle = -1;
-            } else {
-                networkHandle = network.getNetworkHandle();
-            }
-            NetworkMonitor networkMonitor = NetworkMonitor.this;
-            if (networkHandle == networkMonitor.g) {
-                networkMonitor.f6253i = true;
-                c cVar = networkMonitor.b;
-                if (cVar != null && TunnelVpnService.serviceRunning) {
-                    LogBuffer.listener("network lost - waiting");
-                    TunnelVpnService tunnelVpnService = cVar.outer();
-                    tunnelVpnService.updateNotification(tunnelVpnService.getString(R.string.state_connecting), tunnelVpnService.getString(R.string.network_lost));
-                }
-            }
+    private boolean isCurrentDefault(Network network,NetworkCapabilities caps){
+        return network!=null&&f6249d!=null&&network.equals(f6249d.getActiveNetwork())&&caps!=null
+            &&caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            &&!caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN);
+    }
+    private void observeDefault(Network network,NetworkCapabilities caps){
+        if(!isCurrentDefault(network,caps))return;
+        long handle=network.getNetworkHandle();boolean changed=g!=-1&&g!=handle;
+        g=handle;
+        f6252h=caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)?1:
+            caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)?0:
+            caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)?3:-1;
+        if(changed||f6253i){
+            f6253i=false;f6248c.removeCallbacks(j);f6248c.postDelayed(j,1200L);
         }
     }
 
@@ -135,7 +96,13 @@ public final class NetworkMonitor {
 
         @Override // java.lang.Runnable
         public final void run() {
-            c cVar = NetworkMonitor.this.b;
+            NetworkMonitor monitor=NetworkMonitor.this;
+            synchronized(monitor){
+            if(!monitor.f6251f||monitor.f6249d==null)return;
+            Network active=monitor.f6249d.getActiveNetwork();
+            NetworkCapabilities caps=active==null?null:monitor.f6249d.getNetworkCapabilities(active);
+            if(!monitor.isCurrentDefault(active,caps)||active.getNetworkHandle()!=monitor.g)return;
+            c cVar = monitor.b;
             if (cVar != null && TunnelVpnService.serviceRunning) {
                 TunnelVpnService tunnelVpnService = cVar.outer();
                 if (!tunnelVpnService.switching) {
@@ -145,6 +112,7 @@ public final class NetworkMonitor {
                         new Thread(cVar.newReconnect(), "net-reconnect").start();
                     }
                 }
+            }
             }
         }
     }
@@ -169,7 +137,7 @@ public final class NetworkMonitor {
     }
 
     /* renamed from: a */
-    public final void start() {
+    public final synchronized void start() {
         if (this.f6251f) {
             return;
         }
@@ -180,15 +148,17 @@ public final class NetworkMonitor {
                 return;
             }
             this.d = new a();
-            this.f6249d.registerNetworkCallback(new NetworkRequest.Builder().addCapability(12).build(), this.d);
             this.f6251f = true;
+            // The previous broad INTERNET request observed every matching network,
+            // so an idle cellular interface could tear down a working Wi-Fi tunnel.
+            this.f6249d.registerDefaultNetworkCallback(this.d);
         } catch (Throwable unused) {
             this.f6251f = false;
         }
     }
 
     /* renamed from: b */
-    public final void stop() {
+    public final synchronized void stop() {
         this.f6248c.removeCallbacks(this.j);
         if (this.f6251f && this.f6249d != null && this.d != null) {
             try {

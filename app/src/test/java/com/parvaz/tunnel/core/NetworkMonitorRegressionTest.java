@@ -47,4 +47,30 @@ public class NetworkMonitorRegressionTest {
   NetworkMonitor.a callback=monitor.d;monitor.stop();callback.onAvailable(cell);callback.onCapabilitiesChanged(cell,cellCaps);
   assertEquals(-1,monitor.g);assertFalse(monitor.f6248c.hasCallbacks(monitor.j));
  }
+ @Test public void realDefaultHandoverStillSchedulesReconnect(){
+  shadow.setActiveNetworkInfo(ShadowNetworkInfo.newInstance(NetworkInfo.DetailedState.CONNECTED,ConnectivityManager.TYPE_MOBILE,0,true,true));
+  Network next=manager.getActiveNetwork();shadow.setNetworkCapabilities(next,cellCaps);
+  monitor.d.onAvailable(next);monitor.d.onCapabilitiesChanged(next,cellCaps);
+  assertEquals(next.getNetworkHandle(),monitor.g);assertTrue(monitor.f6248c.hasCallbacks(monitor.j));
+ }
+ @Test public void sameDefaultCapabilitiesDoNotRestart(){
+  for(int i=0;i<5;i++){monitor.d.onAvailable(wifi);monitor.d.onCapabilitiesChanged(wifi,wifiCaps);}
+  assertFalse(monitor.f6248c.hasCallbacks(monitor.j));
+ }
+ @Test public void vpnOverlayIsNotAnUnderlyingNetworkChange(){
+  shadow.setActiveNetworkInfo(ShadowNetworkInfo.newInstance(NetworkInfo.DetailedState.CONNECTED,ConnectivityManager.TYPE_VPN,0,true,true));
+  Network vpn=manager.getActiveNetwork();NetworkCapabilities caps=capabilities(NetworkCapabilities.TRANSPORT_VPN);shadow.setNetworkCapabilities(vpn,caps);
+  monitor.d.onAvailable(vpn);monitor.d.onCapabilitiesChanged(vpn,caps);monitor.d.onLost(wifi);
+  assertEquals(wifi.getNetworkHandle(),monitor.g);assertFalse(monitor.f6253i);assertFalse(monitor.f6248c.hasCallbacks(monitor.j));
+ }
+ @Test public void genuineLossAndReturnStillSchedulesReconnect(){
+  monitor.d.onLost(wifi);assertTrue(monitor.f6253i);
+  monitor.d.onAvailable(wifi);assertTrue(monitor.f6248c.hasCallbacks(monitor.j));
+ }
+ @Test public void oldRegistrationCannotModifyRestartedMonitor(){
+  NetworkMonitor.a old=monitor.d;monitor.stop();monitor.start();
+  old.onAvailable(wifi);old.onCapabilitiesChanged(wifi,wifiCaps);
+  assertEquals(-1,monitor.g);assertFalse(monitor.f6248c.hasCallbacks(monitor.j));
+  monitor.d.onAvailable(wifi);assertEquals(wifi.getNetworkHandle(),monitor.g);
+ }
 }
