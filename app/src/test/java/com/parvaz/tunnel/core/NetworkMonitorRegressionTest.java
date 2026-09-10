@@ -35,6 +35,13 @@ public class NetworkMonitorRegressionTest {
  static LinkProperties links(String ip)throws Exception {
   LinkProperties p=new LinkProperties();org.robolectric.util.ReflectionHelpers.callInstanceMethod(p,"addDnsServer",org.robolectric.util.ReflectionHelpers.ClassParameter.from(java.net.InetAddress.class,java.net.InetAddress.getByName(ip)));return p;
  }
+ @Test public void privateDnsValidationFlapRechecksButDoesNotRebuildCache()throws Exception {
+  LinkProperties before=links("1.1.1.1"),after=links("1.1.1.1");
+  org.robolectric.util.ReflectionHelpers.callInstanceMethod(after,"setUsePrivateDns",org.robolectric.util.ReflectionHelpers.ClassParameter.from(boolean.class,true));
+  assertEquals(NetworkMonitor.dnsKey(before),NetworkMonitor.dnsKey(after));
+  monitor.d.onLinkPropertiesChanged(wifi,before);long epoch=NetworkEpoch.current();monitor.d.onLinkPropertiesChanged(wifi,after);
+  assertFalse(NetworkEpoch.owns(epoch));assertFalse(monitor.pendingDnsChange);assertTrue(monitor.f6248c.hasCallbacks(monitor.j));
+ }
  @Test public void changedDnsOnSameNetworkInvalidatesProofAndSchedulesOneCheck()throws Exception {
   monitor.d.onLinkPropertiesChanged(wifi,links("1.1.1.1"));long epoch=NetworkEpoch.current();
   monitor.d.onLinkPropertiesChanged(wifi,links("8.8.8.8"));assertFalse(NetworkEpoch.owns(epoch));assertTrue(monitor.pendingDnsChange);assertTrue(monitor.f6248c.hasCallbacks(monitor.j));

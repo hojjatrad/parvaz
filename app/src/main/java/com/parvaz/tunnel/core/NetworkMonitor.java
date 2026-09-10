@@ -41,7 +41,8 @@ public final class NetworkMonitor {
     static String dnsKey(LinkProperties p){
         if(p==null)return null;
         String key=p.getDnsServers().toString()+"\n"+p.getDomains();
-        if(android.os.Build.VERSION.SDK_INT>=28)key+="\n"+p.isPrivateDnsActive()+"\n"+p.getPrivateDnsServerName();
+        // TLS validation availability is transient, not a new resolver identity.
+        if(android.os.Build.VERSION.SDK_INT>=28)key+="\n"+p.getPrivateDnsServerName();
         return key; // In-memory only. Never log resolver addresses or names.
     }
     private void queueCheck(){f6248c.removeCallbacks(j);f6248c.postDelayed(j,1200L);}
