@@ -36,14 +36,17 @@ public final class NetworkMonitor {
     /* renamed from: i */
     public boolean f6253i = false;
     public final b j = new b();
-    private String observedLinks,observedDns;
+    private String observedLinks;
+    private ResolverIdentity observedDns;
+    private boolean awaitingResolverSnapshot;
     boolean pendingDnsChange;
-    static String dnsKey(LinkProperties p){
+    static ResolverIdentity dnsKey(LinkProperties p){
         if(p==null)return null;
-        String key=p.getDnsServers().toString()+"\n"+p.getDomains();
-        // TLS validation availability is transient, not a new resolver identity.
-        if(android.os.Build.VERSION.SDK_INT>=28)key+="\n"+p.getPrivateDnsServerName();
-        return key; // In-memory only. Never log resolver addresses or names.
+        java.util.List<String> servers=new java.util.ArrayList<>();
+        for(java.net.InetAddress address:p.getDnsServers())servers.add(address.getHostAddress());
+        // Ignore InetAddress display hostnames and transient Private DNS validation.
+        // Preserve actual resolver order, address scope, search domains and strict name.
+        return new ResolverIdentity(servers,p.getDomains(),android.os.Build.VERSION.SDK_INT>=28?p.getPrivateDnsServerName():null);
     }
     private void queueCheck(){f6248c.removeCallbacks(j);f6248c.postDelayed(j,1200L);}
 
@@ -66,12 +69,13 @@ public final class NetworkMonitor {
         @Override public void onLinkPropertiesChanged(Network network,LinkProperties properties){
             synchronized(NetworkMonitor.this){
                 if(!live()||properties==null||!isCurrentDefault(network,f6249d.getNetworkCapabilities(network))||network.getNetworkHandle()!=g)return;
-                String next=properties.toString(),dns=dnsKey(properties);
-                if(observedLinks!=null&&!observedLinks.equals(next)){
-                    boolean reset=!java.util.Objects.equals(observedDns,dns);pendingDnsChange|=reset;
+                String next=properties.toString();ResolverIdentity dns=dnsKey(properties);
+                boolean policyChanged=observedDns!=null&&!observedDns.equals(dns);
+                if(awaitingResolverSnapshot||policyChanged||(observedLinks!=null&&!observedLinks.equals(next))){
+                    boolean reset=awaitingResolverSnapshot||policyChanged;pendingDnsChange|=reset;
                     if(reset)NetworkEpoch.resolverChanged();else NetworkEpoch.changed();queueCheck();
                 }
-                observedLinks=next;observedDns=dns;
+                observedLinks=next;observedDns=dns;awaitingResolverSnapshot=false;
             }
         }
         @Override public void onLost(Network network){
@@ -100,12 +104,16 @@ public final class NetworkMonitor {
     private void observeDefault(Network network,NetworkCapabilities caps){
         if(!isCurrentDefault(network,caps))return;
         long handle=network.getNetworkHandle();boolean changed=g!=-1&&g!=handle;
-        if(g!=handle){
+        if(g!=handle||f6253i){
+            // A returned Network handle is not evidence that its resolver stayed
+            // unchanged while unavailable. Read the current snapshot on return.
             LinkProperties next=f6249d.getLinkProperties(network);
-            String dns=dnsKey(next);
-            boolean reset=changed&&(observedDns==null||dns==null||!observedDns.equals(dns));
+            ResolverIdentity dns=dnsKey(next);
+            boolean continuity=changed||f6253i;
+            boolean reset=continuity&&(observedDns==null||dns==null||!observedDns.equals(dns));
+            awaitingResolverSnapshot=continuity&&next==null;
             pendingDnsChange|=reset;observedDns=dns;observedLinks=next==null?null:next.toString();
-            if(reset)NetworkEpoch.resolverChanged();else if(changed)NetworkEpoch.changed();
+            if(reset)NetworkEpoch.resolverChanged();else if(continuity)NetworkEpoch.changed();
         }
         g=handle;
         f6252h=caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)?1:
@@ -197,7 +205,7 @@ public final class NetworkMonitor {
             }
         }
         this.f6251f = false;
-        this.g = -1L;this.observedLinks=null;this.observedDns=null;this.pendingDnsChange=false;
+        this.g = -1L;this.observedLinks=null;this.observedDns=null;this.pendingDnsChange=false;this.awaitingResolverSnapshot=false;
         this.f6252h = -1;
         this.f6253i = false;
     }

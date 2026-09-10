@@ -54,6 +54,38 @@ public class NetworkMonitorRegressionTest {
   NetworkMonitor.a old=monitor.d;monitor.stop();monitor.start();long epoch=NetworkEpoch.current();old.onLinkPropertiesChanged(wifi,links("1.1.1.1"));assertTrue(NetworkEpoch.owns(epoch));assertFalse(monitor.pendingDnsChange);
  }
  @Test public void lossRevokesPreviouslyObservedNetworkRevision(){long epoch=NetworkEpoch.current();monitor.d.onLost(wifi);assertFalse(NetworkEpoch.owns(epoch));}
+ @Test public void returnedSameNetworkRefreshesChangedDnsBeforeLinkCallback()throws Exception {
+  monitor.d.onLinkPropertiesChanged(wifi,links("1.1.1.1"));long resolver=NetworkEpoch.resolver();
+  shadow.setLinkProperties(wifi,links("8.8.8.8"));monitor.d.onLost(wifi);monitor.d.onAvailable(wifi);
+  assertTrue(monitor.pendingDnsChange);assertTrue(NetworkEpoch.resolver()>resolver);
+  long settled=NetworkEpoch.resolver();monitor.d.onLinkPropertiesChanged(wifi,links("8.8.8.8"));assertEquals(settled,NetworkEpoch.resolver());
+ }
+ @Test public void returnedSameNetworkWithSameKnownDnsRetainsCachePolicy()throws Exception {
+  LinkProperties known=links("1.1.1.1");monitor.d.onLinkPropertiesChanged(wifi,known);shadow.setLinkProperties(wifi,known);
+  long resolver=NetworkEpoch.resolver(),network=NetworkEpoch.current();monitor.d.onLost(wifi);monitor.d.onAvailable(wifi);
+  assertFalse(monitor.pendingDnsChange);assertEquals(resolver,NetworkEpoch.resolver());assertFalse(NetworkEpoch.owns(network));
+ }
+ @Test public void lateSnapshotAfterMissingReturnInvalidatesInterimResolverGeneration()throws Exception {
+  monitor.d.onLinkPropertiesChanged(wifi,links("1.1.1.1"));shadow.setLinkProperties(wifi,null);
+  monitor.d.onLost(wifi);monitor.d.onAvailable(wifi);assertTrue(monitor.pendingDnsChange);
+  long interim=NetworkEpoch.resolver();monitor.pendingDnsChange=false; // Simulate consuming the first rebuild request.
+  StartupDiagnostics.Attempt interimCore=StartupDiagnostics.begin(0,0,()->0L);interimCore.routeConfigured(true);interimCore.coreStarted();interimCore.probeFinished(true,10);assertTrue(interimCore.proofFresh());
+  monitor.d.onLinkPropertiesChanged(wifi,links("8.8.8.8"));assertTrue(monitor.pendingDnsChange);assertTrue(NetworkEpoch.resolver()>interim);
+  interimCore.probeFinished(true,10,NetworkEpoch.current());assertFalse(interimCore.proofFresh());
+  monitor.pendingDnsChange=false;long settled=NetworkEpoch.resolver();monitor.d.onLinkPropertiesChanged(wifi,links("8.8.8.8"));assertFalse(monitor.pendingDnsChange);assertEquals(settled,NetworkEpoch.resolver());
+ }
+ @Test public void lateSnapshotAfterMissingNewDefaultIsNotAnInitialBaseline()throws Exception {
+  monitor.d.onLinkPropertiesChanged(wifi,links("1.1.1.1"));
+  shadow.setActiveNetworkInfo(ShadowNetworkInfo.newInstance(NetworkInfo.DetailedState.CONNECTED,ConnectivityManager.TYPE_MOBILE,0,true,true));
+  Network next=manager.getActiveNetwork();shadow.setNetworkCapabilities(next,cellCaps);shadow.setLinkProperties(next,null);monitor.d.onAvailable(next);
+  long interim=NetworkEpoch.resolver();monitor.pendingDnsChange=false;monitor.d.onLinkPropertiesChanged(next,links("9.9.9.9"));
+  assertTrue(monitor.pendingDnsChange);assertTrue(NetworkEpoch.resolver()>interim);
+ }
+ @Test public void displayHostnameDoesNotChangeResolverIdentity()throws Exception {
+  LinkProperties plain=links("1.1.1.1"),named=new LinkProperties();
+  org.robolectric.util.ReflectionHelpers.callInstanceMethod(named,"addDnsServer",org.robolectric.util.ReflectionHelpers.ClassParameter.from(java.net.InetAddress.class,java.net.InetAddress.getByAddress("display.invalid",new byte[]{1,1,1,1})));
+  assertEquals(NetworkMonitor.dnsKey(plain),NetworkMonitor.dnsKey(named));
+ }
  @After public void cleanup(){monitor.stop();}
  @Test public void secondaryAvailableMustNotRestartNewTunnel(){
   monitor.d.onAvailable(cell);monitor.d.onCapabilitiesChanged(cell,cellCaps);

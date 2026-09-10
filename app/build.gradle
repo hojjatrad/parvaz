@@ -16,8 +16,8 @@ android {
         minSdk 24
         targetSdk 34
         resourceConfigurations += ['en', 'fa'] // The two languages actually offered by Settings.
-        versionCode 35
-        versionName "1.28.1"
+        versionCode 36
+        versionName "1.28.2"
         resValue "string", "bundled_core_version", new groovy.json.JsonSlurper().parse(rootProject.file('tools/release/core-lock.json')).tag
         resValue "string", "bundled_native_versions", new groovy.json.JsonSlurper().parse(rootProject.file('tools/native/engines-lock.json')).collect { it.name + ' ' + it.tag }.join(' • ')
         vectorDrawables.useSupportLibrary = true
