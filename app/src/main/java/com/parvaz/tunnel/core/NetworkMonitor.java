@@ -67,7 +67,8 @@ public final class NetworkMonitor {
                 if(!live()||properties==null||!isCurrentDefault(network,f6249d.getNetworkCapabilities(network))||network.getNetworkHandle()!=g)return;
                 String next=properties.toString(),dns=dnsKey(properties);
                 if(observedLinks!=null&&!observedLinks.equals(next)){
-                    pendingDnsChange|=!java.util.Objects.equals(observedDns,dns);NetworkEpoch.changed();queueCheck();
+                    boolean reset=!java.util.Objects.equals(observedDns,dns);pendingDnsChange|=reset;
+                    if(reset)NetworkEpoch.resolverChanged();else NetworkEpoch.changed();queueCheck();
                 }
                 observedLinks=next;observedDns=dns;
             }
@@ -101,9 +102,9 @@ public final class NetworkMonitor {
         if(g!=handle){
             LinkProperties next=f6249d.getLinkProperties(network);
             String dns=dnsKey(next);
-            pendingDnsChange|=changed&&(observedDns==null||dns==null||!observedDns.equals(dns));
-            observedDns=dns;observedLinks=next==null?null:next.toString();
-            if(changed)NetworkEpoch.changed();
+            boolean reset=changed&&(observedDns==null||dns==null||!observedDns.equals(dns));
+            pendingDnsChange|=reset;observedDns=dns;observedLinks=next==null?null:next.toString();
+            if(reset)NetworkEpoch.resolverChanged();else if(changed)NetworkEpoch.changed();
         }
         g=handle;
         f6252h=caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)?1:
