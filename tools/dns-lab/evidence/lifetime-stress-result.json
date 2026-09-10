@@ -1,0 +1,107 @@
+{
+  "kind": "additional randomized-order local source and real-wrapper stress",
+  "ci_commit": null,
+  "promotion_allowed": false,
+  "tested_inputs_sha256": {
+    "tools/dns-lab/run.py": "e3c3a5fd102202b3e6bb96843c1de6cd86a2d442c73f6e9fcbd9597f7c3de281",
+    "tools/dns-lab/source-pin.json": "98480381e81c6f170d6b8e68180dc99cd72ad4a9610e011149f3879b4e5f1346",
+    "tools/dns-lab/wrapper-source-pin.json": "18c144ec7b5712ed1fd202e8f751d46f2b0d471c8c230a3ce5330fecd2098819",
+    "tools/dns-lab/wrapper-dns-control.go": "b00d5ad04323f2314716fbb58abd46956c70e4b412fe5c3df9991cb3b9937b59",
+    "tools/dns-lab/wrapper-dns-lifetime.patch": "86a433a20d24d1ff332b1ff2d61123ce82227c72d04ff0a6ffc053c126f3f341",
+    "tools/dns-lab/xray-cache-generation.patch": "7fce2e455311fd8c887444f3756e9b2dba9532be51c2f89b1e3a67998e01ef23",
+    "tools/dns-lab/xray-dns-lifetime.patch": "d3e0a17ad8489f031d0e6c37ac706c3d45d9f5df5efd8102a4ae8a791ef705f5",
+    "tools/dns-lab/xray-udp-loopback-fixture.patch": "69084859b9fd213665fd9f45ed98b6de518bdb18a73ada3246116da2856c2254",
+    "tools/dns-lab/xray-udp-transport.patch": "6ad9fe9a43d87b89abd39060d01f6c864e1b33790c9afdf501fd01712bd86959",
+    "tools/dns-lab/tests/parvaz_aggregate_limit_test.go": "b9c2d68872dd45e2dbb1299ba70c81ad307c637a39edb7cd446443b18a175884",
+    "tools/dns-lab/tests/parvaz_cache_generation_test.go": "27ade2f7cb4b5524e38b379d3cb7dea911ff4eeb43de112f2b8f058b092d7d0a",
+    "tools/dns-lab/tests/parvaz_dns_lifetime_fixtures_test.go": "5c7a85656cbe013f4a1d0d0fb83a5ff4635f038ff459f225d58998dae4515490",
+    "tools/dns-lab/tests/parvaz_dns_lifetime_test.go": "d2193fbf92d682cdb4d2834242159643b2780b081359da5ef1d639010fccee7b",
+    "tools/dns-lab/tests/parvaz_naive_flush_test.go": "928b4466544c36d276c8a464383976d02ba7b93d1217a521ebb5fd2759ce3e02",
+    "tools/dns-lab/tests/parvaz_transport_limit_test.go": "b162b51b53a78a3a48b1dcbb6527a967019a9711d29b53858e634d6606cfd99e",
+    "tools/dns-lab/tests/parvaz_udp_transport_test.go": "386e11c59e9fd8e11724b6ce386b7037a4f278907fb4d4cbbc694008faba766d",
+    "tools/dns-lab/wrapper-tests/parvaz_dns_control_test.go": "3583ad4c3e5d54a0c77074303d79494997d779e5217a9a2037c67923f90e181b"
+  },
+  "module_graph_sha256": "60f02c3a5976ec1791fd314fafd77b403239ac7831ea1a94627b6900f924c690",
+  "stages": [
+    {
+      "stage": "lifetime-stress",
+      "command": [
+        "go",
+        "test",
+        "-mod=readonly",
+        "-race",
+        "-p",
+        "2",
+        "-count=30",
+        "-shuffle=on",
+        "-timeout=4m",
+        "-json",
+        "-run",
+        "^TestParvazDNS",
+        "github.com/xtls/xray-core/app/dns"
+      ],
+      "unique_tests": [
+        "TestParvazDNSBusyControlDoesNotQueue",
+        "TestParvazDNSCacheGenerationExhaustionPreflightIsAtomic",
+        "TestParvazDNSCloseCancelsPendingWithoutClaimingNativeDrain",
+        "TestParvazDNSCloseRevokesCachedAndFutureLookups",
+        "TestParvazDNSClosedMaxGenerationRejectsLateMigration",
+        "TestParvazDNSConcurrentControlAndCloseCannotResurrect",
+        "TestParvazDNSDetachedOldContextCannotAdoptFreshCache",
+        "TestParvazDNSDuplicateCacheOwnersAreInvalidatedOnce",
+        "TestParvazDNSInvalidationStopsOldAggregateFallback",
+        "TestParvazDNSParallelCloseRejectsLateUnsupportedChild",
+        "TestParvazDNSPreflightRejectsMixedResolversWithoutPartialMutation",
+        "TestParvazDNSRevisionExhaustionFailsWithoutMutation",
+        "TestParvazDNSStaleRevisionCannotMutateNewState",
+        "TestParvazDNSSystemRouteStrategyIsNotAdvertisedAsCovered"
+      ],
+      "top_level_pass_events": 420,
+      "repetitions": 30,
+      "race_detector": true,
+      "log_sha256": "2887b0d8780cf1760d536454b4437e53a602c5b454cd3c01a1768096f3bfa974",
+      "shuffle_seed_output": [
+        "-test.shuffle 1789082726737123729"
+      ]
+    },
+    {
+      "stage": "wrapper-stress",
+      "command": [
+        "go",
+        "test",
+        "-mod=readonly",
+        "-race",
+        "-p",
+        "2",
+        "-count=30",
+        "-shuffle=on",
+        "-timeout=4m",
+        "-json",
+        "-run",
+        "^TestParvazBridge",
+        "."
+      ],
+      "unique_tests": [
+        "TestParvazBridgeAlreadyRunningStartKeepsSession",
+        "TestParvazBridgeBusyLifecycleIsNotQueued",
+        "TestParvazBridgeCanonicalRevisionAndCAS",
+        "TestParvazBridgeConcurrentInvalidationsDoNotDuplicateRevision",
+        "TestParvazBridgeFailedStartDoesNotPublishSession",
+        "TestParvazBridgeMixedConfigurationRequiresRebuildWithoutMutation",
+        "TestParvazBridgePreservesStaticPolicyButCloseRevokesIt",
+        "TestParvazBridgeRealCoreLogicalInvalidation",
+        "TestParvazBridgeRestartWaitsForRetiredUDPInitializerExit",
+        "TestParvazBridgeSessionCannotCrossControllers",
+        "TestParvazBridgeStaleSessionCannotTargetReplacement"
+      ],
+      "top_level_pass_events": 330,
+      "repetitions": 30,
+      "race_detector": true,
+      "log_sha256": "716e787c35d86f8900814f7480fd2becae827339104895d16686fcb5a3a2b8ed",
+      "shuffle_seed_output": [
+        "-test.shuffle 1789082727589455082"
+      ]
+    }
+  ],
+  "scope": "Linux no-TUN wrapper and injected resource fixtures; not Android runtime/binding, not all-core or process-global cleanup proof."
+}

@@ -51,7 +51,7 @@ python3 tools/dns-lab/run.py
 4. اتصال به build نگهداری‌شوندهٔ wrapper، source متناظر و تست native Android 10/14؛ گواهی دائمی بدون تغییر بماند.
 5. تأیید واقعی HTTPS پس از عملیات؛ پاسخ کنترلر یا RX مدرک اینترنت نیست. تست گوشی/نشت/باتری/Doze همچنان NOT_RUN است.
 
-Patch و فایل‌های Go این آزمایش با SPDX `MPL-2.0` مطابق فایل‌های Xray عرضه شده‌اند؛ مجوز سایر فایل‌های پروژه و وابستگی‌ها محفوظ است.
+Patchها و فایل‌های Go مربوط به Xray با SPDX `MPL-2.0` عرضه شده‌اند. افزوده‌های wrapper و تست‌های آن مطابق LICENSE پین‌شدهٔ AndroidLibXrayLite، `LGPL-3.0-only` هستند؛ مجوز سایر فایل‌های پروژه و وابستگی‌ها محفوظ است.
 
 ## نتیجهٔ ثبت‌شدهٔ مرحلهٔ اول — تاریخی
 
@@ -99,3 +99,60 @@ Runner اکنون سه مرحلهٔ مستقل دارد؛ **دو کنترل من
 - [خلاصهٔ CI](evidence/udp-ci-summary.json) و [مرز production](evidence/udp-production-boundary.json) ثبت شدند. main/تگ و نام/حجم/digest تمام assetهای آخرین پایدار با شواهد تأیید کامل قبلی برابر ماندند؛ این مرحله APKها را دوباره دانلود یا روی گوشی نصب نکرد.
 - [لاگ‌های فشردهٔ اجرای محلی و فشار](evidence/udp-local-logs.tar.gz)، 96,365 بایت، SHA-256: `71506b3f405fdaf4f60a36e64bb55b69b336b7d6441a5452ad40dba556cb4156`. hash فایل‌های بازشده با گزارش‌های JSON قابل تطبیق است؛ وابستگی‌ها/ابزارهای حجیم وارد Git نشده‌اند.
 - callback مسیر قدیمی در این مرز آزمایش‌شده جدا شد؛ تزریق پاسخ به خود مسیر جدید، پوشش سایر cacheها، lifecycle/bridge واقعی Android و اعتبارسنجی گوشی هنوز از ادعای تکمیل خارج‌اند. **هیچ APK، تگ انتشار یا امضایی تغییر نکرد.**
+
+
+## مرحلهٔ سوم — عمر کل lookup و پل خصوصیِ آزمایشی wrapper
+
+### دو شکاف بازتولیدشده، پیش از اصلاح
+
+مرحلهٔ مستقل `aggregate-control` بعد از patch UDP ولی **بدون** patch جدید اجرا می‌شود:
+
+1. درخواست تجمیعی از resolver اول شروع شده؛ cacheهای resolver دوم و سپس اول flush می‌شوند. `DNS.serialQuery` قدیمی می‌تواند fallback را با نسل تازه شروع کند و نتیجه را به درخواست قدیمی بدهد. این تست از `DNS.LookupIP` واقعی، دو ClassicNameServer و routing-pipeهای آزمایشی استفاده می‌کند.
+2. `DNS.Close` پین‌شده noop است و lookup تازه پس از آن هنوز از cache پاسخ می‌گیرد.
+
+این‌ها محدودیت‌های نمونهٔ قبل از patch جدید هستند، **نه ادعای وجود API flush ناقص در APK پایدار**. PASS این دو کنترل منفی یعنی بازتولید شکاف‌ها؛ حذف نشده‌اند.
+
+### مرز جدید Xray
+
+`xray-dns-lifetime.patch` پس از patchهای قبلی اعمال می‌شود:
+
+- نسل/بستن در سطح کل `DNS.LookupIP` محافظت می‌شود، نه فقط یک resolver. snapshot تغییرناپذیرِ scope تمام cache-controllerها در context ذخیره می‌شود؛ fallback و context جداشده با `WithoutCancel` نمی‌توانند scope تازه قرض بگیرند.
+- تعویض نسل همهٔ cacheهای پذیرفته‌شده نسبت به ورود lookup جدید سریال است. lookup قدیمی و نتیجهٔ دیررس، نسل جدید را معتبر نمی‌کنند؛ نتیجه‌ای که قبلاً در نقطهٔ تحویل پذیرفته شده قابل پس‌گرفتن نیست.
+- `Close` ورود و انتشار منطقی را می‌بندد؛ controller بسته‌شده با flush دوباره زنده نمی‌شود. cleanup/migration دیررس، حتی روی سقف uint64، cache بسته را بازسازی نمی‌کند. شروع timerهای cleanup نیز با بستن هماهنگ است.
+- parallel lookup هنگام بستن می‌تواند انتظار را رها کند، ولی خروج یک child ناسازگار با لغو **ادعا نمی‌شود**. کانال نتیجه ظرفیت خروج child را نگه می‌دارد و fixture آن را پس از آزادسازی واقعی جمع می‌کند.
+- preflight قبل از هر mutation، تمام nameserverها را بررسی می‌کند. فعلاً فقط مجموعهٔ محدود به Classic UDP، بدون انتخاب مسیر سیستم، و حداکثر 64 client برای فرمان منطقی پذیرفته می‌شود. Local/Fake/DoH/TCP/QUIC/ناشناخته یا ترکیب آنها از این فرمان رد می‌شوند؛ یک cache از ترکیب ناقص پاک نمی‌شود. این محدودیت مسیر lookup عادی/پیکربندی را بازنویسی نمی‌کند.
+- static hosts و سیاست resolver تغییر نمی‌کنند؛ حفظ پاسخ static پیش/پس از invalidation و رد همان feature پس از Close با wrapper/core واقعی آزمایش شده است.
+
+### پل خصوصی، بدون endpoint یا ادعای موفقیت کامل
+
+`wrapper-dns-lifetime.patch` و `wrapper-dns-control.go` فقط در ریشهٔ موقت wrapper کپی/کامپایل می‌شوند. `ParvazLabDNSState` و `ParvazLabInvalidateDNS` روش‌های **درون‌پردازه‌ای آزمایشی** هستند؛ HTTP controller، Secret جدید یا مسیر direct fallback ندارند.
+
+- stamp تصادفی هر Start موفق، controller/نمونه را تفکیک می‌کند. Stop قبل از بستن native آن را باطل می‌کند؛ Start بدون تغییرِ هسته stamp را نگه می‌دارد. فرمان نشست قبلی به نمونهٔ بعدی یا controller دیگر نمی‌رسد.
+- revision به‌شکل رشتهٔ ده‌دهی canonical منتقل و با compare-and-swap بررسی می‌شود؛ فرمان تکراری حداکثر یک بار اعمال می‌شود. خطای ورودی/نشست قدیمی پیش از mutation رد می‌شود.
+- `TryLock` فرمان را پشت Start/Stop مشغول صف نمی‌کند؛ عملیات کنترل هیچ خواندن/نوشتن/بستن native زیر قفل lifecycle انجام نمی‌دهد. retirement واقعی در reaper متعلق به transport انجام می‌شود.
+- مالکیت UDP بازنشسته در **همان CoreController** تا خروج واقعی نگه داشته می‌شود. اگر initializer قدیمی هنوز برگشت نکرده، StartLoop بعدی خطای صریح می‌دهد؛ پس از خروج و cleanup می‌تواند دوباره شروع شود. این gate، process-global یا محافظ ساخت controller جدید توسط Android نیست.
+- پاسخ همیشه `full_chain_flushed=false` و `rebuild_required=true` دارد. حتی `LOGICAL_INVALIDATED_REBUILD_REQUIRED` فقط اعمال مرز منطقی را اعلام می‌کند، نه تخلیهٔ native، اینترنت تأییدشده یا reload کامل. `owned_udp_leases=0` نیز مدرک تخلیهٔ سایر transportها نیست.
+
+### پوشش و محدودیت اجرا
+
+| مرحله | اجرای سطح اول |
+|---|---:|
+| baseline | 1 |
+| cache-only | 18 × 3 = 54 |
+| UDP-isolated | 39 × 3 = 117 |
+| aggregate-control منفی | 2 × 1 = 2 |
+| lifetime Xray | 53 × 3 = 159 |
+| private-wrapper واقعی | 11 × 3 = 33 |
+
+[شواهد محلی](evidence/lifetime-local-result.json) و [فشار تصادفی](evidence/lifetime-stress-result.json): 14 آزمون lifetime × 30 و 11 آزمون wrapper × 30، در مجموع **750 اجرای فشار** با race detector، بدون failure/skip. graph وابستگی تمام مراحل یکسان و ورودی‌ها SHA-256 شده‌اند. [لاگ‌های کامل فشرده](evidence/lifetime-local-logs.tar.gz): 168,389 بایت؛ SHA-256 `1db154ba89731096dd7292dab3c024a5ab6fe2286bd8e2958145291a00f07376`.
+
+wrapper با `StartLoop/StopLoop` و `core.Instance` واقعی، روی **Linux، بدون TUN/inbound و با outbound آزمایشی blackhole** اجرا شده است؛ fixture initializer ناسازگار از routing تزریقی استفاده می‌کند. این **gomobile binding، فایل‌های مخصوص Android، AAR منتشرشده یا اجرای Android 10/14 نیست**. دو تست loopback قبلی همچنان جداگانه وجود دارند. CI Android برنامهٔ پایدار، حتی اگر موفق شود، این patch آزمایشگاهی را مصرف نمی‌کند.
+
+### هنوز مانع انتشار
+
+- اتصال Android و مالکیت سراسری میان controllerهای تازه/نمونهٔ probe و VPN هنوز ساخته/اثبات نشده است؛ gate همان controller جای آن را نمی‌گیرد.
+- چرخهٔ عمر native همهٔ انواع DNS، سایر cacheهای Xray، sing-box/Mihomo، system/fake-DNS و reload/انتقال TTL کامل نیست.
+- محدودیت بازپخش بایت قدیمی روی خود لینک UDP جدید از مرحلهٔ قبل پابرجاست؛ این primitive اصالت شبکه را اثبات نمی‌کند.
+- تست نصب/گوشی، نشت DNS/IPv6، Doze، جابه‌جایی شبکه و باتری همچنان NOT_RUN است. سرعت یا اتصال بدون‌وقفه تضمین نشده است.
+
+**APK و گواهی پایدار 1.28.2 تغییر نکرده‌اند؛ این مرحله نیز PROMOTION_BLOCKED است.** شواهد CI باید برای commit دقیق جداگانه ثبت شود.

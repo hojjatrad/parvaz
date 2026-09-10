@@ -1,0 +1,55 @@
+--- a/libv2ray_main.go
++++ b/libv2ray_main.go
+@@ -10,6 +10,7 @@
+ 	"strings"
+ 	"sync"
+ 
++	coreappdns "github.com/xtls/xray-core/app/dns"
+ 	coreapplog "github.com/xtls/xray-core/app/log"
+ 	corecommlog "github.com/xtls/xray-core/common/log"
+ 	corefilesystem "github.com/xtls/xray-core/common/platform/filesystem"
+@@ -33,11 +34,13 @@
+ 
+ // CoreController represents a controller for managing Xray core instance lifecycle
+ type CoreController struct {
+-	CallbackHandler CoreCallbackHandler
+-	statsManager    corestats.Manager
+-	coreMutex       sync.Mutex
+-	coreInstance    *core.Instance
+-	IsRunning       bool
++	parvazDNSSession string
++	parvazRetiredDNS *coreappdns.DNS
++	CallbackHandler  CoreCallbackHandler
++	statsManager     corestats.Manager
++	coreMutex        sync.Mutex
++	coreInstance     *core.Instance
++	IsRunning        bool
+ }
+ 
+ // CoreCallbackHandler defines interface for receiving callbacks and notifications from the core service
+@@ -118,6 +121,9 @@
+ 		return nil
+ 	}
+ 
++	if !x.parvazDNSRetiredReady() {
++		return errParvazDNSDrainPending
++	}
+ 	return x.doStartLoop(configContent)
+ }
+ 
+@@ -149,6 +155,7 @@
+ 
+ // doShutdown shuts down the Xray instance and cleans up resources
+ func (x *CoreController) doShutdown() {
++	x.parvazRetireDNSSession()
+ 	if x.coreInstance != nil {
+ 		if err := x.coreInstance.Close(); err != nil {
+ 			log.Printf("core shutdown error: %v", err)
+@@ -180,6 +187,7 @@
+ 		return fmt.Errorf("startup failed: %w", err)
+ 	}
+ 
++	x.parvazDNSSession = parvazNewDNSSession()
+ 	x.CallbackHandler.Startup()
+ 	x.CallbackHandler.OnEmitStatus(0, "Started successfully, running")
+ 

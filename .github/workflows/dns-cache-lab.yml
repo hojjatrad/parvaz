@@ -24,7 +24,7 @@ jobs:
         with:
           go-version: '1.27.0'
           cache: false
-      - name: Reproduce both unsafe controls, test UDP ownership and preserve non-promotion boundary
+      - name: Test cache, UDP, aggregate lifetime and private wrapper; preserve non-promotion boundary
         run: python3 tools/dns-lab/run.py
       - uses: actions/upload-artifact@v4
         if: always()

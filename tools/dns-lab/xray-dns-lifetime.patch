@@ -1,0 +1,510 @@
+--- a/app/dns/dns.go
++++ b/app/dns/dns.go
+@@ -20,6 +20,7 @@
+ 
+ // DNS is a DNS rely server.
+ type DNS struct {
++	parvaz parvazDNSLifetime
+ 	sync.Mutex
+ 	disableFallback        bool
+ 	disableFallbackIfMatch bool
+@@ -194,9 +195,6 @@
+ }
+ 
+ // Close implements common.Closable.
+-func (s *DNS) Close() error {
+-	return nil
+-}
+ 
+ // IsOwnLink implements proxy.dns.ownLinkVerifier
+ func (s *DNS) IsOwnLink(ctx context.Context) bool {
+@@ -213,7 +211,10 @@
+ }
+ 
+ // LookupIP implements dns.Client.
+-func (s *DNS) LookupIP(domain string, option dns.IPOption) ([]net.IP, uint32, error) {
++func (s *DNS) lookupIPInLifetime(ctx context.Context, domain string, option dns.IPOption) ([]net.IP, uint32, error) {
++	if ctx.Err() != nil {
++		return nil, 0, ctx.Err()
++	}
+ 	// Normalize the FQDN form query
+ 	domain = strings.TrimSuffix(domain, ".")
+ 	if domain == "" {
+@@ -258,9 +259,9 @@
+ 
+ 	// Name servers lookup
+ 	if s.enableParallelQuery {
+-		return s.parallelQuery(domain, option)
++		return s.parallelQuery(ctx, domain, option)
+ 	} else {
+-		return s.serialQuery(domain, option)
++		return s.serialQuery(ctx, domain, option)
+ 	}
+ }
+ 
+@@ -360,15 +361,18 @@
+ 	return errors.New("returning nil for domain ", domain).Base(noRNF)
+ }
+ 
+-func (s *DNS) serialQuery(domain string, option dns.IPOption) ([]net.IP, uint32, error) {
++func (s *DNS) serialQuery(ctx context.Context, domain string, option dns.IPOption) ([]net.IP, uint32, error) {
+ 	var errs []error
+ 	for _, client := range s.sortClients(domain) {
++		if ctx.Err() != nil {
++			return nil, 0, ctx.Err()
++		}
+ 		if !option.FakeEnable && strings.EqualFold(client.Name(), "FakeDNS") {
+ 			errors.LogDebug(s.ctx, "skip DNS resolution for domain ", domain, " at server ", client.Name())
+ 			continue
+ 		}
+ 
+-		ips, ttl, err := client.QueryIP(s.ctx, domain, option)
++		ips, ttl, err := client.QueryIP(ctx, domain, option)
+ 
+ 		if len(ips) > 0 {
+ 			return ips, ttl, nil
+@@ -383,11 +387,11 @@
+ 	return nil, 0, mergeQueryErrors(domain, errs)
+ }
+ 
+-func (s *DNS) parallelQuery(domain string, option dns.IPOption) ([]net.IP, uint32, error) {
++func (s *DNS) parallelQuery(ctx context.Context, domain string, option dns.IPOption) ([]net.IP, uint32, error) {
+ 	var errs []error
+ 	clients := s.sortClients(domain)
+ 
+-	resultsChan := asyncQueryAll(domain, option, clients, s.ctx)
++	resultsChan := asyncQueryAll(domain, option, clients, ctx)
+ 
+ 	groups, groupOf := makeGroups( /*s.ctx,*/ clients)
+ 	results := make([]*queryResult, len(clients))
+@@ -398,7 +402,12 @@
+ 
+ 	nextGroup := 0
+ 	for range clients {
+-		result := <-resultsChan
++		var result queryResult
++		select {
++		case <-ctx.Done():
++			return nil, 0, ctx.Err()
++		case result = <-resultsChan:
++		}
+ 		results[result.index] = &result
+ 
+ 		gi := groupOf[result.index]
+@@ -462,9 +471,13 @@
+ 		go func(i int, c *Client) {
+ 			qctx := ctx
+ 			if !c.server.IsDisableCache() {
+-				nctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), c.timeoutMs*2)
++				nctx, cancel := context.WithTimeout(ctx, c.timeoutMs*2)
+ 				qctx = nctx
+ 				defer cancel()
++			}
++			if qctx.Err() != nil {
++				ch <- queryResult{err: qctx.Err(), index: i}
++				return
+ 			}
+ 			ips, ttl, err := c.QueryIP(qctx, domain, option)
+ 			ch <- queryResult{ips: ips, ttl: ttl, err: err, index: i}
+--- a/app/dns/cache_controller.go
++++ b/app/dns/cache_controller.go
+@@ -24,10 +24,12 @@
+ )
+ 
+ type CacheController struct {
+-	name            string
+-	disableCache    bool
+-	serveStale      bool
+-	serveExpiredTTL int32
++	permanentlyClosed bool
++	cleanupGate       sync.Mutex
++	name              string
++	disableCache      bool
++	serveStale        bool
++	serveExpiredTTL   int32
+ 
+ 	ips      map[string]*record
+ 	dirtyips map[string]*record
+@@ -78,7 +80,7 @@
+ 	c.RLock()
+ 	defer c.RUnlock()
+ 
+-	if len(c.ips) == 0 {
++	if c.permanentlyClosed || len(c.ips) == 0 {
+ 		return nil, errors.New("nothing to do. stopping...")
+ 	}
+ 
+@@ -109,7 +111,7 @@
+ 	defer c.Unlock()
+ 
+ 	// Old cleanup must not operate on the replacement generation.
+-	if c.generation != generation || c.dirtyips != nil {
++	if c.permanentlyClosed || c.generation != generation || c.dirtyips != nil {
+ 		return
+ 	}
+ 
+@@ -183,7 +185,7 @@
+ 		if r := recover(); r != nil {
+ 			errors.LogError(context.Background(), c.name, " panic during cache migration: ", r)
+ 			c.Lock()
+-			if c.generation == generation {
++			if !c.permanentlyClosed && c.generation == generation {
+ 				c.dirtyips = nil
+ 			}
+ 			// c.ips = make(map[string]*record)
+@@ -214,7 +216,7 @@
+ 	}
+ 
+ 	c.Lock()
+-	if c.generation == generation {
++	if !c.permanentlyClosed && c.generation == generation {
+ 		c.dirtyips = nil
+ 	}
+ 	c.Unlock()
+@@ -226,7 +228,7 @@
+ 	c.Lock()
+ 	defer c.Unlock()
+ 
+-	if c.generation != generation {
++	if c.permanentlyClosed || c.generation != generation {
+ 		return
+ 	}
+ 	for _, dirty := range batch {
+@@ -251,7 +253,7 @@
+ 
+ func (c *CacheController) updateRecord(req *dnsRequest, rep *IPRecord) {
+ 	c.Lock()
+-	if req.cacheScope.owner != c || req.cacheScope.id != c.generation {
++	if c.permanentlyClosed || req.cacheScope.owner != c || req.cacheScope.id != c.generation {
+ 		c.Unlock()
+ 		return
+ 	}
+@@ -310,7 +312,7 @@
+ 		_, ttl, err := pubRecord.getIPs()
+ 		if ttl > 0 && !go_errors.Is(err, errRecordNotFound) {
+ 			c.RLock()
+-			if c.generation == req.cacheScope.id {
++			if !c.permanentlyClosed && c.generation == req.cacheScope.id {
+ 				c.pub.Publish(req.cacheScope.key(req.domain+pubSuffix), pubRecord)
+ 			}
+ 			c.RUnlock()
+@@ -320,7 +322,7 @@
+ 	errors.LogInfo(context.Background(), c.name, " got answer: ", req.domain, " ", req.reqType, " -> ", rep.IP, ", rtt: ", rtt, ", lock: ", lockWait)
+ 
+ 	if !c.serveStale || c.serveExpiredTTL != 0 {
+-		_ = c.cacheCleanup.Start() // Empty after concurrent flush is normal, not a panic.
++		c.startCleanup(req.cacheScope)
+ 	}
+ }
+ 
+--- a/app/dns/parvaz_cache_generation.go
++++ b/app/dns/parvaz_cache_generation.go
+@@ -5,6 +5,7 @@
+ import (
+ 	"context"
+ 	"errors"
++	"math"
+ 	"strconv"
+ )
+ 
+@@ -25,7 +26,7 @@
+ func (c *CacheController) owns(s cacheScope) bool {
+ 	c.RLock()
+ 	defer c.RUnlock()
+-	return s.owner == c && s.id == c.generation
++	return !c.permanentlyClosed && s.owner == c && s.id == c.generation
+ }
+ 
+ // FlushGeneration isolates newly admitted queries from previous replies, waiters,
+@@ -35,6 +36,16 @@
+ func (c *CacheController) FlushGeneration() uint64 {
+ 	c.Lock()
+ 	defer c.Unlock()
++	if c.permanentlyClosed {
++		return c.generation
++	}
++	if c.generation == math.MaxUint64 {
++		c.permanentlyClosed = true
++		c.cancelGeneration()
++		c.ips = make(map[string]*record)
++		c.dirtyips = nil
++		return c.generation
++	}
+ 	c.cancelGeneration()
+ 	c.generation++
+ 	c.generationContext, c.cancelGeneration = context.WithCancel(context.Background())
+--- a/app/dns/nameserver_cached.go
++++ b/app/dns/nameserver_cached.go
+@@ -22,6 +22,19 @@
+ func queryIP(ctx context.Context, s CachedNameserver, domain string, option dns.IPOption) ([]net.IP, uint32, error) {
+ 	cache := s.getCacheController()
+ 	scope := cache.scope()
++	if captured, ok := ctx.Value(parvazDNSScopesKey{}).(map[*CacheController]cacheScope); ok {
++		var found bool
++		scope, found = captured[cache]
++		if !found {
++			return nil, 0, errCacheGenerationChanged
++		}
++	}
++	if ctx.Err() != nil {
++		return nil, 0, ctx.Err()
++	}
++	if !cache.owns(scope) {
++		return nil, 0, errCacheGenerationChanged
++	}
+ 	ips, ttl, err := queryIPScoped(ctx, s, domain, option, scope)
+ 	if !cache.owns(scope) {
+ 		return nil, 0, errCacheGenerationChanged
+--- a/app/dns/nameserver_udp.go
++++ b/app/dns/nameserver_udp.go
+@@ -30,6 +30,7 @@
+ // A transport lease survives logical retirement until initialization, reads,
+ // writes and cleanup have actually returned. Two leases bound stuck resources.
+ type ClassicNameServer struct {
++	cleanupGate sync.Mutex
+ 	sync.Mutex
+ 	cacheController *CacheController
+ 	address         *net.Destination
+@@ -302,7 +303,7 @@
+ 		e.retire()
+ 	}
+ 	e.done()
+-	_ = e.server.requestsCleanup.Start()
++	e.server.startRequestsCleanup(e.scope)
+ 	return err
+ }
+ 
+--- /dev/null
++++ b/app/dns/parvaz_dns_lifetime.go
+@@ -0,0 +1,231 @@
++// SPDX-License-Identifier: MPL-2.0
++// Experimental in-process logical invalidation, NOT an engine-wide flush API.
++package dns
++
++import (
++	"context"
++	"errors"
++	"math"
++	"sync"
++
++	"github.com/xtls/xray-core/common/net"
++	dnsfeature "github.com/xtls/xray-core/features/dns"
++)
++
++var errDNSLifetimeChanged = errors.New("DNS lookup lifetime changed")
++var errDNSLifetimeClosed = errors.New("DNS lookup lifetime closed")
++
++type parvazDNSScopesKey struct{}
++type parvazDNSLifetime struct {
++	mu       sync.Mutex
++	revision uint64
++	closed   bool
++	ctx      context.Context
++	cancel   context.CancelFunc
++}
++
++// Result deliberately has no successful full-chain/transport-drain outcome.
++// Static mappings are configuration, not a cache to delete. No policy is reloaded.
++type ParvazDNSControlResult struct {
++	Status              string `json:"status"`
++	Revision            uint64 `json:"revision"`
++	LogicalApplied      bool   `json:"logical_applied"`
++	CacheControllers    int    `json:"cache_controllers"`
++	UncoveredConditions int    `json:"uncovered_conditions"`
++	OwnedUDPLeases      int    `json:"owned_udp_leases"`
++	FullChainFlushed    bool   `json:"full_chain_flushed"`
++	RebuildRequired     bool   `json:"rebuild_required"`
++}
++
++func (s *DNS) parvazScopeLocked() context.Context {
++	if s.parvaz.ctx == nil {
++		root := s.ctx
++		if root == nil {
++			root = context.Background()
++		}
++		scopes := make(map[*CacheController]cacheScope)
++		for _, client := range s.clients {
++			if client != nil {
++				if c, ok := client.server.(CachedNameserver); ok && c.getCacheController() != nil {
++					cc := c.getCacheController()
++					scopes[cc] = cc.scope()
++				}
++			}
++		}
++		s.parvaz.ctx, s.parvaz.cancel = context.WithCancel(context.WithValue(root, parvazDNSScopesKey{}, scopes))
++	}
++	return s.parvaz.ctx
++}
++func (s *DNS) LookupIP(domain string, option dnsfeature.IPOption) ([]net.IP, uint32, error) {
++	s.parvaz.mu.Lock()
++	if s.parvaz.closed {
++		s.parvaz.mu.Unlock()
++		return nil, 0, errDNSLifetimeClosed
++	}
++	ctx := s.parvazScopeLocked()
++	revision := s.parvaz.revision
++	s.parvaz.mu.Unlock()
++	ips, ttl, err := s.lookupIPInLifetime(ctx, domain, option)
++	s.parvaz.mu.Lock()
++	defer s.parvaz.mu.Unlock()
++	if s.parvaz.closed {
++		return nil, 0, errDNSLifetimeClosed
++	}
++	if revision != s.parvaz.revision {
++		return nil, 0, errDNSLifetimeChanged
++	}
++	if ctx.Err() != nil {
++		return nil, 0, ctx.Err()
++	}
++	return ips, ttl, err
++}
++func (s *DNS) parvazReportLocked(status string, applied bool) ParvazDNSControlResult {
++	r := ParvazDNSControlResult{Status: status, Revision: s.parvaz.revision, LogicalApplied: applied, RebuildRequired: true}
++	seen := make(map[*CacheController]bool)
++	udpSeen := make(map[*ClassicNameServer]bool)
++	for _, client := range s.clients {
++		if client == nil || client.server == nil {
++			r.UncoveredConditions++
++			continue
++		}
++		if c, ok := client.server.(CachedNameserver); ok && c.getCacheController() != nil {
++			cc := c.getCacheController()
++			if !seen[cc] {
++				r.CacheControllers++
++				seen[cc] = true
++			}
++		}
++		if u, ok := client.server.(*ClassicNameServer); ok {
++			if !udpSeen[u] {
++				r.OwnedUDPLeases += len(u.slots)
++				udpSeen[u] = true
++			}
++		} else {
++			r.UncoveredConditions++
++		}
++		if client.checkSystem {
++			r.UncoveredConditions++
++		}
++	}
++	if s.checkSystem || len(s.clients) == 0 || len(s.clients) > 64 {
++		r.UncoveredConditions++
++	}
++	return r
++}
++func (s *DNS) ParvazDNSControlState() ParvazDNSControlResult {
++	if !s.parvaz.mu.TryLock() {
++		return ParvazDNSControlResult{Status: "BUSY", RebuildRequired: true}
++	}
++	defer s.parvaz.mu.Unlock()
++	if s.parvaz.closed {
++		return s.parvazReportLocked("CLOSED", false)
++	}
++	report := s.parvazReportLocked("EXPERIMENTAL_LOGICAL_ONLY", false)
++	if report.UncoveredConditions > 0 {
++		report.Status = "UNSUPPORTED_REBUILD_REQUIRED"
++	}
++	return report
++}
++
++// TryInvalidate checks the entire configured nameserver set before ANY mutation.
++// The immutable configuration, static hosts, system and remote caches are not
++// reloaded/cleared. Callers must retain conservative rebuild, not report green.
++func (s *DNS) ParvazTryInvalidateDNS(expected uint64) ParvazDNSControlResult {
++	if !s.parvaz.mu.TryLock() {
++		return ParvazDNSControlResult{Status: "BUSY", RebuildRequired: true}
++	}
++	defer s.parvaz.mu.Unlock()
++	if s.parvaz.closed {
++		return s.parvazReportLocked("CLOSED", false)
++	}
++	if expected != s.parvaz.revision {
++		return s.parvazReportLocked("STALE_REVISION", false)
++	}
++	report := s.parvazReportLocked("UNSUPPORTED_REBUILD_REQUIRED", false)
++	if report.UncoveredConditions != 0 {
++		return report
++	}
++	if expected == math.MaxUint64 {
++		return s.parvazReportLocked("REVISION_EXHAUSTED", false)
++	}
++	caches := make(map[*CacheController]bool)
++	for _, client := range s.clients {
++		c := client.server.(CachedNameserver).getCacheController()
++		c.RLock()
++		unusable := c.permanentlyClosed || c.generation == math.MaxUint64
++		c.RUnlock()
++		if unusable {
++			return s.parvazReportLocked("CACHE_LIFETIME_UNAVAILABLE", false)
++		}
++		caches[c] = true
++	}
++	if s.parvaz.cancel != nil {
++		s.parvaz.cancel()
++	}
++	for c := range caches {
++		c.FlushGeneration()
++	}
++	s.parvaz.revision++
++	s.parvaz.ctx = nil
++	s.parvazScopeLocked()
++	return s.parvazReportLocked("LOGICAL_INVALIDATED_REBUILD_REQUIRED", true)
++}
++
++// Close fences admissions and publication immediately. Native cleanup remains
++// owned by the transport reaper; returning here is NOT a native-drain receipt.
++func (s *DNS) Close() error {
++	s.parvaz.mu.Lock()
++	defer s.parvaz.mu.Unlock()
++	if s.parvaz.closed {
++		return nil
++	}
++	s.parvaz.closed = true
++	if s.parvaz.cancel != nil {
++		s.parvaz.cancel()
++	}
++	for _, client := range s.clients {
++		if client == nil {
++			continue
++		}
++		if c, ok := client.server.(CachedNameserver); ok && c.getCacheController() != nil {
++			c.getCacheController().closePermanent()
++		}
++		if u, ok := client.server.(*ClassicNameServer); ok {
++			u.cleanupGate.Lock()
++			u.requestsCleanup.Close()
++			u.cleanupGate.Unlock()
++		}
++	}
++	return nil
++}
++func (c *CacheController) closePermanent() {
++	c.Lock()
++	if !c.permanentlyClosed {
++		c.permanentlyClosed = true
++		c.cancelGeneration()
++		if c.generation != math.MaxUint64 {
++			c.generation++
++		}
++		c.ips = make(map[string]*record)
++		c.dirtyips = nil
++		c.highWatermark = 0
++	}
++	c.Unlock()
++	c.cleanupGate.Lock()
++	c.cacheCleanup.Close()
++	c.cleanupGate.Unlock()
++}
++func (c *CacheController) startCleanup(scope cacheScope) {
++	c.cleanupGate.Lock()
++	defer c.cleanupGate.Unlock()
++	if c.owns(scope) {
++		_ = c.cacheCleanup.Start()
++	}
++}
++func (s *ClassicNameServer) startRequestsCleanup(scope cacheScope) {
++	s.cleanupGate.Lock()
++	defer s.cleanupGate.Unlock()
++	if s.cacheController.owns(scope) {
++		_ = s.requestsCleanup.Start()
++	}
++}

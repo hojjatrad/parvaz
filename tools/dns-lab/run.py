@@ -7,7 +7,7 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[2];LAB=ROOT/'tools/dns-lab';WORK=ROOT/'.cache/dns-lab/run'
 WORK.mkdir(parents=True,exist_ok=True)
 def digest(p):return hashlib.sha256(p.read_bytes()).hexdigest()
-input_files=[LAB/'run.py',LAB/'source-pin.json',LAB/'wrapper-source-pin.json',LAB/'xray-cache-generation.patch',LAB/'xray-udp-transport.patch',LAB/'xray-udp-loopback-fixture.patch',*sorted((LAB/'tests').glob('*.go'))]
+input_files=[LAB/'run.py',LAB/'source-pin.json',LAB/'wrapper-source-pin.json',LAB/'wrapper-dns-control.go',*sorted(LAB.glob('*.patch')),*sorted((LAB/'tests').glob('*.go')),*sorted((LAB/'wrapper-tests').glob('*.go'))]
 input_hashes={str(p.relative_to(ROOT)):digest(p) for p in input_files}
 def extract(pin,name):
  if pin['url']!='https://codeload.github.com/'+pin['repository']+'/tar.gz/'+pin['commit']:raise ValueError('Unpinned source URL')
@@ -56,14 +56,33 @@ shutil.copytree(wrapper_source,wrapper_hardened)
 wrapper_patched=WORK/'wrapper-patched'
 if wrapper_patched.exists():shutil.rmtree(wrapper_patched)
 shutil.copytree(wrapper_source,wrapper_patched)
+aggregate=WORK/'aggregate-control'
+lifetime=WORK/'lifetime'
+wrapper_aggregate=WORK/'wrapper-aggregate'
+wrapper_lifetime=WORK/'wrapper-lifetime'
+for destination,original in [(aggregate,hardened),(lifetime,hardened),(wrapper_aggregate,wrapper_source),(wrapper_lifetime,wrapper_source)]:
+ if destination.exists():shutil.rmtree(destination)
+ shutil.copytree(original,destination)
+for target in [aggregate,lifetime]:
+ shutil.copyfile(LAB/'tests/parvaz_dns_lifetime_fixtures_test.go',target/'app/dns/parvaz_dns_lifetime_fixtures_test.go')
+shutil.copyfile(LAB/'tests/parvaz_aggregate_limit_test.go',aggregate/'app/dns/parvaz_aggregate_limit_test.go')
+subprocess.run(['patch','--batch','--fuzz=0','-p1','-i',str(LAB/'xray-dns-lifetime.patch')],cwd=lifetime,check=True)
+shutil.copyfile(LAB/'tests/parvaz_dns_lifetime_test.go',lifetime/'app/dns/parvaz_dns_lifetime_test.go')
+subprocess.run(['patch','--batch','--fuzz=0','-p1','-i',str(LAB/'wrapper-dns-lifetime.patch')],cwd=wrapper_lifetime,check=True)
+shutil.copyfile(LAB/'wrapper-dns-control.go',wrapper_lifetime/'parvaz_dns_control.go')
+for test in (LAB/'wrapper-tests').glob('*.go'):shutil.copyfile(test,wrapper_lifetime/test.name)
 env=dict(os.environ,GOMAXPROCS='2',GOTOOLCHAIN='local',GOCACHE=str(ROOT/'.cache/dns-lab/go-build'),GOMODCACHE=str(ROOT/'.cache/dns-lab/go-mod'))
 stages=[]
 for name,module,target,pattern,count in [
  ('baseline',wrapper_source,source,'^TestParvazNaiveFlush',1),
  ('patched',wrapper_patched,patched,'^TestParvaz|^TestFqdn$|^Test_parseResponse$|^Test_buildReqMsgs$|^Test_genEDNS0Options$|^TestStaticHosts$',3),
- ('udp-isolated',wrapper_hardened,hardened,'^TestParvaz|^TestFqdn$|^Test_parseResponse$|^Test_buildReqMsgs$|^Test_genEDNS0Options$|^TestStaticHosts$|^TestUDPServer$|^TestUDPServerSubnet$',3)]:
+ ('udp-isolated',wrapper_hardened,hardened,'^TestParvaz|^TestFqdn$|^Test_parseResponse$|^Test_buildReqMsgs$|^Test_genEDNS0Options$|^TestStaticHosts$|^TestUDPServer$|^TestUDPServerSubnet$',3),
+ ('aggregate-control',wrapper_aggregate,aggregate,'^TestParvazKnownLimitAggregate|^TestParvazKnownLimitDNSClose',1),
+ ('lifetime',wrapper_lifetime,lifetime,'^TestParvaz|^TestFqdn$|^Test_parseResponse$|^Test_buildReqMsgs$|^Test_genEDNS0Options$|^TestStaticHosts$|^TestUDPServer$|^TestUDPServerSubnet$',3),
+ ('private-wrapper',wrapper_lifetime,lifetime,'^TestParvazBridge',3)]:
  subprocess.run(['go','mod','edit','-replace=github.com/xtls/xray-core='+str(target)],cwd=module,env=env,check=True)
- cmd=['go','test','-mod=mod','-race','-p','2','-count='+str(count),'-timeout=8m','-json','-run',pattern,'github.com/xtls/xray-core/app/dns']
+ package='.' if name=='private-wrapper' else 'github.com/xtls/xray-core/app/dns'
+ cmd=['go','test','-mod=mod','-race','-p','2','-count='+str(count),'-timeout=8m','-json','-run',pattern,package]
  print('STAGE',name,flush=True);log=WORK/(name+'.jsonl')
  with log.open('w') as out:subprocess.run(cmd,cwd=module,env=env,stdout=out,check=True)
  events=[json.loads(line) for line in log.read_text().splitlines() if line.strip()]
@@ -71,7 +90,7 @@ for name,module,target,pattern,count in [
  assert not any(e.get('Action') in ['fail','skip'] for e in events),'Unexpected failure or skip'
  text=''.join(e.get('Output','') for e in events)
  assert 'WARNING: DATA RACE' not in text,'Race detector failure'
- expected='NAIVE_FLUSH_REPRODUCED:' if name=='baseline' else 'PROMOTION_BLOCKED:'
+ expected={'baseline':'NAIVE_FLUSH_REPRODUCED:','aggregate-control':'AGGREGATE_BOUNDARY_REPRODUCED:','private-wrapper':'PRIVATE_BRIDGE_VERIFIED:'}.get(name,'PROMOTION_BLOCKED:')
  assert expected in text,'Required negative-control/known-limit evidence absent'
  passes=[e['Test'] for e in events if e.get('Action')=='pass' and e.get('Test') and '/' not in e['Test']]
  if name=='baseline':assert len(passes)==1,'Baseline control changed'
@@ -79,18 +98,23 @@ for name,module,target,pattern,count in [
  if name=='udp-isolated':
   assert len(set(passes))==39 and len(passes)==117,'UDP test set changed; review expected coverage'
   assert 'UDP_OLD_TRANSPORT_REPLAY_REJECTED:' in text and 'UDP_NEW_CHANNEL_REPLAY_OUT_OF_SCOPE:' in text,'Missing UDP boundary proofs'
+ if name=='aggregate-control':assert len(set(passes))==2 and len(passes)==2,'Aggregate controls changed'
+ if name=='lifetime':
+  assert len(set(passes))==53 and len(passes)==159,'Lifetime tests changed'
+  assert 'DNS_LIFETIME_FENCE_VERIFIED:' in text,'Missing aggregate fence evidence'
+ if name=='private-wrapper':assert len(set(passes))==11 and len(passes)==33,'Private wrapper tests changed'
  graph=subprocess.check_output(['go','list','-mod=mod','-m','all'],cwd=module,env=env,text=True)
  graph=graph.replace(str(target),'<pinned-xray-source>')
  (WORK/(name+'-modules.txt')).write_text(graph)
  stages.append({'stage':name,'top_level_pass_events':len(passes),'unique_top_level_tests':sorted(set(passes)),'repetitions':count,'race_detector':True,'module_graph_sha256':hashlib.sha256(graph.encode()).hexdigest(),'effective_go_mod_sha256':digest(module/'go.mod'),'log_sha256':digest(log)})
 assert len({s['module_graph_sha256'] for s in stages})==1,'Stages resolved different dependency graphs'
 assert input_hashes=={str(p.relative_to(ROOT)):digest(p) for p in input_files},'Laboratory inputs changed while tests ran'
-result={'tested_inputs_sha256':input_hashes,'ci_commit':os.environ.get('GITHUB_SHA'),'experiment':'Xray cache generation and DNS-local UDP transport ownership','promotion_allowed':False,'production_apk_changed':False,
+result={'tested_inputs_sha256':input_hashes,'ci_commit':os.environ.get('GITHUB_SHA'),'experiment':'Xray DNS cache, UDP ownership, aggregate lifetime and private wrapper control','promotion_allowed':False,'production_apk_changed':False,
  'source':xray,'wrapper_source':wrapper,'patch_sha256':digest(LAB/'xray-cache-generation.patch'),'transport_patch_sha256':digest(LAB/'xray-udp-transport.patch'),'test_fixture_patch_sha256':digest(LAB/'xray-udp-loopback-fixture.patch'),
  'go_version':subprocess.check_output(['go','version'],env=env,text=True).strip(),'stages':stages,
- 'historical_reproductions':['NAIVE_CLEAR_REPOPULATES_CACHE','CACHE_ONLY_UDP_ID_REUSE_BINDS_OLD_CALLBACK_TO_NEW_REQUEST'],
+ 'historical_reproductions':['NAIVE_CLEAR_REPOPULATES_CACHE','CACHE_ONLY_UDP_ID_REUSE_BINDS_OLD_CALLBACK_TO_NEW_REQUEST','SCALAR_FLUSH_ALLOWS_OLD_AGGREGATE_FALLBACK','DNS_CLOSE_DID_NOT_REVOKE_LOOKUPS'],
  'transport_boundary_tested':'Retired routing-link callbacks cannot access fresh pending requests, including same ID and same question. New-link wire authenticity is outside this primitive.',
- 'blocked_by':['UDP_REPLAY_INJECTED_INTO_NEW_TRANSPORT_NOT_AUTHENTICATED','NO_ENGINE_WIDE_RESOLVER_RELOAD','OTHER_ENGINE_AND_SYSTEM_CACHES_NOT_COVERED','NO_ANDROID_WRAPPER_BRIDGE_OR_NATIVE_VPN_TEST'],
- 'scope':'Real pinned upstream DNS source, wrapper-root dependency resolution, synthetic/in-memory DNS fixtures plus two upstream loopback UDP integration cases with RFC-conforming test replies; not the shipped AAR, not Android, not physical DNS/leak/battery validation.'}
+ 'blocked_by':['UDP_REPLAY_INJECTED_INTO_NEW_TRANSPORT_NOT_AUTHENTICATED','NO_ENGINE_WIDE_RESOLVER_RELOAD','OTHER_ENGINE_AND_SYSTEM_CACHES_NOT_COVERED','PRIVATE_WRAPPER_LAB_ONLY_NO_ANDROID_BINDING_OR_NATIVE_VPN_TEST'],
+ 'scope':'Real pinned upstream DNS source, wrapper-root dependency resolution, synthetic/in-memory DNS fixtures plus two upstream loopback UDP integration cases with RFC-conforming test replies; plus private in-process methods on the real wrapper/core with no inbound and blackhole outbound; not the shipped AAR, not Android, not physical DNS/leak/battery validation.'}
 (WORK/'result.json').write_text(json.dumps(result,indent=2)+'\n')
-print('::notice title=DNS_CACHE_LAB_RESULT::Cache source tests/reproductions succeeded; PROMOTION_BLOCKED; baseline=1 patched=54 udp-isolated=117 top-level PASS events; no APK publication')
+print('::notice title=DNS_CACHE_LAB_RESULT::Cache source tests/reproductions succeeded; PROMOTION_BLOCKED; baseline=1 patched=54 udp-isolated=117 aggregate-control=2 lifetime=159 private-wrapper=33 top-level PASS events; no APK publication')
