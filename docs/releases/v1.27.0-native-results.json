@@ -1,0 +1,38 @@
+[
+  {
+    "run": 34509297751,
+    "name": "Native engines and loopback protocol validation",
+    "job": "native",
+    "conclusion": "success",
+    "annotations": [
+      {
+        "title": "NATIVE_TEST_TOTALS",
+        "message": "native-results-29 TEST-emulator-5554 - 10-_-.xml {'tests': '12', 'failures': '0', 'errors': '0', 'skipped': '0'}"
+      },
+      {
+        "title": "NATIVE_TEST_TOTALS",
+        "message": "androidTest-results TEST-emulator-5554 - 14-_-.xml {'tests': '12', 'failures': '0', 'errors': '0', 'skipped': '0'}"
+      },
+      {
+        "title": "NATIVE_ANDROID_SDK_34",
+        "message": "ANDROID_QUIC_OK hysteria2 strict-TLS wrong-SNI-blocked TCP UDP server-down-TCP-blocked SDK=34; ANDROID_QUIC_OK tuic strict-TLS wrong-SNI-blocked TCP UDP server-down-TCP-blocked SDK=34; CALLER_THREAD_EXIT_OK full-clash SDK=34; CALLER_THREAD_EXIT_OK full-singbox SDK=34; CAPACITY_WAIT_CANCEL_NO_OVERRELEASE_OK SDK=34; CLOSED_SESSION_LATE_LAUNCH_REJECTED SDK=34; NATIVE_ENGINE_OK full-clash SDK=34; NATIVE_ENGINE_OK full-singbox SDK=34; OWNER_DEATH_LISTENER_CLOSED_OK full-clash SDK=34; OWNER_DEATH_LISTENER_CLOSED_OK full-singbox SDK=34; QUEUED_LAUNCH_CANCEL_CLEAN_OK SDK=34; REPEATED_STOP_CHILD_TRUST_PORT_CAPACITY_CLEAN_OK cycles=4 SDK=34"
+      },
+      {
+        "title": "NATIVE_ANDROID_SDK_29",
+        "message": "ANDROID_QUIC_OK hysteria2 strict-TLS wrong-SNI-blocked TCP UDP server-down-TCP-blocked SDK=29; ANDROID_QUIC_OK tuic strict-TLS wrong-SNI-blocked TCP UDP server-down-TCP-blocked SDK=29; CALLER_THREAD_EXIT_OK full-clash SDK=29; CALLER_THREAD_EXIT_OK full-singbox SDK=29; CAPACITY_WAIT_CANCEL_NO_OVERRELEASE_OK SDK=29; CLOSED_SESSION_LATE_LAUNCH_REJECTED SDK=29; NATIVE_ENGINE_OK full-clash SDK=29; NATIVE_ENGINE_OK full-singbox SDK=29; OWNER_DEATH_LISTENER_CLOSED_OK full-clash SDK=29; OWNER_DEATH_LISTENER_CLOSED_OK full-singbox SDK=29; QUEUED_LAUNCH_CANCEL_CLEAN_OK SDK=29; REPEATED_STOP_CHILD_TRUST_PORT_CAPACITY_CLEAN_OK cycles=4 SDK=29"
+      },
+      {
+        "title": "PROTOCOL_SMOKE_OK",
+        "message": "full-clash full routing/group + TCP + UDP + authentication + no direct fallback"
+      },
+      {
+        "title": "PROTOCOL_SMOKE_OK",
+        "message": "tuic TLS + wrong-SNI rejection + TCP + UDP + authentication + no direct fallback"
+      },
+      {
+        "title": "PROTOCOL_SMOKE_OK",
+        "message": "hysteria2 TLS + wrong-SNI rejection + TCP + UDP + authentication + no direct fallback"
+      }
+    ]
+  }
+]

@@ -1,0 +1,131 @@
+{
+  "head": "ca08a5f43fc632b68b71b805095d904687ba4d07",
+  "runs": [
+    {
+      "id": 34509300580,
+      "name": "Subscription regression tests",
+      "head_sha": "ca08a5f43fc632b68b71b805095d904687ba4d07",
+      "head_branch": "release/signing-validation-v3",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/hojjatrad/parvaz/actions/runs/34509300580"
+    },
+    {
+      "id": 34509300803,
+      "name": "Validate permanent signing and release APKs without publication",
+      "head_sha": "ca08a5f43fc632b68b71b805095d904687ba4d07",
+      "head_branch": "release/signing-validation-v3",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/hojjatrad/parvaz/actions/runs/34509300803"
+    },
+    {
+      "id": 34509299185,
+      "name": "Subscription regression tests",
+      "head_sha": "ca08a5f43fc632b68b71b805095d904687ba4d07",
+      "head_branch": "feat/adaptive-quality-maintenance",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/hojjatrad/parvaz/actions/runs/34509299185"
+    },
+    {
+      "id": 34509300453,
+      "name": "Android compilation and unit tests",
+      "head_sha": "ca08a5f43fc632b68b71b805095d904687ba4d07",
+      "head_branch": "release/signing-validation-v3",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/hojjatrad/parvaz/actions/runs/34509300453"
+    },
+    {
+      "id": 34509299134,
+      "name": "Android compilation and unit tests",
+      "head_sha": "ca08a5f43fc632b68b71b805095d904687ba4d07",
+      "head_branch": "feat/adaptive-quality-maintenance",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/hojjatrad/parvaz/actions/runs/34509299134"
+    },
+    {
+      "id": 34509297891,
+      "name": "Subscription regression tests",
+      "head_sha": "ca08a5f43fc632b68b71b805095d904687ba4d07",
+      "head_branch": "ci/core-maintenance-check",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/hojjatrad/parvaz/actions/runs/34509297891"
+    },
+    {
+      "id": 34509298293,
+      "name": "Subscription regression tests",
+      "head_sha": "ca08a5f43fc632b68b71b805095d904687ba4d07",
+      "head_branch": "ci/platform-update-probe",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/hojjatrad/parvaz/actions/runs/34509298293"
+    },
+    {
+      "id": 34509297683,
+      "name": "Maintain all three engines and publish tested updates",
+      "head_sha": "ca08a5f43fc632b68b71b805095d904687ba4d07",
+      "head_branch": "ci/core-maintenance-check",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/hojjatrad/parvaz/actions/runs/34509297683"
+    },
+    {
+      "id": 34509297867,
+      "name": "Subscription regression tests",
+      "head_sha": "ca08a5f43fc632b68b71b805095d904687ba4d07",
+      "head_branch": "ci/native-engines",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/hojjatrad/parvaz/actions/runs/34509297867"
+    },
+    {
+      "id": 34509297692,
+      "name": "Android compilation and unit tests",
+      "head_sha": "ca08a5f43fc632b68b71b805095d904687ba4d07",
+      "head_branch": "ci/core-maintenance-check",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/hojjatrad/parvaz/actions/runs/34509297692"
+    },
+    {
+      "id": 34509298130,
+      "name": "Android archive and backup security probes",
+      "head_sha": "ca08a5f43fc632b68b71b805095d904687ba4d07",
+      "head_branch": "ci/platform-update-probe",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/hojjatrad/parvaz/actions/runs/34509298130"
+    },
+    {
+      "id": 34509297731,
+      "name": "Android compilation and unit tests",
+      "head_sha": "ca08a5f43fc632b68b71b805095d904687ba4d07",
+      "head_branch": "ci/native-engines",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/hojjatrad/parvaz/actions/runs/34509297731"
+    },
+    {
+      "id": 34509298103,
+      "name": "Android compilation and unit tests",
+      "head_sha": "ca08a5f43fc632b68b71b805095d904687ba4d07",
+      "head_branch": "ci/platform-update-probe",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/hojjatrad/parvaz/actions/runs/34509298103"
+    },
+    {
+      "id": 34509297751,
+      "name": "Native engines and loopback protocol validation",
+      "head_sha": "ca08a5f43fc632b68b71b805095d904687ba4d07",
+      "head_branch": "ci/native-engines",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/hojjatrad/parvaz/actions/runs/34509297751"
+    }
+  ]
+}
