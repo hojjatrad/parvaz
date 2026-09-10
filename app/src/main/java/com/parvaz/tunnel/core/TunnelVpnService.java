@@ -58,6 +58,7 @@ public class TunnelVpnService extends VpnService {
 
     /* renamed from: a */
     public long dayFlushAtElapsed;
+    final SerialConnectionQueue operations=new SerialConnectionQueue();
     public volatile m b;
     private final java.util.concurrent.atomic.AtomicBoolean healthProbeBusy=new java.util.concurrent.atomic.AtomicBoolean();
     public NetworkMonitor c;
@@ -181,6 +182,7 @@ public class TunnelVpnService extends VpnService {
     /* JADX WARN: Can't change package for inner class: com.parvaz.tunnel.core.TunnelVpnService.f to com.parvaz.tunnel.core.TunnelVpnService$f */
     /* loaded from: classes.dex */
     public class f implements Runnable {
+        private final long requestedFrom=operations.ticket();
 
         /* JADX WARN: Can't change package for inner class: com.parvaz.tunnel.core.TunnelVpnService.f.a to com.parvaz.tunnel.core.TunnelVpnService$f$a */
         /* loaded from: classes.dex */
@@ -227,10 +229,15 @@ public class TunnelVpnService extends VpnService {
         public f() {
         }
 
-        @Override // java.lang.Runnable
-        public final void run() {
+        @Override public final void run(){operations.replace(requestedFrom,this::runOwned);}
+        private void runOwned(long ticket) {
+            if(!operations.current(ticket))return;
             TunnelVpnService tunnelVpnService = TunnelVpnService.this;
             try {
+                Prefs latest=new Prefs(tunnelVpnService);
+                Profile selected=ProfileStore.f(tunnelVpnService).getActiveById(latest.f343a.getString("selected_profile",""));
+                if(selected==null)throw new IllegalStateException("NO_ACTIVE_PROFILE");
+                tunnelVpnService.f=latest;tunnelVpnService.profile=selected;
                 tunnelVpnService.h(tunnelVpnService.profile.remark, 5);
                 tunnelVpnService.stopStatsTicker();
                 tunnelVpnService.stopHealthTicker();
@@ -243,18 +250,20 @@ public class TunnelVpnService extends VpnService {
                 } catch (InterruptedException unused) {
                     android.util.Log.w("Parvaz/TunnelVpnService", "InterruptedException ignored", unused);
                 }
+                if(!operations.current(ticket))return;
                 ParcelFileDescriptor parcelFileDescriptor = tunnelVpnService.tunInterface;
-                CoreManager.b().start(tunnelVpnService, tunnelVpnService.profile, parcelFileDescriptor == null ? 0 : parcelFileDescriptor.getFd(), new a());
+                CoreManager.b().start(tunnelVpnService, tunnelVpnService.profile, parcelFileDescriptor == null ? 0 : parcelFileDescriptor.getFd(), ()->postCoreFailure(ticket));
+                operations.commit(ticket,()->{
                 tunnelVpnService.lastConnectAt = System.currentTimeMillis();
                 tunnelVpnService.switching = false;
                 TunnelVpnService.serviceRunning = true;
                 tunnelVpnService.h(tunnelVpnService.profile.remark, 2);
                 tunnelVpnService.updateNotification(tunnelVpnService.profile.remark, tunnelVpnService.getString(StartupDiagnostics.labelResource()));
-                tunnelVpnService.handler.post(new b());
+                postState(ticket,new b());
+                });
+                if(!operations.current(ticket))CoreManager.b().stop();
             } catch (Throwable th) {
-                Log.e("ParvazVpn", "reconnect failed", th);
-                tunnelVpnService.switching = false;
-                tunnelVpnService.handler.post(new c());
+                postFailure(ticket,getString(R.string.no_alternative));
             }
         }
     }
@@ -265,8 +274,11 @@ public class TunnelVpnService extends VpnService {
         public g() {
         }
 
-        @Override // java.lang.Runnable
-        public final void run() {
+        @Override public final void run(){operations.start(false,this::runOwned);}
+        private void runOwned(long ticket) {
+            if(!operations.current(ticket))return;
+            shutdownInternal(false,true); // Preserve the blocking TUN until its replacement exists.
+            if(!operations.current(ticket))return;
             String str;
             String message;
             String string;
@@ -294,11 +306,16 @@ public class TunnelVpnService extends VpnService {
                     long tunBegan=System.nanoTime();
                     ParcelFileDescriptor c = tunnelVpnService.c(tunnelVpnService.f);
                     long tunSetupMs=java.util.concurrent.TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-tunBegan);
-                    tunnelVpnService.tunInterface = c;
+                    if(c!=null){
+                        ParcelFileDescriptor previous=tunnelVpnService.tunInterface;tunnelVpnService.tunInterface=c;
+                        if(previous!=null&&previous!=c)try{previous.close();}catch(Exception ignored){}
+                    }
                     if (c == null) {
                         string = tunnelVpnService.getString(R.string.err_tun);
                     } else {
-                        CoreManager.b().start(tunnelVpnService, tunnelVpnService.profile, tunnelVpnService.tunInterface.getFd(), new h(),tunSetupMs);
+                        if(!operations.current(ticket))return;
+                        CoreManager.b().start(tunnelVpnService, tunnelVpnService.profile, tunnelVpnService.tunInterface.getFd(), ()->postCoreFailure(ticket),tunSetupMs);
+                        operations.commit(ticket,()->{
                         TunnelVpnService.serviceRunning = true;
                         // LAN sharing is explicitly enabled per session from Settings.
                         HotspotProxyManager.stop();
@@ -316,14 +333,16 @@ public class TunnelVpnService extends VpnService {
                         tunnelVpnService.h = iVar;
                         tunnelVpnService.handler.postDelayed(iVar, TrafficSampling.FAST_INTERVAL_MS);
                         tunnelVpnService.startHealthTicker();
+                        });
+                        if(!operations.current(ticket))CoreManager.b().stop();
                         return;
                     }
                 }
-                tunnelVpnService.fail(string);
+                failOwned(ticket,string);
             } catch (XrayConfigBuilder.a e) {
                 Log.e("ParvazVpn", "unsupported protocol", e);
                 message = tunnelVpnService.getString(R.string.err_unsupported_protocol, e.f6218b);
-                tunnelVpnService.fail(message);
+                failOwned(ticket,message);
             } catch (Throwable th) {
                 Log.e("ParvazVpn", "connect failed", th);
                 if (th.getMessage() == null) {
@@ -331,7 +350,7 @@ public class TunnelVpnService extends VpnService {
                 } else {
                     message = th.getMessage();
                 }
-                tunnelVpnService.fail(message);
+                failOwned(ticket,message);
             }
         }
     }
@@ -515,6 +534,7 @@ public class TunnelVpnService extends VpnService {
     /* JADX WARN: Can't change package for inner class: com.parvaz.tunnel.core.TunnelVpnService.l to com.parvaz.tunnel.core.TunnelVpnService$l */
     /* loaded from: classes.dex */
     public class l implements Runnable {
+        private final long requestedFrom=operations.ticket();
 
         /* renamed from: b */
         public final Profile f6237b;
@@ -527,8 +547,14 @@ public class TunnelVpnService extends VpnService {
             this.f6238c = str;
         }
 
-        @Override // java.lang.Runnable
-        public final void run() {
+        @Override public final void run(){operations.replace(requestedFrom,this::runOwned);}
+        private void runOwned(long ticket) {
+            if(!operations.current(ticket))return;
+            if(HappyEyeballs.activeCandidates(java.util.Collections.singletonList(this.f6237b),ProfileStore.f(TunnelVpnService.this).activeProfiles()).isEmpty()){
+                if(CoreManager.b().running)operations.commit(ticket,()->{switching=false;h("",2);startHealthTicker();});
+                else failOwned(ticket,getString(R.string.no_alternative));
+                return;
+            }
             int fd;
             TunnelVpnService tunnelVpnService = TunnelVpnService.this;
             Profile profile = this.f6237b;
@@ -551,17 +577,20 @@ public class TunnelVpnService extends VpnService {
                 } else {
                     fd = parcelFileDescriptor.getFd();
                 }
-                b.start(tunnelVpnService, profile2, fd, new a());
+                if(!operations.current(ticket))return;
+                b.start(tunnelVpnService,profile2,fd,()->postCoreFailure(ticket));
+                operations.commit(ticket,()->{
+                if(tunnelVpnService.f!=null)tunnelVpnService.f.f343a.edit().putString("selected_profile",profile.id).apply();
                 tunnelVpnService.lastConnectAt = System.currentTimeMillis();
                 tunnelVpnService.switching = false;
                 TunnelVpnService.serviceRunning = true;
                 tunnelVpnService.h(tunnelVpnService.profile.remark, 2);
                 tunnelVpnService.updateNotification(tunnelVpnService.profile.remark, tunnelVpnService.getString(StartupDiagnostics.labelResource()));
-                tunnelVpnService.handler.post(new b());
+                postState(ticket,new b());
+                });
+                if(!operations.current(ticket))CoreManager.b().stop();
             } catch (Throwable th) {
-                Log.e("ParvazVpn", "auto-switch failed", th);
-                tunnelVpnService.switching = false;
-                tunnelVpnService.handler.post(new c());
+                postFailure(ticket,getString(R.string.no_alternative));
             }
         }
     }
@@ -578,9 +607,10 @@ public class TunnelVpnService extends VpnService {
         public final long f6240b;
 
         /* JADX WARN: Can't change package for inner class: com.parvaz.tunnel.core.TunnelVpnService.m.a to com.parvaz.tunnel.core.TunnelVpnService$m$a */
+        private final long ownerTicket=operations.ticket();
         private final long ownerSession=CoreManager.b().sessionId();
         private final long beganElapsed=android.os.SystemClock.elapsedRealtime();
-        boolean isCurrent(){return TunnelVpnService.this.b==this&&serviceRunning&&!switching&&CoreManager.b().sessionId()==ownerSession;}
+        boolean isCurrent(){return operations.current(ownerTicket)&&TunnelVpnService.this.b==this&&serviceRunning&&!switching&&CoreManager.b().sessionId()==ownerSession;}
         public class a implements Runnable {
             @Override public void run(){
                 boolean handedOff=false;
@@ -597,6 +627,8 @@ public class TunnelVpnService extends VpnService {
                     final long measured=delay;
                     handedOff=handler.post(()->{
                         try{
+                            final boolean[] restart={false};
+                            operations.commit(ownerTicket,()->{
                             if(!m.this.isCurrent())return;
                             long receivedNow=sessionDown;boolean received=receivedNow>lastHealthBytes;lastHealthBytes=receivedNow;
                             int threshold=f.f343a.getInt("ping_threshold",1200);
@@ -609,7 +641,9 @@ public class TunnelVpnService extends VpnService {
                                 Intent intent=new Intent("com.parvaz.tunnel.STATE");intent.setPackage(getPackageName());
                                 intent.putExtra("state",4);intent.putExtra("ping",(int)measured);intent.putExtra("profile_id",profile.id);sendBroadcast(intent);
                             }
-                            if(decision.restart)lambda$onCoreStopped$1();
+                            restart[0]=decision.restart;
+                            });
+                            if(restart[0])autoSwitchOwned(ownerTicket);
                         }finally{healthProbeBusy.set(false);}
                     });
                 }catch(Exception ignored){/* Stopped/replaced core: leave the newer session untouched. */}
@@ -836,7 +870,12 @@ public class TunnelVpnService extends VpnService {
     }
 
     /* renamed from: d */
-    public final void fail(String str) {
+    private void postState(long ticket,Runnable update){handler.post(()->operations.commit(ticket,update));}
+    private void postCoreFailure(long ticket){handler.post(()->{if(operations.current(ticket))coreStoppedOwned(ticket);});}
+    private void postFailure(long ticket,String message){handler.post(()->failOwned(ticket,message));}
+    private void failOwned(long ticket,String message){operations.stopIfCurrent(ticket,()->failInternal(message));}
+    public final void fail(String str) {operations.stop(()->failInternal(str));}
+    private void failInternal(String str) {
         boolean z;
         Log.e("ParvazVpn", "fail: " + str);
         LogBuffer.listener("ERROR: " + str);
@@ -849,31 +888,19 @@ public class TunnelVpnService extends VpnService {
         h(str, 3);
         if (z) {
             LogBuffer.listener("kill switch active - traffic blocked");
-            shutdown(false, true);
+            shutdownInternal(false,true);
             updateNotification(getString(R.string.kill_switch), getString(R.string.kill_switch_desc));
             return;
         }
-        shutdown(true, false);
+        shutdownInternal(true,false);
     }
 
     /* renamed from: f */
-    public final void lambda$lambda$autoSwitch$2$2() {
-        Handler handler;
-        Runnable kVar;
-        if (!serviceRunning || this.switching) {
-            return;
-        }
-        Log.w("ParvazVpn", "core stopped unexpectedly");
-        LogBuffer.listener("core stopped unexpectedly");
-        Prefs prefs = this.f;
-        if (prefs == null || !prefs.f343a.getBoolean("auto_switch", true)) {
-            handler = this.handler;
-            kVar = new k();
-        } else {
-            handler = this.handler;
-            kVar = new j();
-        }
-        handler.post(kVar);
+    public final void lambda$lambda$autoSwitch$2$2(){coreStoppedOwned(operations.ticket());}
+    private void coreStoppedOwned(long ticket){
+        if(!operations.current(ticket)||!serviceRunning||switching)return;
+        if(f==null||!f.f343a.getBoolean("auto_switch",true))postFailure(ticket,getString(R.string.state_disconnected));
+        else handler.post(()->{if(operations.current(ticket))autoSwitchOwned(ticket);});
     }
 
     /* JADX WARN: Removed duplicated region for block: B:84:0x00ce  */
@@ -892,13 +919,15 @@ public class TunnelVpnService extends VpnService {
      * minutes are skipped so a flapping server cannot capture the rotation, and after
      * four chained switches we stop and report failure rather than loop forever.
      */
-    public final void lambda$onCoreStopped$1() {
+    public final void lambda$onCoreStopped$1(){autoSwitchOwned(operations.ticket());}
+    private void autoSwitchOwned(long ticket) {
+        if(!operations.current(ticket))return;
         if (this.switching || !serviceRunning) {
             return;
         }
         if (this.chainedSwitches >= 4) {
             Log.w("ParvazVpn", "too many chained switches, giving up");
-            fail(getString(R.string.no_alternative));
+            failOwned(ticket,getString(R.string.no_alternative));
             return;
         }
         LogBuffer.listener("health check failed, looking for a better server");
@@ -939,13 +968,13 @@ public class TunnelVpnService extends VpnService {
         }
 
         if (candidates.isEmpty()) {
-            fail(getString(R.string.no_alternative));
+            failOwned(ticket,getString(R.string.no_alternative));
             return;
         }
 
         final long ownerSession=CoreManager.b().sessionId();
         final int previousState=currentState;
-        final java.util.function.BooleanSupplier owns=()->serviceRunning&&this.profile==current&&CoreManager.b().sessionId()==ownerSession;
+        final java.util.function.BooleanSupplier owns=()->operations.current(ticket)&&serviceRunning&&this.profile==current&&CoreManager.b().sessionId()==ownerSession;
         this.switching = true;
         this.chainedSwitches++;
         h(getString(R.string.state_switching), 5);
@@ -969,7 +998,7 @@ public class TunnelVpnService extends VpnService {
                         }
                         if (winner == null) {
                             TunnelVpnService.this.switching = false;
-                            TunnelVpnService.this.fail(TunnelVpnService.this.getString(R.string.no_alternative));
+                            failOwned(ticket,getString(R.string.no_alternative));
                             return;
                         }
 
@@ -1002,7 +1031,8 @@ public class TunnelVpnService extends VpnService {
     }
 
     /* renamed from: i */
-    public final void shutdown(boolean z, boolean z2) {
+    public final void shutdown(boolean z,boolean z2){operations.stop(()->shutdownInternal(z,z2));}
+    private void shutdownInternal(boolean z, boolean z2) {
         HotspotProxyManager.stop();
         stopStatsTicker();
         stopHealthTicker();
@@ -1158,6 +1188,7 @@ public class TunnelVpnService extends VpnService {
             android.util.Log.w("Parvaz/TunnelVpnService", "Exception ignored", unused3);
         }
         shutdown(false, false);
+        operations.close();
         super.onDestroy();
     }
 
@@ -1168,7 +1199,7 @@ public class TunnelVpnService extends VpnService {
     }
 
     public final void switchNextServer() {
-        if (this.switching) return;
+        if (this.switching||!serviceRunning) return;
         ArrayList<Profile> all = ProfileStore.f(this).activeProfiles();
         if (all.size() < 2) return;
         String curId = this.profile != null ? this.profile.id : "";
@@ -1219,6 +1250,8 @@ public class TunnelVpnService extends VpnService {
             return START_STICKY;
         }
 
+        if(!"com.parvaz.tunnel.RESTART".equals(action)&&operations.current(operations.ticket()))return START_STICKY;
+
         // Android requires startForeground() within ~5 s of the service starting,
         // so post the placeholder notification before doing any work.
         Notification n = buildNotification(getString(R.string.state_connecting), "");
@@ -1229,11 +1262,7 @@ public class TunnelVpnService extends VpnService {
             startForeground(NOTIFY_ID, n);
         }
 
-        if (serviceRunning && "com.parvaz.tunnel.RESTART".equals(action)) {
-            shutdown(false, false);
-        }
-
-        new Thread(new g()).start();
+        operations.start("com.parvaz.tunnel.RESTART".equals(action),ticket->new g().runOwned(ticket));
         return START_STICKY;
     }
 }
