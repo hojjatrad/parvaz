@@ -20,12 +20,17 @@ public class NetworkMonitorRegressionTest {
   context=ApplicationProvider.getApplicationContext();manager=(ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE);shadow=Shadows.shadowOf(manager);
   shadow.setActiveNetworkInfo(ShadowNetworkInfo.newInstance(NetworkInfo.DetailedState.CONNECTED,ConnectivityManager.TYPE_WIFI,0,true,true));
   wifi=manager.getActiveNetwork();cell=ShadowNetwork.newInstance(100);
-  wifiCaps=new NetworkCapabilities().addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET).addTransportType(NetworkCapabilities.TRANSPORT_WIFI);
-  cellCaps=new NetworkCapabilities().addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET).addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR);
+  wifiCaps=capabilities(NetworkCapabilities.TRANSPORT_WIFI);
+  cellCaps=capabilities(NetworkCapabilities.TRANSPORT_CELLULAR);
   shadow.setNetworkCapabilities(wifi,wifiCaps);shadow.setNetworkCapabilities(cell,cellCaps);
   monitor=new NetworkMonitor(context,null);monitor.start();assertNotNull(monitor.d);
   monitor.d.onAvailable(wifi);monitor.d.onCapabilitiesChanged(wifi,wifiCaps);
   assertEquals(wifi.getNetworkHandle(),monitor.g);assertFalse(monitor.f6248c.hasCallbacks(monitor.j));
+ }
+ static NetworkCapabilities capabilities(int transport){
+  NetworkCapabilities caps=ShadowNetworkCapabilities.newInstance();
+  Shadows.shadowOf(caps).addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
+  Shadows.shadowOf(caps).addTransportType(transport);return caps;
  }
  @After public void cleanup(){monitor.stop();}
  @Test public void secondaryAvailableMustNotRestartNewTunnel(){
