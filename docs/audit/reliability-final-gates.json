@@ -1,0 +1,121 @@
+{
+  "head": "5d05c9c88f77dbb2d718003cd34d3b97d9f24182",
+  "runs": [
+    {
+      "id": 34461057682,
+      "name": "Android archive and backup security probes",
+      "head_sha": "5d05c9c88f77dbb2d718003cd34d3b97d9f24182",
+      "head_branch": "ci/platform-update-probe",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/hojjatrad/parvaz/actions/runs/34461057682"
+    },
+    {
+      "id": 34461057675,
+      "name": "Android compilation and unit tests",
+      "head_sha": "5d05c9c88f77dbb2d718003cd34d3b97d9f24182",
+      "head_branch": "release/signing-validation-v3",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/hojjatrad/parvaz/actions/runs/34461057675"
+    },
+    {
+      "id": 34461057989,
+      "name": "Android compilation and unit tests",
+      "head_sha": "5d05c9c88f77dbb2d718003cd34d3b97d9f24182",
+      "head_branch": "feat/connection-reliability",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/hojjatrad/parvaz/actions/runs/34461057989"
+    },
+    {
+      "id": 34461057779,
+      "name": "Android compilation and unit tests",
+      "head_sha": "5d05c9c88f77dbb2d718003cd34d3b97d9f24182",
+      "head_branch": "ci/platform-update-probe",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/hojjatrad/parvaz/actions/runs/34461057779"
+    },
+    {
+      "id": 34461057671,
+      "name": "Subscription regression tests",
+      "head_sha": "5d05c9c88f77dbb2d718003cd34d3b97d9f24182",
+      "head_branch": "ci/platform-update-probe",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/hojjatrad/parvaz/actions/runs/34461057671"
+    },
+    {
+      "id": 34461057975,
+      "name": "Subscription regression tests",
+      "head_sha": "5d05c9c88f77dbb2d718003cd34d3b97d9f24182",
+      "head_branch": "feat/connection-reliability",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/hojjatrad/parvaz/actions/runs/34461057975"
+    },
+    {
+      "id": 34461057728,
+      "name": "Subscription regression tests",
+      "head_sha": "5d05c9c88f77dbb2d718003cd34d3b97d9f24182",
+      "head_branch": "release/signing-validation-v3",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/hojjatrad/parvaz/actions/runs/34461057728"
+    },
+    {
+      "id": 34461057821,
+      "name": "Validate permanent signing and release APKs without publication",
+      "head_sha": "5d05c9c88f77dbb2d718003cd34d3b97d9f24182",
+      "head_branch": "release/signing-validation-v3",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/hojjatrad/parvaz/actions/runs/34461057821"
+    }
+  ],
+  "summaries": [
+    {
+      "run": 34461057682,
+      "job": "probe (29)",
+      "title": "PLATFORM_TEST_SUMMARY",
+      "message": "[{'tests': '11', 'failures': '0', 'errors': '0', 'skipped': '0'}] process_death=['coldRecoveryAfterRecordCommit=passed', 'retainedDoneCannotRollBackLaterEditsAfterColdRestart=passed', 'coldRecoveryAfterSettingsCommit=passed', 'coldRecoveryAfterDoneBeforeDelete=passed', 'coldRecoveryAfterPendingCommit=passed']"
+    },
+    {
+      "run": 34461057682,
+      "job": "probe (34)",
+      "title": "PLATFORM_TEST_SUMMARY",
+      "message": "[{'tests': '11', 'failures': '0', 'errors': '0', 'skipped': '0'}] process_death=['coldRecoveryAfterRecordCommit=passed', 'retainedDoneCannotRollBackLaterEditsAfterColdRestart=passed', 'coldRecoveryAfterSettingsCommit=passed', 'coldRecoveryAfterDoneBeforeDelete=passed', 'coldRecoveryAfterPendingCommit=passed']"
+    },
+    {
+      "run": 34461057675,
+      "job": "android-debug",
+      "title": "UNIT_TEST_TOTALS",
+      "message": "{'tests': 277, 'failures': 0, 'errors': 0, 'skipped': 0} selected={'com.parvaz.tunnel.V115RegressionTest': {'tests': 15, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.BoundedProbeRaceTest': {'tests': 6, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.DnsReconnectPolicyRegressionTest': {'tests': 10, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.HealthPolicyTest': {'tests': 7, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.NetworkMonitorRegressionTest': {'tests': 16, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.ProbeOwnershipRegressionTest': {'tests': 12, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.ResumableDownloadTest': {'tests': 11, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.SerialConnectionQueueTest': {'tests': 8, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.StartupDiagnosticsTest': {'tests': 8, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.StartupWarmupTest': {'tests': 7, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.TrafficSamplingTest': {'tests': 5, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.store.BackupPreservationTest': {'tests': 22, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.store.RestoreCrashRecoveryTest': {'tests': 12, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.store.RestoreJournalTest': {'tests': 14, 'failures': 0, 'errors': 0, 'skipped': 0}}"
+    },
+    {
+      "run": 34461057989,
+      "job": "android-debug",
+      "title": "UNIT_TEST_TOTALS",
+      "message": "{'tests': 277, 'failures': 0, 'errors': 0, 'skipped': 0} selected={'com.parvaz.tunnel.V115RegressionTest': {'tests': 15, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.BoundedProbeRaceTest': {'tests': 6, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.DnsReconnectPolicyRegressionTest': {'tests': 10, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.HealthPolicyTest': {'tests': 7, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.NetworkMonitorRegressionTest': {'tests': 16, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.ProbeOwnershipRegressionTest': {'tests': 12, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.ResumableDownloadTest': {'tests': 11, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.SerialConnectionQueueTest': {'tests': 8, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.StartupDiagnosticsTest': {'tests': 8, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.StartupWarmupTest': {'tests': 7, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.TrafficSamplingTest': {'tests': 5, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.store.BackupPreservationTest': {'tests': 22, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.store.RestoreCrashRecoveryTest': {'tests': 12, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.store.RestoreJournalTest': {'tests': 14, 'failures': 0, 'errors': 0, 'skipped': 0}}"
+    },
+    {
+      "run": 34461057779,
+      "job": "android-debug",
+      "title": "UNIT_TEST_TOTALS",
+      "message": "{'tests': 277, 'failures': 0, 'errors': 0, 'skipped': 0} selected={'com.parvaz.tunnel.V115RegressionTest': {'tests': 15, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.BoundedProbeRaceTest': {'tests': 6, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.DnsReconnectPolicyRegressionTest': {'tests': 10, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.HealthPolicyTest': {'tests': 7, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.NetworkMonitorRegressionTest': {'tests': 16, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.ProbeOwnershipRegressionTest': {'tests': 12, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.ResumableDownloadTest': {'tests': 11, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.SerialConnectionQueueTest': {'tests': 8, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.StartupDiagnosticsTest': {'tests': 8, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.StartupWarmupTest': {'tests': 7, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.TrafficSamplingTest': {'tests': 5, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.store.BackupPreservationTest': {'tests': 22, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.store.RestoreCrashRecoveryTest': {'tests': 12, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.store.RestoreJournalTest': {'tests': 14, 'failures': 0, 'errors': 0, 'skipped': 0}}"
+    },
+    {
+      "run": 34461057821,
+      "job": "validate",
+      "title": "PERMANENT_SIGNING_KEY_OK",
+      "message": "Keystore, alias, password, pinned certificate and private-key signing proof passed."
+    },
+    {
+      "run": 34461057821,
+      "job": "validate",
+      "title": "PERMANENT_SIGNING_KEY_OK",
+      "message": "Keystore, alias, password, pinned certificate and private-key signing proof passed."
+    }
+  ]
+}
