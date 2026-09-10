@@ -156,3 +156,11 @@ wrapper با `StartLoop/StopLoop` و `core.Instance` واقعی، روی **Linux
 - تست نصب/گوشی، نشت DNS/IPv6، Doze، جابه‌جایی شبکه و باتری همچنان NOT_RUN است. سرعت یا اتصال بدون‌وقفه تضمین نشده است.
 
 **APK و گواهی پایدار 1.28.2 تغییر نکرده‌اند؛ این مرحله نیز PROMOTION_BLOCKED است.** شواهد CI باید برای commit دقیق جداگانه ثبت شود.
+
+### CI مرحلهٔ سوم و گام بعدی
+
+- commit دقیق کد/تست: `84721b87421e1f1d2152785bde0607f26b0a0e4e`.
+- [آزمایشگاه](https://github.com/hojjatrad/parvaz/actions/runs/34542175039)، [ساخت و 387 آزمون واحد Android](https://github.com/hojjatrad/parvaz/actions/runs/34542175029) و [رگرسیون subscription](https://github.com/hojjatrad/parvaz/actions/runs/34542175124) موفق شدند. annotation عمومی هر شش مرحله و `PROMOTION_BLOCKED` را تأیید کرد.
+- [خلاصهٔ CI](evidence/lifetime-ci-summary.json) تطابق ورودی‌های محلی با commit و حفظ نام/حجم/digest assetهای پایدار را ثبت می‌کند. [مرز production](evidence/lifetime-production-boundary.json) main/تگ/کد و pinهای build انتشار را بدون تغییر تأیید می‌کند.
+- **پوشش failure-start را تعمیم ندهید:** تست فعلیِ failed-start پل فقط JSON نامعتبر را می‌پوشاند. در pin فعلی، شاخهٔ خطای `coreInstance.Start()` در wrapper تنها `IsRunning=false` می‌گذارد و بدون `doShutdown` برمی‌گردد؛ `core.Instance.Start` نیز هنگام خطای یک feature از حلقه برمی‌گردد. این مسیر در patch فعلی تغییر نکرده است. جمع‌کردن منابع پس از شکستِ شروع native و جلوگیری از جایگزینی پیش از خروج واقعی، گام بعدیِ مستقل و لازم برای ادعای lifecycle کامل است.
+- پس از آن، اتصال مالکیت به مرجع سراسری Android/نمونه‌های probe و VPN و تعیین قابلیت واقعی هر موتور لازم است. ساخت controller تازه نباید راه دورزدن مالکیت منابع بازنشسته باشد. تا اثبات این مرزها، هیچ مصرف‌کنندهٔ Android یا مسیر انتشار به نمونهٔ آزمایشگاهی متصل نمی‌شود.
