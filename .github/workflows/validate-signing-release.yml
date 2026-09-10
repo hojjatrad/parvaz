@@ -57,13 +57,22 @@ jobs:
           sdkmanager 'ndk;27.2.12479018'
           python3 tools/native/build.py
           python3 tools/native/source_bundle.py
-      - name: Build with the verified existing permanent key
+      - name: Build and seal unsigned APKs for the isolated-signing path
+        env:
+          PARVAZ_UNSIGNED_CANDIDATE: 'true'
+        run: |
+          ./gradlew --no-daemon --max-workers=2 :app:assembleRelease
+          python3 tools/native/verify_packaging.py
+          VERSION=$(python3 -c 'import re;print(re.search(r"versionName\s+\"([^\"]+)\"",open("app/build.gradle").read())[1])')
+          python3 tools/release/core_candidate_artifacts.py pack "$VERSION"
+          python3 tools/release/core_candidate_artifacts.py verify "$VERSION"
+      - name: Sign prebuilt APKs with the verified existing permanent key
         env:
           PARVAZ_KEYSTORE_BASE64: ${{ secrets.PARVAZ_KEYSTORE_BASE64 }}
           PARVAZ_KEYSTORE_PASSWORD: ${{ secrets.PARVAZ_KEYSTORE_PASSWORD }}
           PARVAZ_KEY_ALIAS: ${{ secrets.PARVAZ_KEY_ALIAS }}
           PARVAZ_KEY_PASSWORD: ${{ secrets.PARVAZ_KEY_PASSWORD }}
-        run: python3 tools/release/build_signed.py
+        run: python3 tools/release/sign_prebuilt.py
       - name: Verify APK signature, package, version and hashes without publishing
         run: |
           python3 tools/release/verify_apk.py

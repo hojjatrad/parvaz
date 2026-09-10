@@ -221,7 +221,7 @@ public class MainActivity extends AppCompatActivity {
 
         @Override // java.lang.Runnable
         public final void run() {
-            MainActivity.this.getApplicationContext().getSharedPreferences("parvaz_safemode", 0).edit().putInt("pending_launches", 0).putBoolean("safe_active", false).commit();
+            SafeMode.markHealthy(MainActivity.this);
         }
     }
 
@@ -2317,6 +2317,7 @@ public class MainActivity extends AppCompatActivity {
     @Override // androidx.fragment.app.FragmentActivity, androidx.activity.ComponentActivity, androidx.core.app.ComponentActivity, android.app.Activity
     public final void onCreate(Bundle bundle) {
         File latest;
+        SafeMode.beginForegroundLaunch(this);
         super.onCreate(bundle);
         try{ProfileStore.recoverBeforeUse(this);}catch(RuntimeException unavailable){
             recoveryBlocked=true;startActivity(new Intent(this,BackupRecoveryActivity.class));finish();return;

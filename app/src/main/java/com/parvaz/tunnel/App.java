@@ -54,14 +54,7 @@ public class App extends Application {
         }
         initialized=true;
         Thread.setDefaultUncaughtExceptionHandler(new CrashReporter.a(getApplicationContext(), Thread.getDefaultUncaughtExceptionHandler()));
-        boolean z = false;
-        SharedPreferences sharedPreferences = getApplicationContext().getSharedPreferences("parvaz_safemode", 0);
-        int i = sharedPreferences.getInt("pending_launches", 0) + 1;
-        if (i >= 3) {
-            z = true;
-        }
-        SafeMode.sTrippedThisRun = z;
-        sharedPreferences.edit().putInt("pending_launches", i).putBoolean("safe_active", SafeMode.sTrippedThisRun).commit();
+        SafeMode.beginProcess(this);
         try {
             Seq.setContext(getApplicationContext());
         } catch (Throwable unused) {
@@ -85,5 +78,6 @@ public class App extends Application {
         } catch (Throwable unused2) {
             android.util.Log.w("Parvaz/App", "Throwable ignored", unused2);
         }
+        SafeMode.completeProcess(this);
     }
 }

@@ -21,6 +21,12 @@ public class NativeEngineTest {
   if(!process.waitFor(8,java.util.concurrent.TimeUnit.SECONDS))process.destroyForcibly();reader.join(1500);
   android.util.Log.i("ParvazProbe","FIXTURE_DIAGNOSTICS "+output.toString("UTF-8"));
  }
+ private void awaitCapacity(java.util.concurrent.Semaphore capacity,int expected)throws Exception {
+  long deadline=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(5);
+  while(capacity.availablePermits()!=expected&&System.nanoTime()<deadline)Thread.sleep(20);
+  assertEquals("Capacity must reflect completed child exit/cleanup",expected,capacity.availablePermits());
+ }
+ @org.junit.After public void awaitNativeCleanupBetweenTests()throws Exception {awaitCapacity((java.util.concurrent.Semaphore)coreField(null,"CAPACITY"),3);}
  @Test public void singboxStartsAuthenticatesAndStops()throws Exception {assertRuntime("full-singbox");}
  @Test public void mihomoStartsAuthenticatesAndStops()throws Exception {assertRuntime("full-clash");}
  private java.net.Socket authenticated(ExternalCore core)throws Exception {
@@ -222,9 +228,9 @@ public class NativeEngineTest {
    assertEquals("Queued cancellation left private files",baseline,sessionDirectories(context));
    release.countDown();blocker.get(5,java.util.concurrent.TimeUnit.SECONDS);
    launcher.submit(()->{}).get(5,java.util.concurrent.TimeUnit.SECONDS); // Drain the cancelled session's pending launch.
-   assertEquals(3,capacity.availablePermits());assertEquals(baseline,sessionDirectories(context));
+   awaitCapacity(capacity,3);assertEquals(3,capacity.availablePermits());assertEquals(baseline,sessionDirectories(context));
    try(ExternalCore next=ExternalCore.start(context,directProfile("full-singbox"),null)){exchangeTcp(next);}
-   assertEquals(3,capacity.availablePermits());assertEquals(baseline,sessionDirectories(context));
+   awaitCapacity(capacity,3);assertEquals(3,capacity.availablePermits());assertEquals(baseline,sessionDirectories(context));
    android.util.Log.i("ParvazProbe","QUEUED_LAUNCH_CANCEL_CLEAN_OK SDK="+android.os.Build.VERSION.SDK_INT);
   }finally{
    caller.interrupt();release.countDown();caller.join(35000);
@@ -249,7 +255,7 @@ public class NativeEngineTest {
    assertTrue("Expected interrupted capacity wait",error.get() instanceof InterruptedException);assertNull(result.get());
    assertEquals("Unacquired slot was incorrectly released",0,capacity.availablePermits());
    for(ExternalCore core:active){assertTrue(core.isRunning());exchangeTcp(core);}
-   active.get(0).close();active.get(0).close();assertEquals("Double close over-released capacity",1,capacity.availablePermits());
+   Process stopped=(Process)coreField(active.get(0),"process");active.get(0).close();active.get(0).close();assertTrue(stopped.waitFor(5,java.util.concurrent.TimeUnit.SECONDS));awaitCapacity(capacity,1);assertEquals("Double close over-released capacity",1,capacity.availablePermits());
    try(ExternalCore replacement=ExternalCore.start(context,directProfile("full-clash"),null)){
     assertEquals(0,capacity.availablePermits());exchangeTcp(replacement);
    }
@@ -257,7 +263,7 @@ public class NativeEngineTest {
    waiter.interrupt();for(ExternalCore core:active)core.close();waiter.join(35000);
    ExternalCore unexpected=result.get();if(unexpected!=null)unexpected.close();
   }
-  assertEquals(3,capacity.availablePermits());assertEquals(baseline,sessionDirectories(context));
+  awaitCapacity(capacity,3);assertEquals(3,capacity.availablePermits());assertEquals(baseline,sessionDirectories(context));
   android.util.Log.i("ParvazProbe","CAPACITY_WAIT_CANCEL_NO_OVERRELEASE_OK SDK="+android.os.Build.VERSION.SDK_INT);
  }
  @Test public void repeatedStopsReapChildrenAndRemoveTrustBundles()throws Exception {
@@ -273,11 +279,11 @@ public class NativeEngineTest {
     assertTrue("Session trust bundle missing",trustPresent);exchangeTcp(core);
    }finally{core.close();core.close();}
    assertTrue("Native child was not reaped",child.waitFor(5,java.util.concurrent.TimeUnit.SECONDS));
-   assertFalse(core.isRunning());assertNull(core.password);assertFalse("Private session directory remains",directory.exists());
+   awaitCapacity(capacity,3);assertFalse(core.isRunning());assertNull(core.password);assertFalse("Private session directory remains",directory.exists());
    try(java.net.ServerSocket socket=new java.net.ServerSocket()){
     socket.setReuseAddress(true);socket.bind(new java.net.InetSocketAddress("127.0.0.1",port));
    }
-   assertEquals(3,capacity.availablePermits());assertEquals(baseline,sessionDirectories(context));
+   awaitCapacity(capacity,3);assertEquals(3,capacity.availablePermits());assertEquals(baseline,sessionDirectories(context));
   }
   android.util.Log.i("ParvazProbe","REPEATED_STOP_CHILD_TRUST_PORT_CAPACITY_CLEAN_OK cycles=4 SDK="+android.os.Build.VERSION.SDK_INT);
  }

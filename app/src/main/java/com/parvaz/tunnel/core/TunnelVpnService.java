@@ -634,7 +634,7 @@ public class TunnelVpnService extends VpnService {
                         try{
                             final boolean[] restart={false},quality={false};
                             operations.commit(ownerTicket,()->{
-                            if(!m.this.isCurrent()||profile==null||HappyEyeballs.activeCandidates(java.util.Collections.singletonList(profile),ProfileStore.f(TunnelVpnService.this).activeProfiles()).isEmpty())return;
+                            if(!m.this.isCurrent()||profile==null||!com.parvaz.tunnel.store.ProfileIdentity.fingerprint(profile).equals(manager.liveIdentity(ownerSession))||HappyEyeballs.activeCandidates(java.util.Collections.singletonList(profile),ProfileStore.f(TunnelVpnService.this).activeProfiles()).isEmpty())return;
                             long receivedNow=sessionDown;boolean received=trafficBefore&&measured==VerifiedProbe.UNKNOWN;lastHealthBytes=receivedNow;
                             int threshold=f.f343a.getInt("ping_threshold",1200);
                             HealthPolicy.Decision decision=HealthPolicy.evaluate(alive,received,measured,threshold,strikes,f.f343a.getInt("health_strikes",3));
@@ -648,7 +648,7 @@ public class TunnelVpnService extends VpnService {
                             if(alive&&measured>0&&profile!=null){
                                 manager.acceptVerifiedHealth(ownerSession,measured);
                                 ProfileStore.f(TunnelVpnService.this).i(profile.id,(int)measured);
-                                new ServerMemory(TunnelVpnService.this).recordSuccess(TunnelVpnService.this,profile.id,(int)measured);
+                                new ServerMemory(TunnelVpnService.this).recordSuccess(TunnelVpnService.this,profile,(int)measured);
                                 Intent intent=new Intent("com.parvaz.tunnel.STATE");intent.setPackage(getPackageName());
                                 intent.putExtra("state",4);intent.putExtra("ping",(int)measured);intent.putExtra("profile_id",profile.id);sendBroadcast(intent);
                             }
@@ -953,11 +953,11 @@ public class TunnelVpnService extends VpnService {
 
         // Remember that the current server just let us down.
         if (!qualityOnly&&!currentId.isEmpty()) {
-            new ServerMemory(this).recordFailure(this, currentId);
+            new ServerMemory(this).recordFailure(this, current);
         }
 
         ArrayList<Profile> all = ProfileStore.f(this).activeProfiles();
-        long now = System.currentTimeMillis();
+        long now = android.os.SystemClock.elapsedRealtime();
 
         ArrayList<Profile> candidates = new ArrayList<>();
         for (int i = 0; i < all.size(); i++) {
@@ -996,6 +996,7 @@ public class TunnelVpnService extends VpnService {
                     @Override
                     public void run() {
                         if(!owns.getAsBoolean())return;
+                        operations.commit(ticket,()->{for(Profile failed:race.failed)TunnelVpnService.this.p.put(failed.id,Long.valueOf(android.os.SystemClock.elapsedRealtime()));});
                         Profile winner = race.winner;
                         if(race.cancelled||race.deferred||(winner!=null&&HappyEyeballs.activeCandidates(java.util.Collections.singletonList(winner),ProfileStore.f(TunnelVpnService.this).activeProfiles()).isEmpty())){
                             operations.commit(ticket,()->{
@@ -1013,7 +1014,7 @@ public class TunnelVpnService extends VpnService {
                         }
 
                         operations.commit(ticket,()->{
-                            TunnelVpnService.this.p.put(winner.id,Long.valueOf(System.currentTimeMillis()));
+                            TunnelVpnService.this.p.put(winner.id,Long.valueOf(android.os.SystemClock.elapsedRealtime()));
                             ProfileStore.f(TunnelVpnService.this).i(winner.id,race.delayMs);
                             LogBuffer.listener("Switching to a repeatedly verified active-source candidate");
                             new l(winner,TunnelVpnService.this.getString(R.string.state_switching)).run();

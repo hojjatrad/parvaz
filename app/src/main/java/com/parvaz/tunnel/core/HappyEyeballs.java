@@ -15,6 +15,7 @@ public final class HappyEyeballs {
  public static final class Result {
   public Profile winner;public int delayMs=-1,probed;public long elapsedMs;
   public boolean cancelled,deferred;
+  public final List<Profile> failed=new ArrayList<>();
  }
  public static Result race(Context context,List<Profile> profiles){return race(context,profiles,DEFAULT_PARALLEL);}
  public static Result race(Context context,List<Profile> profiles,int parallel){return race(context,profiles,parallel,()->true);}
@@ -44,8 +45,9 @@ public final class HappyEyeballs {
   // Never mark untested, timed-out or cancelled losers as actual failures.
   if(network.equals(NetContext.key(app))&&owns.getAsBoolean()){
    ServerMemory memory=new ServerMemory(app);
-   if(result.winner!=null)memory.recordSuccess(app,result.winner.id,result.delayMs);
-   for(Profile failed:activeCandidates(measured.failed,active))memory.recordFailure(app,failed.id);
+   if(result.winner!=null)memory.recordSuccess(app,result.winner,result.delayMs);
+   result.failed.addAll(activeCandidates(measured.failed,active));
+   for(Profile failed:result.failed)memory.recordFailure(app,failed);
   }
   LogBuffer.listener(result.winner!=null?"Candidate proxy response confirmed; active tunnel readiness remains separate":"Candidate proxy response not confirmed");
   return result;

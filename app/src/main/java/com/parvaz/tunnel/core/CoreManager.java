@@ -28,6 +28,8 @@ public final class CoreManager {
     private volatile long generation;
     private volatile int verifiedPort;
     private int activeTunFd;
+    private volatile String liveIdentity="";
+    String liveIdentity(long owner){return owner==generation?liveIdentity:"";}
     synchronized void startIsolatedProbe(CoreController probe,String config)throws Exception {
         // The wrapper writes a process-global TUN fd even for TUN-less probes.
         // Preserve the active value and serialize with real core startup.
@@ -151,6 +153,8 @@ public final class CoreManager {
         final StartupDiagnostics.Attempt trace=StartupDiagnostics.begin(System.nanoTime(),tunSetupMs);
         stop();diagnostics=trace;trace.cleanupDone();
         final long ownerGeneration = generation;
+        profile=com.parvaz.tunnel.store.ProfileIdentity.copy(profile);
+        liveIdentity=com.parvaz.tunnel.store.ProfileIdentity.fingerprint(profile);
         try{
             Prefs prefs=new Prefs(context);String chainId=prefs.f343a.getString("chain_profile","");
             Profile chain=chainId==null||chainId.isEmpty()||chainId.equals(profile.id)?null:ProfileStore.f(context).getById(chainId);
@@ -188,7 +192,7 @@ public final class CoreManager {
     /* renamed from: d */
     public final synchronized void stop() {
         StartupDiagnostics.Attempt trace=diagnostics;if(trace!=null)trace.stop();
-        startupWarmup.cancel();verifiedPort=0;
+        startupWarmup.cancel();verifiedPort=0;liveIdentity="";
         ++generation; // Invalidate callbacks before closing either core, including intentional restarts.
         HotspotProxyManager.stop();
         this.running = false;

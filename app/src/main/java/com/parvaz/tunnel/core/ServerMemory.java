@@ -131,7 +131,10 @@ public final class ServerMemory {
     // ----------------------------------------------------------------- recording
 
     /** Records a successful connection and its latency (ms, or -1 if unknown). */
-    public void recordSuccess(Context context, String profileId, int latencyMs) {synchronized(WRITE_LOCK){recordSuccessLocked(context,profileId,latencyMs);}}
+    public void recordSuccess(Context context,Profile observed,int latencyMs){
+        if(observed==null)return;ProfileStore store=ProfileStore.f(context);
+        synchronized(store){Profile current=store.getActiveById(observed.id);if(current!=null&&ProfileIdentity.fingerprint(current).equals(ProfileIdentity.fingerprint(observed)))synchronized(WRITE_LOCK){recordSuccessLocked(context,observed.id,latencyMs);}}
+    }
     private void recordSuccessLocked(Context context, String profileId, int latencyMs) {
         if (profileId == null || profileId.isEmpty()) {
             return;
@@ -158,7 +161,10 @@ public final class ServerMemory {
     }
 
     /** Records a failed or unusable connection. */
-    public void recordFailure(Context context, String profileId) {synchronized(WRITE_LOCK){recordFailureLocked(context,profileId);}}
+    public void recordFailure(Context context,Profile observed){
+        if(observed==null)return;ProfileStore store=ProfileStore.f(context);
+        synchronized(store){Profile current=store.getActiveById(observed.id);if(current!=null&&ProfileIdentity.fingerprint(current).equals(ProfileIdentity.fingerprint(observed)))synchronized(WRITE_LOCK){recordFailureLocked(context,observed.id);}}
+    }
     private void recordFailureLocked(Context context, String profileId) {
         if (profileId == null || profileId.isEmpty()) {
             return;

@@ -83,7 +83,7 @@ public final class ExternalCore implements AutoCloseable {
   if(closed.getAndSet(true))return;
   ChildProcessReaper.close(process,this::releaseResources);
  }
- private synchronized void releaseResources(){erase(directory);if(permit){permit=false;CAPACITY.release();}password=null;}
+ private synchronized void releaseResources(){erase(directory);password=null;if(permit){permit=false;CAPACITY.release();}}
  private static void erase(File directory){if(directory==null)return;File[] files=directory.listFiles();if(files!=null)for(File file:files){try{if(file.getCanonicalFile().getParentFile().equals(directory.getCanonicalFile())){if(file.isDirectory())erase(file);else file.delete();}}catch(IOException ignored){}}directory.delete();}
  public static void cleanOrphans(Context context){File[] files=context.getNoBackupFilesDir().listFiles();if(files!=null)for(File file:files)if(file.isDirectory()&&file.getName().startsWith("engine-session-"))erase(file);}
 }

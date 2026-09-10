@@ -8,6 +8,8 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import zipfile
+import struct
 
 ROOT = Path(__file__).resolve().parents[2]
 config = (ROOT / 'app/build.gradle').read_text()
@@ -39,6 +41,17 @@ for original, destination in expected.items():
     match = re.search(r"package: name='([^']+)' versionCode='([^']+)' versionName='([^']+)'", badging)
     if not match or match.groups() != (pin['application_id'], code, version):
         raise SystemExit(f'Package/version mismatch: {original}. Publishing refused.')
+    abis=['arm64-v8a'] if destination.endswith('-arm64.apk') else ['arm64-v8a','armeabi-v7a']
+    with zipfile.ZipFile(apk) as package:
+        found=sorted({name.split('/')[1] for name in package.namelist() if name.startswith('lib/') and name.endswith('.so')})
+        if found!=abis:raise SystemExit('APK ABI set mismatch')
+        for abi in abis:
+            for library in ['libgojni.so','libsingbox.so','libmihomo.so']:
+                name='lib/'+abi+'/'+library
+                info=package.getinfo(name)
+                if info.file_size<1024*1024:raise SystemExit('Native library unexpectedly small: '+name)
+                with package.open(name) as entry:header=entry.read(20)
+                if header[:4]!=b'\x7fELF' or struct.unpack_from('<H',header,18)[0]!={'arm64-v8a':183,'armeabi-v7a':40}[abi]:raise SystemExit('Wrong native ELF architecture: '+name)
     output = artifacts / destination
     shutil.copyfile(apk, output)
     verified.append(output)
