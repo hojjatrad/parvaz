@@ -1116,14 +1116,14 @@ public class TunnelVpnService extends VpnService {
 
     private final java.util.concurrent.atomic.AtomicBoolean handoverBusy=new java.util.concurrent.atomic.AtomicBoolean();
     private long handoverRevision;
-    private Runnable pendingHandover;
-    private boolean pendingDnsReset;
+    private final HandoverPending pendingHandover=new HandoverPending();
     void verifyHandover(Runnable reconnect){verifyHandover(reconnect,false);}
     void verifyHandover(Runnable reconnect,boolean resetDns){
+        if(!serviceRunning||switching)return;
         final long revision=++handoverRevision,ticket=operations.ticket(),session=CoreManager.b().sessionId();
         bindUnderlyingNetwork();
-        if(!handoverBusy.compareAndSet(false,true)){pendingHandover=reconnect;pendingDnsReset|=resetDns;return;}
-        pendingHandover=null;pendingDnsReset=false;
+        if(!handoverBusy.compareAndSet(false,true)){pendingHandover.offer(ticket,session,resetDns,reconnect);return;}
+        pendingHandover.clear();
         if(resetDns||CoreManager.b().verifiedPort(session)<=0){
             handoverBusy.set(false);CoreManager.b().markUnconfirmed(session);
             if(resetDns)LogBuffer.listener("Resolver policy changed; rebuilding core without importing old DNS cache");
@@ -1138,8 +1138,9 @@ public class TunnelVpnService extends VpnService {
             final long measured=delay;
             handler.post(()->{
                 handoverBusy.set(false);
-                if(!operations.current(ticket)||!serviceRunning||switching||CoreManager.b().sessionId()!=session){pendingHandover=null;pendingDnsReset=false;return;}
-                if(pendingHandover!=null){Runnable next=pendingHandover;boolean dns=pendingDnsReset;pendingHandover=null;pendingDnsReset=false;verifyHandover(next,dns);return;}
+                HandoverPending.Work next=pendingHandover.take();
+                if(next!=null&&next.owns(operations.ticket(),CoreManager.b().sessionId())&&serviceRunning&&!switching){verifyHandover(next.reconnect,next.resetDns);return;}
+                if(!operations.current(ticket)||!serviceRunning||switching||CoreManager.b().sessionId()!=session)return;
                 if(revision!=handoverRevision||!NetworkEpoch.owns(network))return;
                 if(measured>0){strikes=0;CoreManager.b().acceptVerifiedHealth(session,measured,network);LogBuffer.listener("Transport recovered; retaining live core within unchanged resolver policy");return;}
                 CoreManager.b().markUnconfirmed(session);

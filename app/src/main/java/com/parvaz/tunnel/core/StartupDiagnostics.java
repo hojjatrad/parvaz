@@ -35,7 +35,7 @@ public final class StartupDiagnostics {
   synchronized void configDone(){if(owns())configMs=elapsed();}
   synchronized void coreStarted(){if(owns())coreMs=elapsed();}
   synchronized void probeFinished(boolean ok,long duration){probeFinished(ok,duration,NetworkEpoch.current());}
-  synchronized void probeFinished(boolean ok,long duration,long observedNetwork){if(owns()){probeMs=Math.max(0,duration);if(ok&&routePinned&&NetworkEpoch.owns(observedNetwork)){responseCurrent=true;proofNetwork=observedNetwork;proofAt=elapsed();if(responseMs<0)responseMs=elapsed();}}}
+  synchronized void probeFinished(boolean ok,long duration,long observedNetwork){if(owns()){probeMs=duration<0?-1:duration;if(ok&&routePinned&&NetworkEpoch.owns(observedNetwork)){responseCurrent=true;proofNetwork=observedNetwork;proofAt=elapsed();if(responseMs<0)responseMs=elapsed();}}}
   synchronized void received(long bytes){if(owns()&&bytes>0&&rxMs<0)rxMs=elapsed();}
   synchronized void stop(){stopped=true;}
   synchronized Confirmation confirmation(){
@@ -51,6 +51,7 @@ public final class StartupDiagnostics {
    +"vpn_setup_ms="+value(tunMs)+"\nvpn_setup="+(tunMs<0?"REUSED_OR_UNMEASURED":"MEASURED")
    +"\nprevious_core_cleanup_ms="+value(cleanupMs)+"\nconfig_ready_from_core_entry_ms="+value(configMs)
    +"\nlocal_core_started_from_entry_ms="+value(coreMs)+"\nfirst_proxy_http_response_from_entry_ms="+value(responseMs)
+   +"\nproof_age_ms="+value(proofAt<0?-1:elapsed()-proofAt)+"\nproof_revalidation_due="+proofDue()
    +"\nprobe_duration_ms="+value(probeMs)+"\nfirst_proxy_rx_observed_from_entry_ms="+value(rxMs)
    +"\nconfirmation="+confirmation()+"\nsession="+(stopped?"STOPPED":"LATEST_CORE_ATTEMPT")
    +"\nselected_remote_route="+(routePinned?(proofFresh()?"PINNED_HTTPS_RESPONSE":"PINNED_AWAITING_RESPONSE"):"NOT_PROVEN")+"\ndns_ms=NOT_INSTRUMENTED\nfirst_application_response_ms=NOT_INSTRUMENTED\n";}
