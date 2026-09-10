@@ -26,6 +26,8 @@ import java.util.List;
  */
 public final class ServerMemory {
 
+    private static final Object WRITE_LOCK=new Object();
+
     private static final String PREFS = "parvaz_memory";
     private static final String KEY_DATA = "entries";
 
@@ -124,7 +126,8 @@ public final class ServerMemory {
     // ----------------------------------------------------------------- recording
 
     /** Records a successful connection and its latency (ms, or -1 if unknown). */
-    public synchronized void recordSuccess(Context context, String profileId, int latencyMs) {
+    public void recordSuccess(Context context, String profileId, int latencyMs) {synchronized(WRITE_LOCK){recordSuccessLocked(context,profileId,latencyMs);}}
+    private void recordSuccessLocked(Context context, String profileId, int latencyMs) {
         if (profileId == null || profileId.isEmpty()) {
             return;
         }
@@ -148,7 +151,8 @@ public final class ServerMemory {
     }
 
     /** Records a failed or unusable connection. */
-    public synchronized void recordFailure(Context context, String profileId) {
+    public void recordFailure(Context context, String profileId) {synchronized(WRITE_LOCK){recordFailureLocked(context,profileId);}}
+    private void recordFailureLocked(Context context, String profileId) {
         if (profileId == null || profileId.isEmpty()) {
             return;
         }
@@ -206,7 +210,8 @@ public final class ServerMemory {
     }
 
     /** Forgets everything. Exposed through Settings. */
-    public synchronized void clear() {
+    public void clear() {synchronized(WRITE_LOCK){clearLocked();}}
+    private void clearLocked() {
         prefs.edit().remove(KEY_DATA).apply();
     }
 

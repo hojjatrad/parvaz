@@ -15,6 +15,6 @@ public final class TunnelVpnService_RunnableC0008AnonymousClass3_2 implements Ru
 
     @Override // java.lang.Runnable
     public final void run() {
-        this.f6302b.outer().lambda$onCoreStopped$1();
+        if(this.f6302b.isCurrent())this.f6302b.outer().lambda$onCoreStopped$1();
     }
 }

@@ -58,7 +58,8 @@ public class TunnelVpnService extends VpnService {
 
     /* renamed from: a */
     public long dayFlushAtElapsed;
-    public m b;
+    public volatile m b;
+    private final java.util.concurrent.atomic.AtomicBoolean healthProbeBusy=new java.util.concurrent.atomic.AtomicBoolean();
     public NetworkMonitor c;
 
     /* renamed from: d */
@@ -69,7 +70,7 @@ public class TunnelVpnService extends VpnService {
     public Prefs f;
 
     /* renamed from: g */
-    public Profile profile;
+    public volatile Profile profile;
     public i h;
 
     /* renamed from: i */
@@ -98,10 +99,10 @@ public class TunnelVpnService extends VpnService {
     public long sessionUp = 0;
 
     /* renamed from: r */
-    public long sessionDown = 0;
+    public volatile long sessionDown = 0;
 
-    /** Session byte total at the previous health check, to detect real traffic flow. */
-    public long lastHealthBytes = 0;
+    /** Received proxy byte total at the previous health check (not application-specific). */
+    public volatile long lastHealthBytes = 0;
     public final d s = new d();
 
     /* JADX WARN: Can't change package for inner class: com.parvaz.tunnel.core.TunnelVpnService.a to com.parvaz.tunnel.core.TunnelVpnService$a */
@@ -567,93 +568,42 @@ public class TunnelVpnService extends VpnService {
         public final long f6240b;
 
         /* JADX WARN: Can't change package for inner class: com.parvaz.tunnel.core.TunnelVpnService.m.a to com.parvaz.tunnel.core.TunnelVpnService$m$a */
-        /* loaded from: classes.dex */
+        private final long ownerSession=CoreManager.b().sessionId();
+        private final long beganElapsed=android.os.SystemClock.elapsedRealtime();
+        boolean isCurrent(){return TunnelVpnService.this.b==this&&serviceRunning&&!switching&&CoreManager.b().sessionId()==ownerSession;}
         public class a implements Runnable {
-            public a() {
-            }
-
-            @Override // java.lang.Runnable
-            public final void run() {
-                boolean z;
-                CoreController coreController;
-                m mVar = m.this;
-                mVar.getClass();
-                if (TunnelVpnService.serviceRunning) {
-                    TunnelVpnService tunnelVpnService = TunnelVpnService.this;
-                    if (!tunnelVpnService.switching) {
-                        CoreManager b = CoreManager.b();
-                        if (b.running && (coreController = b.controller) != null && coreController.getIsRunning()) {
-                            z = true;
-                        } else {
-                            z = false;
-                        }
-                        boolean z2 = !z;
-                        long j = -1;
-                        if (!z2) {
-                            CoreManager b2 = CoreManager.b();
-                            String string = tunnelVpnService.f.f343a.getString("ping_url", "https://www.gstatic.com/generate_204");
-                            b2.getClass();
-                            try {
-                                CoreController coreController2 = b2.controller;
-                                if (coreController2 != null) {
-                                    j = coreController2.measureDelay(string);
-                                }
-                            } catch (Exception unused) {
-                                android.util.Log.w("Parvaz/TunnelVpnService", "Exception ignored", unused);
-                            }
-                        }
-                        int i = tunnelVpnService.f.f343a.getInt("ping_threshold", 1200);
-
-                        // Real traffic is a far stronger liveness signal than a probe.
-                        // The probe URL itself can be throttled or blocked while the
-                        // tunnel is perfectly healthy, and MeasureDelay has a 12 s
-                        // timeout on a 15 s interval, so a single slow probe used to be
-                        // enough to start tearing down a working connection. If bytes
-                        // moved since the last check, the tunnel is alive: clear the
-                        // strikes and skip the switch entirely.
-                        long movedNow = tunnelVpnService.sessionUp + tunnelVpnService.sessionDown;
-                        boolean trafficMoving = movedNow > tunnelVpnService.lastHealthBytes;
-                        tunnelVpnService.lastHealthBytes = movedNow;
-
-                        if (!z2 && trafficMoving && (j < 0 || j > i)) {
-                            // Core is up and data is flowing, the probe is just unhappy.
-                            tunnelVpnService.strikes = 0;
-                            return;
-                        }
-
-                        if (!z2 && j >= 0 && j <= i) {
-                            tunnelVpnService.strikes = 0;
-                            tunnelVpnService.chainedSwitches = 0;
-                            if (tunnelVpnService.profile != null) {
-                                ProfileStore.f(tunnelVpnService).i(tunnelVpnService.profile.id, (int) j);
-                                // A healthy probe is the strongest signal this server
-                                // works here and now (idea 1.1).
-                                new ServerMemory(tunnelVpnService).recordSuccess(
-                                        tunnelVpnService, tunnelVpnService.profile.id, (int) j);
-                            }
-                            Intent intent = new Intent("com.parvaz.tunnel.STATE");
-                            intent.setPackage(tunnelVpnService.getPackageName());
-                            intent.putExtra("state", 4);
-                            intent.putExtra("ping", (int) j);
-                            Profile profile = tunnelVpnService.profile;
-                            if (profile != null) {
-                                intent.putExtra("profile_id", profile.id);
-                            }
-                            tunnelVpnService.sendBroadcast(intent);
-                            return;
-                        }
-                        tunnelVpnService.strikes++;
-                        Log.w("ParvazVpn", "health strike " + tunnelVpnService.strikes + " (coreDead=" + z2 + " delay=" + j + " threshold=" + i + ")");
-                        // A dead core is unambiguous -- switch at once. A merely slow or
-                        // failing probe needs more evidence before we throw away a
-                        // connection the user may be actively using: 3 consecutive
-                        // failures with no traffic at all (~45 s).
-                        int required = z2 ? 1 : tunnelVpnService.f.f343a.getInt("health_strikes", 3);
-                        if (tunnelVpnService.strikes >= required) {
-                            tunnelVpnService.handler.post(new TunnelVpnService_RunnableC0008AnonymousClass3_2(mVar));
-                        }
+            @Override public void run(){
+                boolean handedOff=false;
+                try{
+                    if(!m.this.isCurrent())return;
+                    CoreManager manager=CoreManager.b();CoreController controller=manager.controller;
+                    final boolean alive=manager.running&&controller!=null&&controller.getIsRunning();
+                    long delay=-1;
+                    // Do not spend a probe/radio wakeup when replies already arrived.
+                    if(alive&&sessionDown<=lastHealthBytes){
+                        try{delay=controller.measureDelay(f.f343a.getString("ping_url","https://www.gstatic.com/generate_204"));}
+                        catch(Exception ignored){/* Endpoint/credential-free diagnostics. */}
                     }
-                }
+                    final long measured=delay;
+                    handedOff=handler.post(()->{
+                        try{
+                            if(!m.this.isCurrent())return;
+                            long receivedNow=sessionDown;boolean received=receivedNow>lastHealthBytes;lastHealthBytes=receivedNow;
+                            int threshold=f.f343a.getInt("ping_threshold",1200);
+                            HealthPolicy.Decision decision=HealthPolicy.evaluate(alive,received,measured,threshold,strikes,f.f343a.getInt("health_strikes",3));
+                            strikes=decision.strikes;
+                            if(strikes==0)chainedSwitches=0;
+                            if(alive&&measured>=0&&measured<=threshold&&profile!=null){
+                                ProfileStore.f(TunnelVpnService.this).i(profile.id,(int)measured);
+                                new ServerMemory(TunnelVpnService.this).recordSuccess(TunnelVpnService.this,profile.id,(int)measured);
+                                Intent intent=new Intent("com.parvaz.tunnel.STATE");intent.setPackage(getPackageName());
+                                intent.putExtra("state",4);intent.putExtra("ping",(int)measured);intent.putExtra("profile_id",profile.id);sendBroadcast(intent);
+                            }
+                            if(decision.restart)lambda$onCoreStopped$1();
+                        }finally{healthProbeBusy.set(false);}
+                    });
+                }catch(Exception ignored){/* Stopped/replaced core: leave the newer session untouched. */}
+                finally{if(!handedOff)healthProbeBusy.set(false);}
             }
         }
 
@@ -663,8 +613,8 @@ public class TunnelVpnService extends VpnService {
 
         /**
          * Health probing is the service's main background cost: every tick wakes the
-         * core and issues a real network request. While the screen is off the user
-         * cannot see a stall anyway, so we back the interval off (default 4x) instead
+         * core unless received traffic already provides liveness. While the screen is
+         * off we back the interval off (default 4x) instead
          * of hammering the radio every 15 s from the user's pocket. Traffic still
          * keeps the tunnel honest via the liveness short-circuit below, and the
          * interval snaps back the moment the screen comes on.
@@ -695,19 +645,12 @@ public class TunnelVpnService extends VpnService {
             }
         }
 
-        @Override // java.lang.Runnable
-        public final void run() {
-            if (TunnelVpnService.serviceRunning) {
-                TunnelVpnService tunnelVpnService = TunnelVpnService.this;
-                if (tunnelVpnService.switching) {
-                    return;
-                }
-                tunnelVpnService.handler.postDelayed(this, currentInterval());
-                if (System.currentTimeMillis() - tunnelVpnService.lastConnectAt < 10000) {
-                    return;
-                }
-                new Thread(new a()).start();
-            }
+        @Override public final void run(){
+            if(!isCurrent())return;
+            handler.postDelayed(this,currentInterval());
+            if(android.os.SystemClock.elapsedRealtime()-beganElapsed<10000||!healthProbeBusy.compareAndSet(false,true))return;
+            try{new Thread(new a(),"parvaz-health").start();}
+            catch(RuntimeException failure){healthProbeBusy.set(false);throw failure;}
         }
     }
 
@@ -990,6 +933,9 @@ public class TunnelVpnService extends VpnService {
             return;
         }
 
+        final long ownerSession=CoreManager.b().sessionId();
+        final int previousState=currentState;
+        final java.util.function.BooleanSupplier owns=()->serviceRunning&&this.profile==current&&CoreManager.b().sessionId()==ownerSession;
         this.switching = true;
         this.chainedSwitches++;
         h(getString(R.string.state_switching), 5);
@@ -998,11 +944,19 @@ public class TunnelVpnService extends VpnService {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                final HappyEyeballs.Result race = HappyEyeballs.race(TunnelVpnService.this, raceCandidates);
+                final HappyEyeballs.Result race = HappyEyeballs.race(TunnelVpnService.this,raceCandidates,HappyEyeballs.DEFAULT_PARALLEL,owns);
                 TunnelVpnService.this.handler.post(new Runnable() {
                     @Override
                     public void run() {
+                        if(!owns.getAsBoolean())return;
                         Profile winner = race.winner;
+                        if(race.cancelled||race.deferred||(winner!=null&&HappyEyeballs.activeCandidates(java.util.Collections.singletonList(winner),ProfileStore.f(TunnelVpnService.this).activeProfiles()).isEmpty())){
+                            TunnelVpnService.this.switching=false;
+                            TunnelVpnService.this.chainedSwitches=Math.max(0,TunnelVpnService.this.chainedSwitches-1);
+                            TunnelVpnService.this.h("",previousState);
+                            TunnelVpnService.this.startHealthTicker();
+                            return;
+                        }
                         if (winner == null) {
                             TunnelVpnService.this.switching = false;
                             TunnelVpnService.this.fail(TunnelVpnService.this.getString(R.string.no_alternative));
@@ -1012,7 +966,7 @@ public class TunnelVpnService extends VpnService {
                         TunnelVpnService.this.p.put(winner.id, Long.valueOf(System.currentTimeMillis()));
                         ProfileStore.f(TunnelVpnService.this).i(winner.id, race.delayMs);
                         LogBuffer.listener("switching to " + winner.remark);
-                        TunnelVpnService.this.handler.post(new l(winner, TunnelVpnService.this.getString(R.string.state_switching)));
+                        new l(winner,TunnelVpnService.this.getString(R.string.state_switching)).run();
                     }
                 });
             }

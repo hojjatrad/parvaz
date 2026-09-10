@@ -131,6 +131,8 @@ public final class CoreManager {
         return c;
     }
 
+    public long sessionId(){return generation;}
+
     /* renamed from: c */
     public final synchronized void start(Context context,Profile profile,int tunFd,Runnable failure) {
         stop();
