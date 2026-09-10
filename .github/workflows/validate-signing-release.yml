@@ -53,12 +53,7 @@ jobs:
       - name: Build and seal unsigned APKs for the isolated-signing path
         env:
           PARVAZ_UNSIGNED_CANDIDATE: 'true'
-        run: |
-          ./gradlew --no-daemon --max-workers=2 :app:assembleRelease
-          python3 tools/native/verify_packaging.py
-          VERSION=$(python3 -c 'import re;print(re.search(r"versionName\s+\"([^\"]+)\"",open("app/build.gradle").read())[1])')
-          python3 tools/release/core_candidate_artifacts.py pack "$VERSION"
-          python3 tools/release/core_candidate_artifacts.py verify "$VERSION"
+        run: bash tools/release/unsigned_candidate.sh
       - uses: actions/upload-artifact@v4
         with:
           name: sealed-signing-validation-candidate
