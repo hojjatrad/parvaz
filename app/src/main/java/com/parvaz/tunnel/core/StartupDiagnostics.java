@@ -26,6 +26,7 @@ public final class StartupDiagnostics {
   private long cleanupMs=-1,configMs=-1,coreMs=-1,responseMs=-1,probeMs=-1,rxMs=-1;
   private boolean stopped,routePinned,responseCurrent;
   private long proofAt=-1,proofNetwork=-1,verifiedDelayMs=-1;
+  synchronized boolean resolverCurrent(){return owns()&&resolverAtStart==NetworkEpoch.resolver();}
   synchronized long verifiedLatency(){return proofFresh()&&verifiedDelayMs>0?verifiedDelayMs:-1;}
   synchronized boolean proofFresh(){return owns()&&resolverAtStart==NetworkEpoch.resolver()&&responseCurrent&&proofAt>=0&&NetworkEpoch.owns(proofNetwork)&&proofAge()<PROOF_MAX_AGE_MS;}
   synchronized boolean proofDue(){return !proofFresh()||proofAge()>=PROOF_MAX_AGE_MS/2;}

@@ -51,4 +51,14 @@ public class LastConnectedTest {
   app.getSharedPreferences("parvaz_store",0).edit().putString("pings","{\"a\":9000}").commit();assertEquals(-1,new ProfileStore(app).getById("a").ping);
   ServerMemory.Entry old=ServerMemory.Entry.fromJson(new JSONObject("{\"p\":\"a\",\"s\":7,\"f\":2,\"l\":9000,\"j\":500,\"t\":42}"));assertEquals(7,old.successes);assertEquals(2,old.failures);assertEquals(42,old.lastSuccess);assertEquals(-1,old.avgLatency,0);assertEquals(0,old.jitter,0);
  }
+ @Test public void liveProbeRequiresSameProfileSourceIdentityAndResolver(){
+  ReflectionHelpers.setField(manager,"liveProfile",ProfileIdentity.copy(a));ReflectionHelpers.setField(manager,"liveIdentity",ProfileIdentity.fingerprint(a));
+  CoreManager.LiveProbe lease=manager.liveProbe(a);assertNotNull(lease);assertTrue(manager.ownsLiveProbe(lease));assertNull(manager.liveProbe(b));
+  Profile edited=ProfileIdentity.copy(a);edited.uuid="22222222-2222-4222-8222-222222222222";assertNull(manager.liveProbe(edited));
+  Profile other=ProfileIdentity.copy(a);other.subscriptionId="other";assertNull(manager.liveProbe(other));NetworkEpoch.resolverChanged();assertNull(manager.liveProbe(a));assertFalse(manager.ownsLiveProbe(lease));
+ }
+ @Test public void liveProbeResultsExpireOnNetworkAndSessionChange(){
+  ReflectionHelpers.setField(manager,"liveProfile",ProfileIdentity.copy(a));ReflectionHelpers.setField(manager,"liveIdentity",ProfileIdentity.fingerprint(a));
+  CoreManager.LiveProbe old=manager.liveProbe(a);NetworkEpoch.changed();assertFalse(manager.ownsLiveProbe(old));CoreManager.LiveProbe fresh=manager.liveProbe(a);assertNotNull(fresh);manager.stop();assertFalse(manager.ownsLiveProbe(fresh));
+ }
 }

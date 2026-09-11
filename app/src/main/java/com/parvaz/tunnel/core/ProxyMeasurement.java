@@ -20,6 +20,13 @@ public final class ProxyMeasurement {
   return measure(context,profile,url,true);
  }
  private static long measure(Context context,Profile profile,String url,boolean wait)throws Exception {
+  // The active profile is measured through its existing pinned listener. Do not
+  // start a competing native controller just to test the already-live route.
+  CoreManager manager=CoreManager.b();CoreManager.LiveProbe live=manager.liveProbe(profile);
+  if(live!=null){
+   long measured=wait?VerifiedProbe.measureDetailed(live.port,url,true):VerifiedProbe.measure(live.port,url,true);
+   return manager.ownsLiveProbe(live)?measured:VerifiedProbe.UNKNOWN;
+  }
   if(!CAPACITY.enter(wait))return wait?ProbeAdmission.BUSY:VerifiedProbe.UNKNOWN;
   ExternalCore external=null;CoreController controller=null;
   try{

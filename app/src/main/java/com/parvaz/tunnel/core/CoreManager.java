@@ -30,6 +30,20 @@ public final class CoreManager {
     private int activeTunFd;
     private volatile String liveIdentity="";
     String liveIdentity(long owner){return owner==generation?liveIdentity:"";}
+    static final class LiveProbe {
+        final long session,network;final int port;
+        LiveProbe(long session,long network,int port){this.session=session;this.network=network;this.port=port;}
+    }
+    synchronized LiveProbe liveProbe(Profile candidate){
+        if(!running||verifiedPort<=0||diagnostics==null||!diagnostics.resolverCurrent()||liveProfile==null||candidate==null
+            ||!candidate.id.equals(liveProfile.id)||!candidate.subscriptionId.equals(liveProfile.subscriptionId)
+            ||!com.parvaz.tunnel.store.ProfileIdentity.fingerprint(candidate).equals(liveIdentity))return null;
+        return new LiveProbe(generation,NetworkEpoch.current(),verifiedPort);
+    }
+    synchronized boolean ownsLiveProbe(LiveProbe lease){
+        return lease!=null&&running&&generation==lease.session&&verifiedPort==lease.port
+            &&NetworkEpoch.owns(lease.network)&&diagnostics!=null&&diagnostics.resolverCurrent();
+    }
     synchronized void startIsolatedProbe(CoreController probe,String config)throws Exception {
         // The wrapper writes a process-global TUN fd even for TUN-less probes.
         // Preserve the active value and serialize with real core startup.
