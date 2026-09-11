@@ -3,7 +3,7 @@ package com.parvaz.tunnel.ui;
 import android.view.View;
 import com.parvaz.tunnel.MainActivity;
 import com.parvaz.tunnel.MainActivity_3_1;
-import com.parvaz.tunnel.core.PingManager_1;
+import com.parvaz.tunnel.core.PingManager;
 import com.parvaz.tunnel.model.Profile;
 
 /* renamed from: T1.f */
@@ -24,8 +24,10 @@ public final class ServerAdapter_4 implements View.OnClickListener {
         MainActivity.C0030l c0030l = (MainActivity.C0030l) this.b.d;
         MainActivity mainActivity = this.b.d.outer();
         Profile profile = this.f363a;
-        profile.ping = -3;
+        mainActivity.K.testOne(profile,new PingManager.Listener(){
+            public void onResult(String id){if(!mainActivity.isFinishing()&&!mainActivity.isDestroyed())mainActivity.z.i(id);}
+            public void onFinished(boolean cancelled){}
+        });
         mainActivity.z.i(profile.id);
-        new Thread(new PingManager_1(mainActivity.K, profile, new MainActivity_3_1(c0030l))).start();
     }
 }

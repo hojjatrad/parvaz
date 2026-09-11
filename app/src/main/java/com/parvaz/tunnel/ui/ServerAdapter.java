@@ -166,11 +166,12 @@ public final class ServerAdapter extends RecyclerView.Adapter<ServerAdapter.b> {
             }
             pingText.setTextColor(color);
         } else if (ping == -2) {
-            pingText.setText(this.f366e.getString(R.string.timeout));
+            pingText.setText(this.f366e.getString(R.string.latency_failed));
             pingText.setTextColor(-1754827);
         } else {
-            // -3 = measuring right now, anything else = never measured
-            pingText.setText(ping == -3 ? "\u2026" : "\u2014");
+            int label=ping==-3?R.string.latency_testing:ping==-4?R.string.latency_unconfirmed:
+                ping==-5?R.string.latency_busy:ping==-6?R.string.latency_cancelled:R.string.latency_untested;
+            pingText.setText(this.f366e.getString(label));
             pingText.setTextColor(-6381922);
         }
 

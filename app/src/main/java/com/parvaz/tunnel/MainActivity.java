@@ -54,8 +54,6 @@ import com.parvaz.tunnel.config.LinkParser;
 import com.parvaz.tunnel.RulesActivity__ExternalSyntheticOutline0;
 import com.parvaz.tunnel.core.CrashReporter;
 import com.parvaz.tunnel.core.PingManager;
-import com.parvaz.tunnel.core.PingManager_3;
-import com.parvaz.tunnel.core.PingManager_4;
 import com.parvaz.tunnel.core.SafeMode;
 import com.parvaz.tunnel.core.SpeedTester;
 import com.parvaz.tunnel.core.SpeedTester_1;
@@ -1388,32 +1386,19 @@ public class MainActivity extends AppCompatActivity {
 
     /* renamed from: G */
     public final void pingAll() {
-        ArrayList e = this.b0.activeProfiles();
-        if (e.isEmpty()) {
-            this.refresh.setRefreshing(false);
-            setPingAllBusy(false);
-            return;
-        }
+        if(K.isBatchBusy())return;
+        ArrayList<Profile> profiles=b0.activeProfiles();
+        if(profiles.isEmpty()){refresh.setRefreshing(false);setPingAllBusy(false);return;}
         setPingAllBusy(true);
-        Iterator it = e.iterator();
-        while (it.hasNext()) {
-            ((Profile) it.next()).ping = -3;
-        }
-        this.z.notifyDataSetChanged();
-        PingManager pingManager = this.K;
-        K k = new K();
-        pingManager.f6273d = false;
-        pingManager.f6271b = Executors.newFixedThreadPool(4);
-        AtomicInteger atomicInteger = new AtomicInteger(e.size());
-        if (e.isEmpty()) {
-            pingManager.f6272c.post(new PingManager_3(k));
-            return;
-        }
-        Iterator it2 = e.iterator();
-        while (it2.hasNext()) {
-            pingManager.f6271b.execute(new PingManager_4(pingManager, atomicInteger, k, (Profile) it2.next()));
-        }
-        pingManager.f6271b.shutdown();
+        K.startBatch(profiles,new PingManager.Listener(){
+            public void onResult(String id){if(!isFinishing()&&!isDestroyed())z.i(id);}
+            public void onFinished(boolean cancelled){
+                if(isFinishing()||isDestroyed())return;
+                refresh.setRefreshing(false);setPingAllBusy(false);
+                Snackbar.make(connectButton,cancelled?R.string.ping_cancelled:R.string.ping_done,Snackbar.LENGTH_SHORT).show();
+            }
+        });
+        z.notifyDataSetChanged();
     }
 
     /* renamed from: H */
@@ -2030,25 +2015,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void lambda$onCreate$5(View view) {
-        PingManager pingManager = this.K;
-        ExecutorService executorService = pingManager.f6271b;
-        if (executorService == null || executorService.isTerminated() || pingManager.f6271b.isShutdown()) {
-            if (this.b0.activeProfiles().isEmpty()) {
-                Snackbar.make(view, R.string.no_servers_yet, -1).show();
-                return;
-            } else {
-                pingAll();
-                return;
-            }
-        }
-        PingManager pingManager2 = this.K;
-        pingManager2.f6273d = true;
-        ExecutorService executorService2 = pingManager2.f6271b;
-        if (executorService2 != null) {
-            executorService2.shutdownNow();
-        }
-        setPingAllBusy(false);
-        Snackbar.make(view, R.string.ping_cancelled, -1).show();
+        if(K.isBatchBusy()){K.cancelBatch();return;}
+        if(b0.activeProfiles().isEmpty()){Snackbar.make(view,R.string.no_servers_yet,Snackbar.LENGTH_SHORT).show();return;}
+        pingAll();
     }
 
     /* JADX WARN: Type inference failed for: r2v0, types: [java.lang.Object, java.util.Comparator] */
@@ -2102,7 +2071,7 @@ public class MainActivity extends AppCompatActivity {
         synchronized (store) {
             for (int i = store.f346b.size() - 1; i >= 0; i--) {
                 Profile p = (Profile) store.f346b.get(i);
-                if (p != null && p.ping == -1) {
+                if (p != null && p.ping == com.parvaz.tunnel.core.LatencyResult.FAILED) {
                     store.f346b.remove(i);
                     removed++;
                 }
@@ -2114,40 +2083,21 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void runRealBypassTest() {
-        final ArrayList<Profile> all = this.b0.activeProfiles();
-        if (all.isEmpty()) {
-            Snackbar.make(this.connectButton, R.string.no_servers_yet, -1).show();
-            return;
-        }
-        Snackbar.make(this.connectButton, R.string.bypass_test_running, -1).show();
-        setPingAllBusy(true);
-        RealBypassTester.testAll(this, all, new RealBypassTester.Callback() {
-            @Override
-            public void onServerTested(final Profile profile, boolean passed, int latencyMs) {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (MainActivity.this.z != null) {
-                            MainActivity.this.z.notifyDataSetChanged();
-                        }
-                    }
-                });
-            }
-
-            @Override
-            public void onAllComplete(final int passedCount, final int failedCount) {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        setPingAllBusy(false);
-                        MainActivity.this.reload();
-                        Snackbar.make(MainActivity.this.connectButton,
-                                getString(R.string.bypass_test_done, Integer.valueOf(passedCount), Integer.valueOf(failedCount)),
-                                0).show();
-                    }
-                });
+        if(K.isBatchBusy())return;
+        final ArrayList<Profile> all=b0.activeProfiles();
+        if(all.isEmpty()){Snackbar.make(connectButton,R.string.no_servers_yet,Snackbar.LENGTH_SHORT).show();return;}
+        Snackbar.make(connectButton,R.string.bypass_test_running,Snackbar.LENGTH_SHORT).show();setPingAllBusy(true);
+        final java.util.concurrent.atomic.AtomicInteger passed=new java.util.concurrent.atomic.AtomicInteger();
+        K.startBypassBatch(all,new PingManager.Listener(){
+            public void onResult(String id){Profile p=b0.getActiveById(id);if(p!=null&&p.ping>0)passed.incrementAndGet();if(!isFinishing()&&!isDestroyed())z.i(id);}
+            public void onFinished(boolean cancelled){
+                if(isFinishing()||isDestroyed())return;
+                refresh.setRefreshing(false);setPingAllBusy(false);
+                String text=cancelled?getString(R.string.ping_cancelled):getString(R.string.bypass_test_done,passed.get(),all.size()-passed.get());
+                Snackbar.make(connectButton,text,Snackbar.LENGTH_LONG).show();
             }
         });
+        z.notifyDataSetChanged();
     }
 
     /**
@@ -2550,4 +2500,6 @@ public class MainActivity extends AppCompatActivity {
         quotaRefreshHandler.post(quotaRefreshTick);
         quotaRefreshHandler.postDelayed(automaticUpdateCheck,10000L);
     }
+    @Override protected void onDestroy(){if(K!=null)K.close();super.onDestroy();}
+
 }

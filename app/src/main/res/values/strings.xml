@@ -391,7 +391,7 @@ Tap + to paste a config link or add a subscription."</string>
     <string name="clean_dead_nodes_done">Removed %d dead/unreachable servers</string>
     <string name="bypass_test">True Censorship Bypass Test</string>
     <string name="bypass_test_running">Testing real content access across all servers…</string>
-    <string name="bypass_test_done">Tested: %1$d verified, %2$d blocked</string>
+    <string name="bypass_test_done">Tested: %1$d verified, %2$d not verified</string>
 
     <string name="service_status_title">Purchased Service Status</string>
     <string name="service_set_manual">Set Service Plan (Volume &amp; Days)</string>
@@ -481,4 +481,10 @@ Tap + to paste a config link or add a subscription."</string>
     <string name="background_updates">Check for app and engine updates automatically</string>
     <string name="auto_download_wifi">Download updates on unmetered network while charging</string>
     <string name="auto_download_help">Checks run approximately every six hours; Android may defer them. Installation still needs your approval. Downloads use the same strict hash and signature checks.</string>
+    <string name="latency_failed">Test failed</string>
+    <string name="latency_testing">Testing…</string>
+    <string name="latency_unconfirmed">Unconfirmed</string>
+    <string name="latency_busy">Busy — retry</string>
+    <string name="latency_cancelled">Cancelled</string>
+    <string name="latency_untested">Test latency</string>
 </resources>

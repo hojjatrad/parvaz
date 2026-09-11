@@ -10,10 +10,17 @@ import java.util.concurrent.Semaphore;
 /** Isolated actual-engine HTTP probes. The selected route must be provable;
  * two successful responses are required, never just an open socket. */
 public final class ProxyMeasurement {
- private static final Semaphore CAPACITY=new Semaphore(3);
+ private static final ProbeAdmission CAPACITY=new ProbeAdmission(3);
  private ProxyMeasurement(){}
  public static long measure(Context context,Profile profile,String url)throws Exception {
-  if(!CAPACITY.tryAcquire())return VerifiedProbe.UNKNOWN;
+  return measure(context,profile,url,false);
+ }
+ /** Manual tests wait their turn rather than silently dropping queued profiles. */
+ public static long measureQueued(Context context,Profile profile,String url)throws Exception {
+  return measure(context,profile,url,true);
+ }
+ private static long measure(Context context,Profile profile,String url,boolean wait)throws Exception {
+  if(!CAPACITY.enter(wait))return wait?ProbeAdmission.BUSY:VerifiedProbe.UNKNOWN;
   ExternalCore external=null;CoreController controller=null;
   try{
    Prefs prefs=new Prefs(context);String config;boolean nativeProfile=EngineConfig.external(profile.protocol);
@@ -36,7 +43,7 @@ public final class ProxyMeasurement {
    return VerifiedProbe.measure(port,url,true);
   }finally{
    // Keep capacity until the Xray instance really returns from StopLoop.
-   try{if(controller!=null)controller.stopLoop();}finally{if(external!=null)external.close();CAPACITY.release();}
+   try{if(controller!=null)controller.stopLoop();}finally{if(external!=null)external.close();CAPACITY.exit();}
   }
  }
 }

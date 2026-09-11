@@ -34,7 +34,7 @@ public final class SubscriptionReconciler {
             String fingerprint=ProfileIdentity.fingerprint(p);
             if(!seen.add(fingerprint)){duplicates++;continue;}
             Profile existing=previous.get(fingerprint);
-            if(existing!=null){p.id=existing.id;p.ping=existing.ping;retained++;}
+            if(existing!=null){p.id=existing.id;p.ping=com.parvaz.tunnel.core.LatencyResult.restored(existing.ping);retained++;}
             else{do{p.id=UUID.randomUUID().toString();}while(usedIds.contains(p.id));p.ping=-1;added++;}
             usedIds.add(p.id);replacement.add(p);
         }

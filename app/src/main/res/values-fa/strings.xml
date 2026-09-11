@@ -372,7 +372,7 @@
     <string name="clean_dead_nodes_done">%d سرور قطع و غیرفعال حذف شد</string>
     <string name="bypass_test">تست واقعی عبور از فیلتر</string>
     <string name="bypass_test_running">در حال آزمایش واقعی باز شدن سایت‌ها از تمام سرورها…</string>
-    <string name="bypass_test_done">نتیجه: %1$d سرور سالم، %2$d سرور مسدود</string>
+    <string name="bypass_test_done">نتیجه: %1$d تأیید شده، %2$d تأیید نشده</string>
 
     <string name="service_status_title">وضعیت سرویس خریداری‌شده</string>
     <string name="service_set_manual">تنظیم مشخصات سرویس (حجم و مدت)</string>
@@ -463,4 +463,10 @@
     <string name="background_updates">بررسی خودکار بروزرسانی برنامه و هسته‌ها</string>
     <string name="auto_download_wifi">دانلود بروزرسانی با شبکهٔ بدون هزینهٔ حجمی هنگام شارژ</string>
     <string name="auto_download_help">بررسی تقریباً هر شش ساعت است و اندروید ممکن است آن را عقب بیندازد. نصب همچنان نیاز به تأیید شما دارد؛ هش و امضای فایل دانلودشده بررسی می‌شود.</string>
+    <string name="latency_failed">ناموفق</string>
+    <string name="latency_testing">در حال تست…</string>
+    <string name="latency_unconfirmed">تأیید نشد</string>
+    <string name="latency_busy">مشغول؛ تکرار</string>
+    <string name="latency_cancelled">لغو شد</string>
+    <string name="latency_untested">تست تأخیر</string>
 </resources>

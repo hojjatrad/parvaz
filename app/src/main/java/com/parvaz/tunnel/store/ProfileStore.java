@@ -119,7 +119,7 @@ public final class ProfileStore {
             } else {
                 intValue = num.intValue();
             }
-            profile.ping = intValue;
+            profile.ping = com.parvaz.tunnel.core.LatencyResult.restored(intValue);
         }
     }
 
@@ -422,10 +422,49 @@ public final class ProfileStore {
         }
     }
 
+    /** Latency-only persistence must not change the subscription/source revision. */
+    public synchronized void saveMeasurements(){
+        recoverPendingRestore();
+        try{JSONObject pings=new JSONObject();for(Object value:f346b){Profile p=(Profile)value;if(p!=null&&p.ping>0)pings.put(p.id,p.ping);}f345a.edit().putString("pings",pings.toString()).apply();}
+        catch(org.json.JSONException e){throw new IllegalStateException("Latency persistence failed");}
+    }
+
+    /** Transient latency ownership; never written to subscription/profile JSON. */
+    private final java.util.Map<String, Measurement> measurements=new java.util.HashMap<>();
+    public static final class Measurement {
+        public final Profile snapshot;
+        private final Profile original;
+        private final long revision;
+        private Measurement(Profile original,long revision){this.original=original;this.revision=revision;this.snapshot=ProfileIdentity.copy(original);}
+    }
+    public synchronized Measurement beginMeasurement(Profile profile){
+        recoverPendingRestore();
+        if(profile==null||getActiveById(profile.id)!=profile)return null;
+        Measurement m=new Measurement(profile,revision);measurements.put(profile.id,m);
+        profile.ping=com.parvaz.tunnel.core.LatencyResult.TESTING;return m;
+    }
+    public synchronized boolean ownsMeasurement(Measurement m){
+        recoverPendingRestore();
+        return m!=null&&measurements.get(m.snapshot.id)==m&&revision==m.revision
+            &&getActiveById(m.snapshot.id)==m.original
+            &&m.snapshot.subscriptionId.equals(m.original.subscriptionId)
+            &&ProfileIdentity.fingerprint(m.snapshot).equals(ProfileIdentity.fingerprint(m.original));
+    }
+    public synchronized boolean finishMeasurement(Measurement m,int result){
+        recoverPendingRestore();
+        if(m==null||measurements.get(m.snapshot.id)!=m)return false;
+        boolean valid=ownsMeasurement(m);measurements.remove(m.snapshot.id);
+        if(valid){m.original.ping=result;return true;}
+        // Retire our own pending marker only, never a newer measurement/result.
+        if(m.original.ping==com.parvaz.tunnel.core.LatencyResult.TESTING)m.original.ping=com.parvaz.tunnel.core.LatencyResult.CANCELLED;
+        return getActiveById(m.snapshot.id)==m.original;
+    }
+
     public final synchronized void i(String str, int i) {
         recoverPendingRestore();
         Profile byId = getById(str);
         if (byId != null) {
+            measurements.remove(str); // A newer live-session result supersedes a pending manual test.
             byId.ping = i;
         }
     }
