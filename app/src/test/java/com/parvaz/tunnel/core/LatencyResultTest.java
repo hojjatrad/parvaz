@@ -3,7 +3,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 import java.util.concurrent.*;
 public class LatencyResultTest {
- @Test public void unknownAndFailuresAreNotUntested(){assertEquals(LatencyResult.FAILED,LatencyResult.measured(-1));assertEquals(LatencyResult.UNCONFIRMED,LatencyResult.measured(-2));assertEquals(LatencyResult.BUSY,LatencyResult.measured(ProbeAdmission.BUSY));assertEquals(LatencyResult.FAILED,LatencyResult.measured(0));}
+ @Test public void unknownAndFailuresAreNotUntested(){assertEquals(LatencyResult.FAILED,LatencyResult.measured(-1));assertEquals(LatencyResult.UNCONFIRMED,LatencyResult.measured(-2));assertEquals(LatencyResult.BUSY,LatencyResult.measured(ProbeAdmission.BUSY));assertEquals(LatencyResult.FAILED,LatencyResult.measured(0));assertEquals(LatencyResult.UNCONFIRMED,LatencyResult.scoped(LatencyResult.FAILED,false));assertEquals(LatencyResult.UNCONFIRMED,LatencyResult.scoped(42,false));assertEquals(LatencyResult.CANCELLED,LatencyResult.scoped(LatencyResult.CANCELLED,false));}
  @Test public void onlyPositiveMeasurementsBecomeMilliseconds(){assertEquals(127,LatencyResult.measured(127));assertEquals(Integer.MAX_VALUE,LatencyResult.measured(Long.MAX_VALUE));}
  @Test public void restoredPendingMarkerIsNotAnEndlessSpinner(){assertEquals(LatencyResult.UNTESTED,LatencyResult.restored(LatencyResult.TESTING));assertEquals(151,LatencyResult.restored(151));}
  @Test public void manualFourthRequestWaitsForOwnedCapacity()throws Exception{

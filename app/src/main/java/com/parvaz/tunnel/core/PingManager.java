@@ -71,7 +71,7 @@ public final class PingManager implements AutoCloseable {
    if(!finished.compareAndSet(false,true))return;
    handler.post(()->{
     synchronized(PingManager.this){
-     int scoped=value>0&&!NetworkEpoch.owns(observedNetwork)?LatencyResult.UNCONFIRMED:value;
+     int scoped=observedNetwork<0?value:LatencyResult.scoped(value,NetworkEpoch.owns(observedNetwork));
      boolean applied=store.finishMeasurement(measurement,scoped);
      if(jobs.get(id)==this)jobs.remove(id);
      Listener callback=listener;listener=null;

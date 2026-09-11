@@ -3,6 +3,7 @@ package com.parvaz.tunnel.core;
 public final class LatencyResult {
  public static final int UNTESTED=-1,FAILED=-2,TESTING=-3,UNCONFIRMED=-4,BUSY=-5,CANCELLED=-6;
  private LatencyResult(){}
+ public static int scoped(int value,boolean currentNetwork){return currentNetwork||value==CANCELLED?value:UNCONFIRMED;}
  public static int restored(int value){return value==TESTING?UNTESTED:value;}
  public static int measured(long value){
   if(value>0)return (int)Math.min(Integer.MAX_VALUE,value);
