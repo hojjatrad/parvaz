@@ -1,0 +1,104 @@
+{
+  "version": "1.28.5",
+  "version_code": 39,
+  "tag_commit": "c3d4a4c7ee72e37dc1256e577487921501db9550",
+  "tested_executable": "25911f9af8e9ee1938406b7f8ab51ff3ced6cb7f",
+  "release_id": 387294951,
+  "stable_latest_verified": true,
+  "anonymous_api_verified": true,
+  "latest_redirect_verified": true,
+  "assets": [
+    {
+      "name": "Parvaz-1.28.5-arm64.apk",
+      "bytes": 45568570,
+      "sha256": "71d99e7ab114639e85e5e2db21494ff34fa95fd4cc91719dac4b6baf11776205",
+      "github_digest_match": true,
+      "whole_file_streamed": true,
+      "latency_dependency_license_verified": true,
+      "signature_verified": true,
+      "certificate_sha256": "d1383b8f34da5d3299b13634de421487289d82c1bb47ec3bc7f20ae8d02fe500",
+      "v1": false,
+      "v2": true,
+      "v3": false,
+      "package": "com.parvaz.tunnel",
+      "version_name": "1.28.5",
+      "version_code": 39,
+      "abis": [
+        "arm64-v8a"
+      ],
+      "native_engines_verified": [
+        "Xray",
+        "sing-box",
+        "Mihomo"
+      ]
+    },
+    {
+      "name": "Parvaz-1.28.5-source.tar.gz",
+      "bytes": 479006779,
+      "sha256": "cacfc453d204d0b82685f9aabe22d6346e79bb0ac6a46371cc520ae1fb0a090b",
+      "github_digest_match": true,
+      "whole_file_streamed": true,
+      "archive_members_checked": 24784,
+      "pinned_java_source_jars_verified": 6,
+      "app_build_source_files_match_tag": 8,
+      "source_member_sha256": {
+        "parvaz/app/build.gradle": "0e37d8f0b7667c447f37820195da82403fc78dc9c7bced14222d593f26faf46a",
+        "parvaz/app/src/main/assets/licenses/latency-http-dependencies.txt": "b548df2e38d98919aba5c0a123ebea6056e28250d3129d07098c4fe5b6b8d8c3",
+        "parvaz/app/src/main/java/com/parvaz/tunnel/core/HttpsLatency.java": "5673178ede871dcb8a6fab4ebe199eed4bf7239ae7824767cd8a79f3555ab305",
+        "parvaz/app/src/main/java/com/parvaz/tunnel/store/LastConnected.java": "f29bf8d24e99ddb82c03119efc60e713dff0c0342b8bb5d0cff2ec1c0ac1083e",
+        "parvaz/tools/native/engines-lock.json": "ade79f0ecadba876cd5e0e58be317c3b3a7c71aa91cdf8e8ad5bc3b234eb4fb4",
+        "parvaz/tools/native/source_bundle.py": "80702a42fbe0181fc5fb6957d39d7c69a4b52beb42e7d79ac508fa69cd5a1c7f",
+        "parvaz/tools/release/latency-java-lock.json": "92e87c018e789fb14e26be30dc3198975ff866f8c47a014ff6eda5126a4731ad",
+        "parvaz/tools/release/latency-java.gradle": "e734538781713c64dac4032cef4d676705e2546337671ab43a093c5198465dd4",
+        "java-latency-dependencies/kotlin-stdlib-1.9.24-sources.jar": "e749e084569407e41085f51aa917ecc1b8185730ff49eb01986062753c45cf53",
+        "java-latency-dependencies/kotlin-stdlib-common-1.9.24-sources.jar": "6408b12eca479c45121dd0ad729d35e38d9c72afddb2764fb2c3c6af879be255",
+        "java-latency-dependencies/kotlin-stdlib-jdk7-1.9.24-sources.jar": "2534c8908432e06de73177509903d405b55f423dd4c2f747e16b92a2162611e6",
+        "java-latency-dependencies/kotlin-stdlib-jdk8-1.9.24-sources.jar": "3cb6895054a0985bba591c165503fe4dd63a215af53263b67a071ccdc242bf6e",
+        "java-latency-dependencies/okhttp-4.12.0-sources.jar": "d91a769a4140e542cddbac4e67fcf279299614e8bfd53bd23b85e60c2861341c",
+        "java-latency-dependencies/okio-jvm-3.6.0-sources.jar": "870a42a7b468af8fd24d67b7b62e5861aab398c56f15a80b10642e7001564e2f"
+      },
+      "vendored_native_module_manifests": [
+        "engines/mihomo/vendor/modules.txt",
+        "engines/sing-box/vendor/modules.txt",
+        "engines/xray-wrapper/vendor/modules.txt"
+      ]
+    },
+    {
+      "name": "Parvaz-1.28.5.apk",
+      "bytes": 88847312,
+      "sha256": "2bc0c129996580f2a48263a0b2e6aafb127813d045222e64619c2a940db06ce2",
+      "github_digest_match": true,
+      "whole_file_streamed": true,
+      "latency_dependency_license_verified": true,
+      "signature_verified": true,
+      "certificate_sha256": "d1383b8f34da5d3299b13634de421487289d82c1bb47ec3bc7f20ae8d02fe500",
+      "v1": false,
+      "v2": true,
+      "v3": false,
+      "package": "com.parvaz.tunnel",
+      "version_name": "1.28.5",
+      "version_code": 39,
+      "abis": [
+        "arm64-v8a",
+        "armeabi-v7a"
+      ],
+      "native_engines_verified": [
+        "Xray",
+        "sing-box",
+        "Mihomo"
+      ]
+    },
+    {
+      "name": "SHA256SUMS.txt",
+      "bytes": 268,
+      "sha256": "5c0894feaafe8613ba57f93ab930357553d6f200769dfb302d3801cad1d91379",
+      "github_digest_match": true,
+      "whole_file_streamed": true
+    }
+  ],
+  "phone_installation": "NOT_RUN",
+  "signature_verifier": {
+    "library": "com.android.tools.build:apksig:8.5.2",
+    "jar_sha256": "c4f6fdf2148490296f422a7eb37647ea11d1c3b02f1f2349c33ce257f3c29b1f"
+  }
+}
