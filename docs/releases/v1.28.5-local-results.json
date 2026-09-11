@@ -1,0 +1,15 @@
+{
+  "tested_head": "25911f9af8e9ee1938406b7f8ab51ff3ced6cb7f",
+  "release_python_tests": 36,
+  "host_audit_exit": 0,
+  "host_suites": {
+    "parser_builder": 35,
+    "http_tls_desktop": 63,
+    "phase_b_test_substitutes": 93,
+    "smart_import": 38,
+    "format": 16,
+    "network": 6,
+    "refresh_dedup": 53
+  },
+  "hardware": "NOT_RUN"
+}

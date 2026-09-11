@@ -1,0 +1,133 @@
+[
+  {
+    "run": 34637317277,
+    "name": "Android archive and backup security probes",
+    "job": "probe (29)",
+    "conclusion": "success",
+    "annotations": [
+      {
+        "title": "ANDROID_ARCHIVE_PROBE",
+        "message": "09-11 19:12:36.013  3576  3595 I ParvazProbe: BACKUP_ANDROID_LEGACY_AND_UTF8_OK SDK=29 | 09-11 19:12:40.157  3576  3595 I ParvazProbe: ANDROID_RECORD_TAMPER_SWAP_DOWNGRADE_PRESERVED_OK SDK=29 | 09-11 19:12:39.307  3576  3595 I ParvazProbe: BACKUP_ANDROID_AUTH_METADATA_REJECTION_OK SDK=29 | 09-11 19:12:40.186  3576  3595 I ParvazProbe: SECURE_RECORDS_OK SDK=29 | 09-11 19:12:32.080  3576  3595 I ParvazProbe: BACKUP_ANDROID_V2_ROUNDTRIP_OK SDK=29 | 09-11 19:12:29.717  3576  3595 I ParvazProbe: cache parvaz-1.26.1.apk.part oldSigned=false; fixedPinned=true; com.parvaz.tunnel version=1.26.1 code=28 signed=true | 09-11 19:12:29.961  3576  3595 I ParvazProbe: cache parvaz-1.26.1.apk oldSigned=false; fixedPinned=true; com.parvaz.tunnel version=1.26.1 code=28 signed=true | 09-11 19:12:30.220  3576  3595 I ParvazProbe: cache parvaz-1.26.1.apk.part oldSigned=false; fixedPinned=true; com.parvaz.tunnel version=1.26.1 code=28 signed=true | 09-11 19:12:30.462  3576  3595 I ParvazProbe: cache parvaz-1.26.1.apk oldSigned=false; fixedPinned=true; com.parvaz.tunnel version=1.26.1 code=28 signed=true"
+      },
+      {
+        "title": "PLATFORM_TEST_SUMMARY",
+        "message": "[{'tests': '11', 'failures': '0', 'errors': '0', 'skipped': '0'}] process_death=['coldRecoveryAfterRecordCommit=passed', 'retainedDoneCannotRollBackLaterEditsAfterColdRestart=passed', 'coldRecoveryAfterSettingsCommit=passed', 'coldRecoveryAfterDoneBeforeDelete=passed', 'coldRecoveryAfterPendingCommit=passed']"
+      }
+    ]
+  },
+  {
+    "run": 34637317277,
+    "name": "Android archive and backup security probes",
+    "job": "probe (34)",
+    "conclusion": "success",
+    "annotations": [
+      {
+        "title": "ANDROID_ARCHIVE_PROBE",
+        "message": "09-11 19:12:22.143  2368  2388 I ParvazProbe: BACKUP_ANDROID_LEGACY_AND_UTF8_OK SDK=34 | 09-11 19:12:27.915  2368  2388 I ParvazProbe: ANDROID_RECORD_TAMPER_SWAP_DOWNGRADE_PRESERVED_OK SDK=34 | 09-11 19:12:27.065  2368  2388 I ParvazProbe: BACKUP_ANDROID_AUTH_METADATA_REJECTION_OK SDK=34 | 09-11 19:12:27.949  2368  2388 I ParvazProbe: SECURE_RECORDS_OK SDK=34 | 09-11 19:12:14.361  2368  2388 I ParvazProbe: BACKUP_ANDROID_V2_ROUNDTRIP_OK SDK=34 | 09-11 19:12:09.865  2368  2388 I ParvazProbe: cache parvaz-1.26.1.apk.part oldSigned=true; fixedPinned=true; com.parvaz.tunnel version=1.26.1 code=28 signed=true | 09-11 19:12:10.183  2368  2388 I ParvazProbe: cache parvaz-1.26.1.apk oldSigned=true; fixedPinned=true; com.parvaz.tunnel version=1.26.1 code=28 signed=true | 09-11 19:12:10.513  2368  2388 I ParvazProbe: cache parvaz-1.26.1.apk.part oldSigned=true; fixedPinned=true; com.parvaz.tunnel version=1.26.1 code=28 signed=true | 09-11 19:12:10.829  2368  2388 I ParvazProbe: cache parvaz-1.26.1.apk oldSigned=true; fixedPinned=true; com.parvaz.tunnel version=1.26.1 code=28 signed=true"
+      },
+      {
+        "title": "PLATFORM_TEST_SUMMARY",
+        "message": "[{'tests': '11', 'failures': '0', 'errors': '0', 'skipped': '0'}] process_death=['coldRecoveryAfterRecordCommit=passed', 'retainedDoneCannotRollBackLaterEditsAfterColdRestart=passed', 'coldRecoveryAfterSettingsCommit=passed', 'coldRecoveryAfterDoneBeforeDelete=passed', 'coldRecoveryAfterPendingCommit=passed']"
+      }
+    ]
+  },
+  {
+    "run": 34637317294,
+    "name": "Android compilation and unit tests",
+    "job": "android-debug",
+    "conclusion": "success",
+    "annotations": [
+      {
+        "title": "UNIT_TEST_TOTALS",
+        "message": "{'tests': 510, 'failures': 0, 'errors': 0, 'skipped': 0} selected={'com.parvaz.tunnel.V115RegressionTest': {'tests': 15, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.BoundedProbeRaceTest': {'tests': 9, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.DnsReconnectPolicyRegressionTest': {'tests': 10, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.HealthPolicyTest': {'tests': 8, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.HttpsLatencyTest': {'tests': 20, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.LastConnectedTest': {'tests': 42, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.LatencyResultTest': {'tests': 5, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.ManualLatencyTest': {'tests': 26, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.NetworkMonitorRegressionTest': {'tests': 36, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.ProbeOwnershipRegressionTest': {'tests': 12, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.ReadinessConfigTest': {'tests': 20, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.ReadinessMonitorTest': {'tests': 11, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.ReconnectOwnershipTest': {'tests': 6, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.ResolverIdentityTest': {'tests': 5, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.ResumableDownloadTest': {'tests': 12, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.SerialConnectionQueueTest': {'tests': 8, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.StartupDiagnosticsTest': {'tests': 13, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.StartupLatencyDisplayTest': {'tests': 30, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.StartupWarmupTest': {'tests': 12, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.TrafficSamplingTest': {'tests': 5, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.store.BackupPreservationTest': {'tests': 22, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.store.RestoreCrashRecoveryTest': {'tests': 12, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.store.RestoreJournalTest': {'tests': 14, 'failures': 0, 'errors': 0, 'skipped': 0}}"
+      },
+      {
+        "title": "FIXTURE_ISOLATION",
+        "message": "V115_STALE_STORE_NAMESPACE=true"
+      }
+    ]
+  },
+  {
+    "run": 34637317238,
+    "name": "Maintain all three engines and publish tested updates",
+    "job": "test-candidate",
+    "conclusion": "success",
+    "annotations": [
+      {
+        "title": "CORE_DISCOVERY_OK",
+        "message": "Official stable metadata checked for Xray and 2 native engines; newer native candidates=0. Check-only run never publishes."
+      }
+    ]
+  },
+  {
+    "run": 34637317238,
+    "name": "Maintain all three engines and publish tested updates",
+    "job": "sign-and-publish",
+    "conclusion": "skipped",
+    "annotations": []
+  },
+  {
+    "run": 34637317631,
+    "name": "Native engines and loopback protocol validation",
+    "job": "native",
+    "conclusion": "success",
+    "annotations": [
+      {
+        "title": "NATIVE_TEST_TOTALS",
+        "message": "native-results-29 TEST-emulator-5554 - 10-_-.xml {'tests': '18', 'failures': '0', 'errors': '0', 'skipped': '0'}"
+      },
+      {
+        "title": "NATIVE_TEST_TOTALS",
+        "message": "androidTest-results TEST-emulator-5554 - 14-_-.xml {'tests': '18', 'failures': '0', 'errors': '0', 'skipped': '0'}"
+      },
+      {
+        "title": "NATIVE_ANDROID_SDK_34",
+        "message": "ANDROID_QUIC_OK hysteria2 strict-TLS wrong-SNI-blocked TCP UDP server-down-TCP-blocked SDK=34; ANDROID_QUIC_OK tuic strict-TLS wrong-SNI-blocked TCP UDP server-down-TCP-blocked SDK=34; CALLER_THREAD_EXIT_OK full-clash SDK=34; CALLER_THREAD_EXIT_OK full-singbox SDK=34; CAPACITY_WAIT_CANCEL_NO_OVERRELEASE_OK SDK=34; CLOSED_SESSION_LATE_LAUNCH_REJECTED SDK=34; HTTPS_RTT_REAL_ENGINE_OK full-clash TLS_HOSTNAME_CHECKED NO_DIRECT_FALLBACK SDK=34; HTTPS_RTT_REAL_ENGINE_OK full-singbox TLS_HOSTNAME_CHECKED NO_DIRECT_FALLBACK SDK=34; HTTPS_RTT_REAL_ENGINE_OK xray TLS_HOSTNAME_CHECKED NO_DIRECT_FALLBACK SDK=34; NATIVE_ENGINE_OK full-clash SDK=34; NATIVE_ENGINE_OK full-singbox SDK=34; OWNER_DEATH_LISTENER_CLOSED_OK full-clash SDK=34; OWNER_DEATH_LISTENER_CLOSED_OK full-singbox SDK=34; QUEUED_LAUNCH_CANCEL_CLEAN_OK SDK=34; REPEATED_STOP_CHILD_TRUST_PORT_CAPACITY_CLEAN_OK cycles=4 SDK=34; XRAY_NATIVE_RELAY_RESTART_4_CYCLES_NO_SLEEP_OK full-clash SDK=34; XRAY_NATIVE_RELAY_RESTART_4_CYCLES_NO_SLEEP_OK full-singbox SDK=34; XRAY_SAME_PORT_RESTART_8_CYCLES_NO_SLEEP_OK SDK=34"
+      },
+      {
+        "title": "NATIVE_ANDROID_SDK_29",
+        "message": "ANDROID_QUIC_OK hysteria2 strict-TLS wrong-SNI-blocked TCP UDP server-down-TCP-blocked SDK=29; ANDROID_QUIC_OK tuic strict-TLS wrong-SNI-blocked TCP UDP server-down-TCP-blocked SDK=29; CALLER_THREAD_EXIT_OK full-clash SDK=29; CALLER_THREAD_EXIT_OK full-singbox SDK=29; CAPACITY_WAIT_CANCEL_NO_OVERRELEASE_OK SDK=29; CLOSED_SESSION_LATE_LAUNCH_REJECTED SDK=29; HTTPS_RTT_REAL_ENGINE_OK full-clash TLS_HOSTNAME_CHECKED NO_DIRECT_FALLBACK SDK=29; HTTPS_RTT_REAL_ENGINE_OK full-singbox TLS_HOSTNAME_CHECKED NO_DIRECT_FALLBACK SDK=29; HTTPS_RTT_REAL_ENGINE_OK xray TLS_HOSTNAME_CHECKED NO_DIRECT_FALLBACK SDK=29; NATIVE_ENGINE_OK full-clash SDK=29; NATIVE_ENGINE_OK full-singbox SDK=29; OWNER_DEATH_LISTENER_CLOSED_OK full-clash SDK=29; OWNER_DEATH_LISTENER_CLOSED_OK full-singbox SDK=29; QUEUED_LAUNCH_CANCEL_CLEAN_OK SDK=29; REPEATED_STOP_CHILD_TRUST_PORT_CAPACITY_CLEAN_OK cycles=4 SDK=29; XRAY_NATIVE_RELAY_RESTART_4_CYCLES_NO_SLEEP_OK full-clash SDK=29; XRAY_NATIVE_RELAY_RESTART_4_CYCLES_NO_SLEEP_OK full-singbox SDK=29; XRAY_SAME_PORT_RESTART_8_CYCLES_NO_SLEEP_OK SDK=29"
+      },
+      {
+        "title": "PROTOCOL_SMOKE_OK",
+        "message": "full-clash full routing/group + TCP + UDP + authentication + no direct fallback"
+      },
+      {
+        "title": "PROTOCOL_SMOKE_OK",
+        "message": "tuic TLS + wrong-SNI rejection + TCP + UDP + authentication + no direct fallback"
+      },
+      {
+        "title": "PROTOCOL_SMOKE_OK",
+        "message": "hysteria2 TLS + wrong-SNI rejection + TCP + UDP + authentication + no direct fallback"
+      }
+    ]
+  },
+  {
+    "run": 34637317690,
+    "name": "Validate permanent signing and release APKs without publication",
+    "job": "validate",
+    "conclusion": "success",
+    "annotations": [
+      {
+        "title": "SOURCE_BUNDLE_OK",
+        "message": "Parvaz-1.28.5-source.tar.gz bytes=479006327"
+      },
+      {
+        "title": "CORE_DISCOVERY_OK",
+        "message": "Official stable metadata checked for Xray and 2 native engines; newer native candidates=1. Check-only run never publishes."
+      }
+    ]
+  },
+  {
+    "run": 34637317690,
+    "name": "Validate permanent signing and release APKs without publication",
+    "job": "sign-prebuilt",
+    "conclusion": "success",
+    "annotations": [
+      {
+        "title": "PERMANENT_SIGNING_KEY_OK",
+        "message": "Keystore, alias, password, pinned certificate and private-key signing proof passed."
+      }
+    ]
+  }
+]
