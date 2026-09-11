@@ -27,7 +27,7 @@ public class LastConnectedTest {
  private Profile profile(String id){Profile p=new Profile();p.id=id;p.protocol="vless";p.address="fixture.invalid";p.port=443;p.uuid="11111111-1111-4111-8111-111111111111";return p;}
  private void live(Profile p){
   AtomicLong now=new AtomicLong();trace=StartupDiagnostics.begin(0,0,now::get);trace.routeConfigured(true);trace.coreStarted();
-  ReflectionHelpers.setField(manager,"diagnostics",trace);ReflectionHelpers.setField(manager,"verifiedPort",12345);ReflectionHelpers.setField(manager,"startupLatency",store.captureStartupLatency(p));ReflectionHelpers.setField(manager,"livePrefs",prefs);ReflectionHelpers.setField(manager,"rememberedDefault",false);manager.running=true;
+  ReflectionHelpers.setField(manager,"diagnostics",trace);ReflectionHelpers.setField(manager,"verifiedPort",12345);ReflectionHelpers.setField(manager,"startupLatency",store.captureStartupLatency(p));ReflectionHelpers.setField(manager,"livePrefs",prefs);ReflectionHelpers.setField(manager,"liveStore",store);ReflectionHelpers.setField(manager,"rememberedDefault",false);manager.running=true;
  }
  private void confirmed(){trace.probeFinished(true,80);manager.publishStartupLatency(store,manager.sessionId());}
  @After public void cleanup(){manager.stop();CoreManager.c=null;ProfileStore.d=null;TunnelVpnService.serviceRunning=false;}
@@ -60,5 +60,13 @@ public class LastConnectedTest {
  @Test public void liveProbeResultsExpireOnNetworkAndSessionChange(){
   ReflectionHelpers.setField(manager,"liveProfile",ProfileIdentity.copy(a));ReflectionHelpers.setField(manager,"liveIdentity",ProfileIdentity.fingerprint(a));
   CoreManager.LiveProbe old=manager.liveProbe(a);NetworkEpoch.changed();assertFalse(manager.ownsLiveProbe(old));CoreManager.LiveProbe fresh=manager.liveProbe(a);assertNotNull(fresh);manager.stop();assertFalse(manager.ownsLiveProbe(fresh));
+ }
+ @Test public void stopBeforeNextTickerStillRemembersVerifiedConnection(){trace.probeFinished(true,80);assertNull(LastConnected.resolve(store,prefs));manager.stop();assertEquals("a",LastConnected.resolve(store,prefs).id);}
+ @Test public void restoredDefaultUpdatesVisibleSelection(){
+  confirmed();prefs.edit().putString("selected_profile","b").commit();assertTrue(LastConnected.restore(app));
+  com.parvaz.tunnel.MainActivity activity=Robolectric.buildActivity(com.parvaz.tunnel.MainActivity.class).get();activity.L=new Prefs(app);activity.b0=store;
+  activity.connectButton=new android.view.View(activity);activity.statusText=new android.widget.TextView(activity);activity.serverText=new android.widget.TextView(activity);
+  activity.z=new com.parvaz.tunnel.ui.ServerAdapter(new android.view.ContextThemeWrapper(app,com.parvaz.tunnel.R.style.AppTheme),activity.new C0030l());activity.z.f368h="b";activity.state=0;
+  activity.renderState();assertEquals("a",activity.z.f368h);
  }
 }

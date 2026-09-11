@@ -18,6 +18,7 @@ public final class LastConnected {
  public static Profile resolve(ProfileStore store,SharedPreferences prefs){
   String value=prefs.getString(KEY,"");if(value.isEmpty()||value.length()>4096)return null;
   try{
+   com.parvaz.tunnel.config.LinkParser.checkJsonDepth(value);
    JSONObject record=new JSONObject(value);if(record.optInt("schema",0)!=1)return null;
    Profile p=store.getActiveById(record.getString("id"));
    return p!=null&&record.getString("source").equals(p.subscriptionId)&&record.getString("identity").equals(ProfileIdentity.fingerprint(p))?p:null;

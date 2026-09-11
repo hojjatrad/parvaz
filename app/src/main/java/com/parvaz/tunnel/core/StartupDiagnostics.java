@@ -57,7 +57,7 @@ public final class StartupDiagnostics {
    +"\nprevious_core_cleanup_ms="+value(cleanupMs)+"\nprevious_core_cleanup_scope=STOP_CALL_RETURN_NOT_CHILD_EXIT\nreconnect_fixed_delay_ms=0\nconfig_ready_from_core_entry_ms="+value(configMs)
    +"\nlocal_core_started_from_entry_ms="+value(coreMs)+"\nfirst_proxy_http_response_from_entry_ms="+value(responseMs)
    +"\nproof_clock=ELAPSED_REALTIME\nproof_age_ms="+value(proofAge())+"\nproof_revalidation_due="+proofDue()
-   +"\nprobe_duration_ms="+value(probeMs)+"\nfirst_proxy_rx_observed_from_entry_ms="+value(rxMs)
+   +"\nprobe_metric=HTTPS_REQUEST_RTT\nprobe_excludes_connect_and_tls=true\nprobe_duration_ms="+value(probeMs)+"\nfirst_proxy_rx_observed_from_entry_ms="+value(rxMs)
    +"\nconfirmation="+confirmation()+"\nsession="+(stopped?"STOPPED":"LATEST_CORE_ATTEMPT")
    +"\nselected_remote_route="+(routePinned?(proofFresh()?"PINNED_HTTPS_RESPONSE":"PINNED_AWAITING_RESPONSE"):"NOT_PROVEN")+"\ndns_ms=NOT_INSTRUMENTED\nfirst_application_response_ms=NOT_INSTRUMENTED\n";}
  }

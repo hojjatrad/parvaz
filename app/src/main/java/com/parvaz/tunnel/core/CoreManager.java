@@ -64,9 +64,13 @@ public final class CoreManager {
         if(owner!=generation||!running||verifiedPort<=0||diagnostics==null)return 0;
         final StartupDiagnostics.Attempt trace=diagnostics;
         long measured=trace.verifiedLatency();if(measured<=0)return 0;
-        if(!rememberedDefault&&livePrefs!=null)rememberedDefault=store.rememberConnected(startupLatency,livePrefs,trace::proofFresh);
+        rememberVerifiedDefault();
         int ms=(int)Math.min(Integer.MAX_VALUE,measured);
         return store.publishStartupLatency(startupLatency,ms,()->trace.verifiedLatency()==measured)?ms:0;
+    }
+    private void rememberVerifiedDefault(){
+        if(!rememberedDefault&&running&&livePrefs!=null&&liveStore!=null&&diagnostics!=null)
+            rememberedDefault=liveStore.rememberConnected(startupLatency,livePrefs,diagnostics::proofFresh);
     }
     StartupDiagnostics.Attempt startupAttempt(){return diagnostics;}
 
@@ -190,6 +194,7 @@ public final class CoreManager {
     }
     private boolean startInternal(Context context,Profile profile,int tunFd,Runnable failure,long tunSetupMs,java.util.function.BooleanSupplier current) {
         if(!current.getAsBoolean())return false;
+        rememberVerifiedDefault(); // Preserve a just-confirmed old session before replacing its diagnostics.
         final StartupDiagnostics.Attempt trace=StartupDiagnostics.begin(System.nanoTime(),tunSetupMs);
         stop();diagnostics=trace;trace.cleanupDone();
         if(!current.getAsBoolean()){trace.stop();return false;}
@@ -235,6 +240,7 @@ public final class CoreManager {
 
     /* renamed from: d */
     public final synchronized void stop() {
+        rememberVerifiedDefault(); // STOP before the next UI tick must not lose a verified default.
         StartupDiagnostics.Attempt trace=diagnostics;if(trace!=null)trace.stop();
         startupWarmup.cancel();verifiedPort=0;liveIdentity="";startupLatency=null;livePrefs=null;liveStore=null;liveProfile=null;rememberedDefault=false;
         ++generation; // Invalidate callbacks before closing either core, including intentional restarts.

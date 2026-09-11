@@ -11,6 +11,7 @@ public final class LatencyResult {
   if(value==-21)return TLS_ERROR;
   if(value==-22)return HTTP_ERROR;
   if(value==-23)return NETWORK_ERROR;
+  if(value==-24)return BUSY;
   if(value==ProbeAdmission.BUSY)return BUSY;
   if(value==-2)return UNCONFIRMED; // VerifiedProbe.UNKNOWN; not a measured failure.
   return FAILED;

@@ -12,7 +12,7 @@ import okhttp3.*;
  * Connection, proxy negotiation and TLS occur BEFORE the timing window. No TCP-only
  * success, direct fallback, redirects, permissive trust or best-of sampling. */
 public final class HttpsLatency {
- public static final long FAILED=-1,UNKNOWN=-2,TIMEOUT=-20,TLS_ERROR=-21,HTTP_ERROR=-22,NETWORK_ERROR=-23;
+ public static final long FAILED=-1,UNKNOWN=-2,TIMEOUT=-20,TLS_ERROR=-21,HTTP_ERROR=-22,NETWORK_ERROR=-23,BUSY=-24;
  private static final Semaphore SLOTS=new Semaphore(6);
  private HttpsLatency(){}
  static final class Timing extends okhttp3.EventListener {
@@ -45,7 +45,7 @@ public final class HttpsLatency {
   public long measure(String configured,int samples)throws InterruptedException {
    if(samples!=1&&samples!=3)throw new IllegalArgumentException("Expected one or three samples");
    if(closed||port<1||port>65535)return UNKNOWN;
-   if(!SLOTS.tryAcquire())return UNKNOWN;
+   if(!SLOTS.tryAcquire())return BUSY;
    try{
     HttpUrl endpoint;
     try{endpoint=HttpUrl.get(configured);if(!endpoint.isHttps()||!endpoint.username().isEmpty()||!endpoint.password().isEmpty()||endpoint.fragment()!=null)return UNKNOWN;}
