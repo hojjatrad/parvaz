@@ -155,6 +155,7 @@ public final class ServerAdapter extends RecyclerView.Adapter<ServerAdapter.b> {
 
         // ---- ping ----------------------------------------------------------
         TextView pingText = holder.f370B;
+        androidx.core.view.ViewCompat.setTooltipText(pingText,this.f366e.getString(R.string.latency_rtt_hint));
         int ping = profile.ping;
         if (ping > 0) {
             pingText.setText(ping + " ms");
@@ -172,10 +173,14 @@ public final class ServerAdapter extends RecyclerView.Adapter<ServerAdapter.b> {
             pingText.setTextColor(-1754827);
         } else {
             int label=ping==-3?R.string.latency_testing:ping==-4?R.string.latency_unconfirmed:
-                ping==-5?R.string.latency_busy:ping==-6?R.string.latency_cancelled:R.string.latency_untested;
+                ping==-5?R.string.latency_busy:ping==-6?R.string.latency_cancelled:
+                ping==-7?R.string.latency_timeout:ping==-8?R.string.latency_tls_error:
+                ping==-9?R.string.latency_http_error:ping==-10?R.string.latency_network_error:R.string.latency_untested;
             pingText.setText(this.f366e.getString(label));
             pingText.setTextColor(-6381922);
         }
+
+        pingText.setContentDescription(pingText.getText()+". "+this.f366e.getString(R.string.latency_rtt_hint));
 
         // ---- favourite star --------------------------------------------------
         boolean favorite = this.visibleFavorites.contains(profile.id);

@@ -115,7 +115,7 @@ public class PanelRefreshTest {
         int before=setup.disk.writes;
         ProfileStore.Snapshot snapshot=setup.store.beginRefresh("a");
         setup.store.replaceSubscription(snapshot,accepted(renamed),"upload=2; download=20; total=2000",12345,old.id);
-        check("Store refresh performs exactly ONE edit",setup.disk.writes==before+1&&setup.disk.lastKeys.equals(new HashSet<>(Arrays.asList("profiles","subs","pings"))));
+        check("Store refresh performs exactly ONE edit",setup.disk.writes==before+1&&setup.disk.lastKeys.equals(new HashSet<>(Arrays.asList("profiles","subs","pings_https_rtt_v1"))));
         check("Store retains selected/favorite IDs without preference rewrite",setup.prefs.getString("selected_profile","").equals(old.id)&&setup.prefs.getString("favorites","").equals(old.id)&&setup.store.getById(old.id)!=null);
         Subscription updated=(Subscription)setup.store.f().get(0);
         check("Quota/time/count updated in same snapshot",updated.quotaDownload==20&&updated.quotaTotal==2000&&updated.lastUpdate==12345&&updated.count==1);

@@ -6,9 +6,9 @@ import com.parvaz.tunnel.store.*;
 import libv2ray.*;
 import org.json.*;
 import java.net.*;
-import java.util.concurrent.Semaphore;
+
 /** Isolated actual-engine HTTP probes. The selected route must be provable;
- * two successful responses are required, never just an open socket. */
+ * multiple successful responses are required, never just an open socket. */
 public final class ProxyMeasurement {
  private static final ProbeAdmission CAPACITY=new ProbeAdmission(3);
  private ProxyMeasurement(){}
@@ -40,7 +40,7 @@ public final class ProxyMeasurement {
    controller=Libv2ray.newCoreController(new CoreCallbackHandler(){public long startup(){return 0;}public long shutdown(){return 0;}public long onEmitStatus(long code,String message){return 0;}});
    CoreManager.b().startIsolatedProbe(controller,plan.config);
    if(!controller.getIsRunning()||(external!=null&&!external.isRunning()))return wait?VerifiedProbe.UNKNOWN:-1;
-   return VerifiedProbe.measure(port,url,true);
+   return wait?VerifiedProbe.measureDetailed(port,url,true):VerifiedProbe.measure(port,url,true);
   }finally{
    // Keep capacity until the Xray instance really returns from StopLoop.
    try{if(controller!=null)controller.stopLoop();}finally{if(external!=null)external.close();CAPACITY.exit();}

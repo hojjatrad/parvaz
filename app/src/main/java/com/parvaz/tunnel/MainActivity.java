@@ -1714,6 +1714,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if (this.z != null) {
+            this.z.f368h=this.L.f343a.getString("selected_profile","");
             this.z.notifyDataSetChanged();
         }
         renderQuota();
@@ -2277,6 +2278,7 @@ public class MainActivity extends AppCompatActivity {
         this.L = new Prefs(this);
         this.b0 = ProfileStore.f(this);
         this.b0.ensureActiveSubscription(this.L.f343a);
+        if(bundle==null&&!TunnelVpnService.serviceRunning&&TunnelVpnService.currentState!=1&&TunnelVpnService.currentState!=5)com.parvaz.tunnel.store.LastConnected.restore(this);
         this.K = new PingManager(this);
         this.connectButton = findViewById(R.id.connect_button);
         this.statusText = (TextView) findViewById(R.id.status_text);

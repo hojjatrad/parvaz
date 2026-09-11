@@ -111,7 +111,7 @@ public final class ServerMemory {
             json.put("c", context);json.put("identity",identity);
             json.put("s", successes);
             json.put("f", failures);
-            json.put("l", avgLatency);
+            json.put("l", avgLatency);json.put("latency_metric","https-request-rtt-v1");
             json.put("t", lastSuccess);json.put("j",jitter);
             return json;
         }
@@ -125,6 +125,7 @@ public final class ServerMemory {
             entry.avgLatency = json.optDouble("l", -1);entry.jitter=json.optDouble("j",0);
             if(!Double.isFinite(entry.avgLatency)||entry.avgLatency<=0)entry.avgLatency=-1;
             if(!Double.isFinite(entry.jitter)||entry.jitter<0)entry.jitter=0;
+            if(!"https-request-rtt-v1".equals(json.optString("latency_metric",""))){entry.avgLatency=-1;entry.jitter=0;} // Retain success/failure history, not incompatible cold timings.
             entry.lastSuccess = json.optLong("t", 0);
             return entry;
         }

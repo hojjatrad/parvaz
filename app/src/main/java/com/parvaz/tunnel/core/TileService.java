@@ -51,6 +51,7 @@ public class TileService extends android.service.quicksettings.TileService {
                 startActivityAndCollapse(intent2);
             }
         } else {
+            com.parvaz.tunnel.store.LastConnected.restore(this);
             Intent intent3 = new Intent(this, (Class<?>) TunnelVpnService.class);
             intent3.setAction("com.parvaz.tunnel.START");
             ContextCompat.startForegroundService(this, intent3);

@@ -38,16 +38,19 @@ public final class CoreManager {
     synchronized void markUnconfirmed(long owner){if(owner==generation&&diagnostics!=null)diagnostics.unconfirmed();}
     synchronized boolean healthProofDue(long owner){return owner!=generation||diagnostics==null||diagnostics.proofDue();}
     synchronized void acceptVerifiedHealth(long owner,long delay){acceptVerifiedHealth(owner,delay,NetworkEpoch.current());}
-    synchronized void acceptVerifiedHealth(long owner,long delay,long network){if(owner==generation&&running&&verifiedPort>0&&delay>0&&diagnostics!=null&&NetworkEpoch.owns(network)){diagnostics.probeFinished(true,delay,network);startupWarmup.confirmedExternally();}}
+    synchronized void acceptVerifiedHealth(long owner,long delay,long network){if(owner==generation&&running&&verifiedPort>0&&delay>0&&diagnostics!=null&&NetworkEpoch.owns(network)){diagnostics.probeFinished(true,delay,network);startupWarmup.confirmedExternally();if(!rememberedDefault&&liveStore!=null&&liveProfile!=null)startupLatency=liveStore.captureStartupLatency(liveProfile);}}
     int verifiedPort(long owner){return owner==generation&&running?verifiedPort:0;}
     private volatile StartupDiagnostics.Attempt diagnostics;
     private ProfileStore.StartupLatency startupLatency;
+    private android.content.SharedPreferences livePrefs;
+    private ProfileStore liveStore;private Profile liveProfile;private boolean rememberedDefault;
     /** Called by the existing stats ticker, never from a monitor-held callback.
      * No extra network request, native controller, timer or callback lock inversion. */
     synchronized int publishStartupLatency(ProfileStore store,long owner){
         if(owner!=generation||!running||verifiedPort<=0||diagnostics==null)return 0;
         final StartupDiagnostics.Attempt trace=diagnostics;
         long measured=trace.verifiedLatency();if(measured<=0)return 0;
+        if(!rememberedDefault&&livePrefs!=null)rememberedDefault=store.rememberConnected(startupLatency,livePrefs,trace::proofFresh);
         int ms=(int)Math.min(Integer.MAX_VALUE,measured);
         return store.publishStartupLatency(startupLatency,ms,()->trace.verifiedLatency()==measured)?ms:0;
     }
@@ -179,9 +182,9 @@ public final class CoreManager {
         final long ownerGeneration = generation;
         profile=com.parvaz.tunnel.store.ProfileIdentity.copy(profile);
         liveIdentity=com.parvaz.tunnel.store.ProfileIdentity.fingerprint(profile);
-        startupLatency=ProfileStore.f(context).captureStartupLatency(profile);
+        liveStore=ProfileStore.f(context);liveProfile=profile;startupLatency=liveStore.captureStartupLatency(profile);
         try{
-            Prefs prefs=new Prefs(context);String chainId=prefs.f343a.getString("chain_profile","");
+            Prefs prefs=new Prefs(context);livePrefs=prefs.f343a;String chainId=prefs.f343a.getString("chain_profile","");
             Profile chain=chainId==null||chainId.isEmpty()||chainId.equals(profile.id)?null:ProfileStore.f(context).getById(chainId);
             boolean nativeProfile=com.parvaz.tunnel.config.EngineConfig.external(profile.protocol);
             if(chain!=null&&(nativeProfile||com.parvaz.tunnel.config.FullConfig.isFull(profile.protocol)||com.parvaz.tunnel.config.EngineConfig.external(chain.protocol)))
@@ -219,7 +222,7 @@ public final class CoreManager {
     /* renamed from: d */
     public final synchronized void stop() {
         StartupDiagnostics.Attempt trace=diagnostics;if(trace!=null)trace.stop();
-        startupWarmup.cancel();verifiedPort=0;liveIdentity="";startupLatency=null;
+        startupWarmup.cancel();verifiedPort=0;liveIdentity="";startupLatency=null;livePrefs=null;liveStore=null;liveProfile=null;rememberedDefault=false;
         ++generation; // Invalidate callbacks before closing either core, including intentional restarts.
         HotspotProxyManager.stop();
         this.running = false;

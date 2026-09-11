@@ -61,6 +61,9 @@ public final class BackupManager {
             for(int i=0;i<list.length();i++){String value=list.getString(i);if(value.contains("\n")||value.length()>1024)throw new IllegalArgumentException("Invalid setting list");values.add(value);}
             edit.putString(key,String.join("\n",values));
         }
+        String last=settings.optString(LastConnected.KEY,"");
+        if(last.length()>4096)throw new IllegalArgumentException("Invalid last connection record");
+        edit.putString(LastConnected.KEY,last); // Clear a local marker when restoring a legacy backup.
         // Import never turns on automatic VPN connection or LAN sharing unexpectedly.
         edit.putBoolean("connect_on_boot",false).putBoolean("lan_proxy",false);
         String selected=settings.optString("selected_profile","");if(!ids.contains(selected))edit.putString("selected_profile",profiles.isEmpty()?"":profiles.get(0).id);
@@ -164,6 +167,7 @@ public final class BackupManager {
         JSONObject jSONObject2 = new JSONObject();
         SharedPreferences sharedPreferences = prefs.f343a;
         jSONObject2.put("selected_profile",sharedPreferences.getString("selected_profile",""));
+        jSONObject2.put(LastConnected.KEY,sharedPreferences.getString(LastConnected.KEY,""));
         jSONObject2.put("routing_mode", sharedPreferences.getString("routing_mode", "iran_direct"));
         jSONObject2.put("remote_dns", sharedPreferences.getString("remote_dns", "https://1.1.1.1/dns-query,https://dns.google/dns-query"));
         jSONObject2.put("direct_dns", sharedPreferences.getString("direct_dns", "78.157.42.100"));

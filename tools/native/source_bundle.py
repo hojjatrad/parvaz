@@ -1,12 +1,19 @@
 #!/usr/bin/env python3
 """Corresponding-source bundle: tracked app/build scripts, modified engine trees, vendored modules.
 No workspace credentials, signing keys, caches outside the two explicit source trees, or APKs."""
-import io,json,subprocess,tarfile,re
+import io,json,subprocess,tarfile,re,hashlib,urllib.request
 from vendor_xray import vendor
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[2];version=re.search(r'versionName\s+"([^"]+)"',(ROOT/'app/build.gradle').read_text())[1]
 output=ROOT/'release-artifacts'/('Parvaz-'+version+'-source.tar.gz');output.parent.mkdir(exist_ok=True)
 xray=vendor()
+java_sources=ROOT/'.cache/java-latency-sources';java_sources.mkdir(parents=True,exist_ok=True)
+for dep in json.loads((ROOT/'tools/release/latency-java-lock.json').read_text())['dependencies']:
+ file=java_sources/(dep['name']+'-'+dep['version']+'-sources.jar')
+ if not file.exists():
+  with urllib.request.urlopen(dep['sources_url'],timeout=90) as response:file.write_bytes(response.read())
+ if hashlib.sha256(file.read_bytes()).hexdigest()!=dep['sources_sha256']:raise SystemExit('Latency Java source hash mismatch')
+print('JAVA_LATENCY_SOURCES_VERIFIED')
 # Ship the license/NOTICE texts of vendored runtime dependencies inside the APK too.
 notices=ROOT/'app/src/main/assets/licenses/native-dependencies.txt'
 with notices.open('w',encoding='utf-8') as out:
@@ -32,4 +39,5 @@ with tarfile.open(output,'w:gz') as archive,tarfile.open(fileobj=io.BytesIO(trac
   if not (source/'vendor/modules.txt').is_file():raise SystemExit('Vendored corresponding source missing')
   archive.add(source,arcname='engines/'+core['name'])
  archive.add(xray,arcname='engines/xray-wrapper')
+ archive.add(java_sources,arcname='java-latency-dependencies')
 print('::notice title=SOURCE_BUNDLE_OK::'+output.name+' bytes='+str(output.stat().st_size))

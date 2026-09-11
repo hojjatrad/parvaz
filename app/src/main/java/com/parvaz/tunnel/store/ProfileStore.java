@@ -101,7 +101,7 @@ public final class ProfileStore {
             android.util.Log.w("Parvaz/ProfileStore", "Exception ignored", unused3);
         }
         try {
-            JSONObject jSONObject = new JSONObject(sharedPreferences.getString("pings", "{}"));
+            JSONObject jSONObject = new JSONObject(sharedPreferences.getString("pings_https_rtt_v1", "{}"));
             Iterator<String> keys = jSONObject.keys();
             while (keys.hasNext()) {
                 String next = keys.next();
@@ -186,7 +186,7 @@ public final class ProfileStore {
         for(Subscription sub:subscriptions){sj.put(sub.toJson());if(sub.id.equals(primary))found=true;}
         if(!found)primary=MANUAL_GROUP;
         if(!f345a.edit().putString("profiles",recordCipher.encode("profiles",pj.toString())).putString("subs",recordCipher.encode("subs",sj.toString()))
-            .putString("pings",pings.toString()).putString("primary_subscription",primary).putString("primary_choice","1").commit())throw new IllegalStateException("Restore commit failed");
+            .putString("pings_https_rtt_v1",pings.toString()).putString("primary_subscription",primary).putString("primary_choice","1").commit())throw new IllegalStateException("Restore commit failed");
         f346b.clear();f346b.addAll(profiles);f347c.clear();f347c.addAll(subscriptions);revision++;
     }
 
@@ -267,7 +267,7 @@ public final class ProfileStore {
             JSONArray pj=new JSONArray(),sj=new JSONArray();JSONObject pings=new JSONObject();
             for(Profile p:unique.values()){pj.put(p.toJson());if(p.ping>0)pings.put(p.id,p.ping);}
             for(Subscription sub:subs){Subscription c=Subscription.fromJson(sub.toJson());c.count=0;for(Profile p:unique.values())if(p.subscriptionId.equals(c.id))c.count++;sj.put(c.toJson());}
-            commit(f345a.edit().putString("profiles",recordCipher.encode("profiles",pj.toString())).putString("subs",recordCipher.encode("subs",sj.toString())).putString("pings",pings.toString())
+            commit(f345a.edit().putString("profiles",recordCipher.encode("profiles",pj.toString())).putString("subs",recordCipher.encode("subs",sj.toString())).putString("pings_https_rtt_v1",pings.toString())
                 .putString("primary_subscription",owners.getOrDefault(primarySubscription(),primarySubscription())));
             f346b.clear();f346b.addAll(unique.values());f347c.clear();
             for(int i=0;i<sj.length();i++)f347c.add(Subscription.fromJson(sj.getJSONObject(i)));
@@ -337,7 +337,7 @@ public final class ProfileStore {
             JSONArray profilesJson=new JSONArray(),subsJson=new JSONArray();JSONObject pings=new JSONObject();
             for(Profile p:plan.all){profilesJson.put(p.toJson());if(p.ping>0)pings.put(p.id,p.ping);}
             for(Subscription sub:subscriptions)subsJson.put(sub.toJson());
-            commit(f345a.edit().putString("profiles",recordCipher.encode("profiles",profilesJson.toString())).putString("subs",recordCipher.encode("subs",subsJson.toString())).putString("pings",pings.toString()));
+            commit(f345a.edit().putString("profiles",recordCipher.encode("profiles",profilesJson.toString())).putString("subs",recordCipher.encode("subs",subsJson.toString())).putString("pings_https_rtt_v1",pings.toString()));
             f346b.clear();f346b.addAll(plan.all);f347c.clear();f347c.addAll(subscriptions);revision++;
             return plan;
         } catch(org.json.JSONException e) { throw new IllegalStateException("Subscription serialization failed"); }
@@ -416,7 +416,7 @@ public final class ProfileStore {
                     jSONObject.put(profile2.id, i);
                 }
             }
-            commit(this.f345a.edit().putString("profiles",recordCipher.encode("profiles",jSONArray.toString())).putString("subs",recordCipher.encode("subs",jSONArray2.toString())).putString("pings", jSONObject.toString()));
+            commit(this.f345a.edit().putString("profiles",recordCipher.encode("profiles",jSONArray.toString())).putString("subs",recordCipher.encode("subs",jSONArray2.toString())).putString("pings_https_rtt_v1", jSONObject.toString()));
         } catch (Exception error) {
             throw new IllegalStateException("Profile persistence failed",error);
         }
@@ -425,7 +425,7 @@ public final class ProfileStore {
     /** Latency-only persistence must not change the subscription/source revision. */
     public synchronized void saveMeasurements(){
         recoverPendingRestore();
-        try{JSONObject pings=new JSONObject();for(Object value:f346b){Profile p=(Profile)value;if(p!=null&&p.ping>0)pings.put(p.id,p.ping);}f345a.edit().putString("pings",pings.toString()).apply();}
+        try{JSONObject pings=new JSONObject();for(Object value:f346b){Profile p=(Profile)value;if(p!=null&&p.ping>0)pings.put(p.id,p.ping);}f345a.edit().putString("pings_https_rtt_v1",pings.toString()).apply();}
         catch(org.json.JSONException e){throw new IllegalStateException("Latency persistence failed");}
     }
 
@@ -440,6 +440,13 @@ public final class ProfileStore {
         Profile p=expected==null?null:getActiveById(expected.id);
         if(p==null||!p.subscriptionId.equals(expected.subscriptionId)||!ProfileIdentity.fingerprint(p).equals(ProfileIdentity.fingerprint(expected)))return null;
         return new StartupLatency(p,revision);
+    }
+    public synchronized boolean rememberConnected(StartupLatency owner,android.content.SharedPreferences prefs,java.util.function.BooleanSupplier proofCurrent){
+        recoverPendingRestore();
+        if(owner==null||prefs==null||revision!=owner.revision||getActiveById(owner.snapshot.id)!=owner.original
+            ||!owner.snapshot.subscriptionId.equals(owner.original.subscriptionId)
+            ||!ProfileIdentity.fingerprint(owner.snapshot).equals(ProfileIdentity.fingerprint(owner.original))||!proofCurrent.getAsBoolean())return false;
+        return LastConnected.remember(prefs,owner.snapshot);
     }
     /** Fill only an untested row, never overwrite a manual status/result. Proof is
      * rechecked at the write, not just when the ticker obtained the duration. */
@@ -462,7 +469,10 @@ public final class ProfileStore {
     }
     public synchronized Measurement beginMeasurement(Profile profile){
         recoverPendingRestore();
-        if(profile==null||getActiveById(profile.id)!=profile)return null;
+        if(profile==null)return null;
+        Profile current=getActiveById(profile.id);
+        if(current==null||!current.subscriptionId.equals(profile.subscriptionId)||!ProfileIdentity.fingerprint(current).equals(ProfileIdentity.fingerprint(profile)))return null;
+        profile=current;
         Measurement m=new Measurement(profile,revision);measurements.put(profile.id,m);
         profile.ping=com.parvaz.tunnel.core.LatencyResult.TESTING;return m;
     }

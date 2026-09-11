@@ -1,0 +1,30 @@
+// Exact binary pins for the new HTTPS timing stack, not only version labels.
+def latencyRoot = project.projectDir
+while (!new File(latencyRoot, 'tools/release/latency-java-lock.json').isFile()) {
+    latencyRoot = latencyRoot.parentFile
+    if (latencyRoot == null) throw new GradleException('Latency dependency lock missing')
+}
+def latencyLock = new groovy.json.JsonSlurper().parse(new File(latencyRoot, 'tools/release/latency-java-lock.json')).dependencies
+def latencyPins = latencyLock.collectEntries { [(it.group + ':' + it.name): it] }
+def verifyLatencyRuntimePins = tasks.register('verifyLatencyRuntimePins') {
+    doLast {
+        def seen = [] as Set
+        configurations.releaseRuntimeClasspath.resolvedConfiguration.resolvedArtifacts.each { artifact ->
+            def id = artifact.moduleVersion.id
+            if (id.group in ['com.squareup.okhttp3', 'com.squareup.okio', 'org.jetbrains.kotlin']) {
+                def pin = latencyPins[id.group + ':' + id.name]
+                if (pin == null || pin.version != id.version) throw new GradleException('Unreviewed latency runtime dependency: ' + id)
+                def digest = java.security.MessageDigest.getInstance('SHA-256')
+                artifact.file.withInputStream { input ->
+                    byte[] buffer = new byte[65536]; int n
+                    while ((n = input.read(buffer)) > 0) digest.update(buffer, 0, n)
+                }
+                if (digest.digest().encodeHex().toString() != pin.binary_sha256) throw new GradleException('Latency dependency binary hash mismatch: ' + id)
+                seen.add(id.name)
+            }
+        }
+        if (!seen.containsAll(['okhttp', 'okio-jvm', 'kotlin-stdlib'])) throw new GradleException('Required latency runtime dependencies missing')
+        println('JAVA_LATENCY_RUNTIME_PINS_OK ' + seen.sort().join(' '))
+    }
+}
+tasks.named('preBuild').configure { dependsOn(verifyLatencyRuntimePins) }

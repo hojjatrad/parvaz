@@ -469,4 +469,9 @@
     <string name="latency_busy">مشغول؛ تکرار</string>
     <string name="latency_cancelled">لغو شد</string>
     <string name="latency_untested">تست تأخیر</string>
+    <string name="latency_rtt_hint">رفت‌وبرگشت درخواست HTTPS؛ بدون زمان برقراری اتصال و TLS. تست دستی میانهٔ سه پاسخ را نشان می‌دهد.</string>
+    <string name="latency_timeout">مهلت تست تمام شد</string>
+    <string name="latency_tls_error">خطای تأیید TLS</string>
+    <string name="latency_http_error">پاسخ مقصد تست نامعتبر</string>
+    <string name="latency_network_error">خطای شبکه در تست</string>
 </resources>

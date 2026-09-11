@@ -487,4 +487,9 @@ Tap + to paste a config link or add a subscription."</string>
     <string name="latency_busy">Busy — retry</string>
     <string name="latency_cancelled">Cancelled</string>
     <string name="latency_untested">Test latency</string>
+    <string name="latency_rtt_hint">HTTPS request round-trip; connection and TLS setup excluded. Manual tests use the median of three responses.</string>
+    <string name="latency_timeout">Test timed out</string>
+    <string name="latency_tls_error">TLS verification failed</string>
+    <string name="latency_http_error">Test endpoint rejected</string>
+    <string name="latency_network_error">Network test failed</string>
 </resources>

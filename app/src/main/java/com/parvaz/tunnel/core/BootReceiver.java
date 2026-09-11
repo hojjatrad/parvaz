@@ -25,6 +25,7 @@ public class BootReceiver extends BroadcastReceiver {
             }
             SharedPreferences sharedPreferences = context.getApplicationContext().getSharedPreferences("parvaz_prefs", 0);
             if (sharedPreferences.getBoolean("connect_on_boot", false)) {
+                com.parvaz.tunnel.store.LastConnected.restore(context);
                 if (ProfileStore.f(context).getById(sharedPreferences.getString("selected_profile", "")) == null) {
                     str = "boot: no selected profile, skipping";
                 } else {

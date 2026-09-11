@@ -1059,6 +1059,7 @@ public class TunnelVpnService extends VpnService {
         this.sessionDown = 0L;
         this.lastHealthBytes = 0L;
         CoreManager.b().stop();
+        if(!z2)com.parvaz.tunnel.store.LastConnected.restore(this);
         if (z) {
             stopForeground(true);
             stopSelf();
@@ -1279,6 +1280,7 @@ public class TunnelVpnService extends VpnService {
         String action = (intent == null) ? "com.parvaz.tunnel.START" : intent.getAction();
 
         if (intent == null || intent.getAction() == null) {
+            if(!serviceRunning)com.parvaz.tunnel.store.LastConnected.restore(this);
             boolean lockdown = false;
             try {
                 if (Build.VERSION.SDK_INT >= 29) {

@@ -16,8 +16,8 @@ android {
         minSdk 24
         targetSdk 34
         resourceConfigurations += ['en', 'fa'] // The two languages actually offered by Settings.
-        versionCode 38
-        versionName "1.28.4"
+        versionCode 39
+        versionName "1.28.5"
         resValue "string", "bundled_core_version", new groovy.json.JsonSlurper().parse(rootProject.file('tools/release/core-lock.json')).tag
         resValue "string", "bundled_native_versions", new groovy.json.JsonSlurper().parse(rootProject.file('tools/native/engines-lock.json')).collect { it.name + ' ' + it.tag }.join(' • ')
         vectorDrawables.useSupportLibrary = true
@@ -116,9 +116,13 @@ dependencies {
     implementation 'com.google.zxing:core:3.5.3'
     implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
     implementation files('libs/libv2ray.aar')
+    implementation platform('org.jetbrains.kotlin:kotlin-bom:1.9.24')
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
     implementation 'org.yaml:snakeyaml:2.4' // SafeConstructor + explicit resource limits
 
     testImplementation 'junit:junit:4.13.2'
+    testImplementation 'com.squareup.okhttp3:mockwebserver:4.12.0'
+    testImplementation 'com.squareup.okhttp3:okhttp-tls:4.12.0'
     testImplementation 'androidx.work:work-testing:2.9.0'
     testImplementation 'org.robolectric:robolectric:4.12.2'
     testImplementation 'androidx.test:core:1.5.0'
@@ -158,3 +162,5 @@ tasks.configureEach {
         dependsOn(requireReleaseSigning)
     }
 }
+
+apply from: '../tools/release/latency-java.gradle'

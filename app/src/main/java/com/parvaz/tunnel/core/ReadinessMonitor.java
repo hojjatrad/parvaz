@@ -18,10 +18,10 @@ final class ReadinessMonitor implements AutoCloseable {
     private final Timer timer;
     private final AtomicReference<Session> active=new AtomicReference<>();
     private final ScheduledThreadPoolExecutor executor;
-    private final StartupWarmup network;
+    private final LatencyProbe network;
     ReadinessMonitor(){
-        network=new StartupWarmup();
-        probe=new Probe(){public void start(String url,int port,StartupWarmup.Result result){network.start(url,u->StartupWarmup.pinnedConnection(u,port),result);}public void cancel(){network.cancel();}};
+        network=new LatencyProbe();
+        probe=new Probe(){public void start(String url,int port,StartupWarmup.Result result){network.start(url,port,result);}public void cancel(){network.cancel();}};
         executor=new ScheduledThreadPoolExecutor(1,r->{Thread t=new Thread(r,"parvaz-readiness-retry");t.setDaemon(true);return t;});
         executor.setRemoveOnCancelPolicy(true);
         timer=(work,delay)->{ScheduledFuture<?> f=executor.schedule(work,delay,TimeUnit.MILLISECONDS);return ()->f.cancel(false);};
