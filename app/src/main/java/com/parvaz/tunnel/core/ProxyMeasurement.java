@@ -39,7 +39,7 @@ public final class ProxyMeasurement {
    if(Thread.currentThread().isInterrupted())throw new InterruptedException();
    controller=Libv2ray.newCoreController(new CoreCallbackHandler(){public long startup(){return 0;}public long shutdown(){return 0;}public long onEmitStatus(long code,String message){return 0;}});
    CoreManager.b().startIsolatedProbe(controller,plan.config);
-   if(!controller.getIsRunning()||(external!=null&&!external.isRunning()))return -1;
+   if(!controller.getIsRunning()||(external!=null&&!external.isRunning()))return wait?VerifiedProbe.UNKNOWN:-1;
    return VerifiedProbe.measure(port,url,true);
   }finally{
    // Keep capacity until the Xray instance really returns from StopLoop.

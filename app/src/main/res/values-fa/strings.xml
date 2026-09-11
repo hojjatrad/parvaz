@@ -463,7 +463,7 @@
     <string name="background_updates">بررسی خودکار بروزرسانی برنامه و هسته‌ها</string>
     <string name="auto_download_wifi">دانلود بروزرسانی با شبکهٔ بدون هزینهٔ حجمی هنگام شارژ</string>
     <string name="auto_download_help">بررسی تقریباً هر شش ساعت است و اندروید ممکن است آن را عقب بیندازد. نصب همچنان نیاز به تأیید شما دارد؛ هش و امضای فایل دانلودشده بررسی می‌شود.</string>
-    <string name="latency_failed">ناموفق</string>
+    <string name="latency_failed">تست ناموفق</string>
     <string name="latency_testing">در حال تست…</string>
     <string name="latency_unconfirmed">تأیید نشد</string>
     <string name="latency_busy">مشغول؛ تکرار</string>
