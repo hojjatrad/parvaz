@@ -22,24 +22,26 @@ public class NativeEngineTest {
   Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
   okhttp3.tls.HeldCertificate cert=okhttp3.tls.HeldCertificate.decode(asset(context,"fixture-cert.pem")+"\n"+asset(context,"fixture-key.pem"));
   okhttp3.tls.HandshakeCertificates tls=new okhttp3.tls.HandshakeCertificates.Builder().heldCertificate(cert).build();
-  okhttp3.mockwebserver.MockWebServer target=new okhttp3.mockwebserver.MockWebServer();target.useHttps(tls.sslSocketFactory(),false);target.start();
+  okhttp3.mockwebserver.MockWebServer target=new okhttp3.mockwebserver.MockWebServer();target.useHttps(tls.sslSocketFactory(),false);target.start(java.net.InetAddress.getByName("127.0.0.1"),0);
+  okhttp3.tls.HeldCertificate wrongCert=new okhttp3.tls.HeldCertificate.Builder().commonName("wrong-fixture").addSubjectAlternativeName("not-localhost.invalid").signedBy(cert).build();
+  okhttp3.tls.HandshakeCertificates wrongTls=new okhttp3.tls.HandshakeCertificates.Builder().heldCertificate(wrongCert,cert.certificate()).build();
+  okhttp3.mockwebserver.MockWebServer wrong=new okhttp3.mockwebserver.MockWebServer();wrong.useHttps(wrongTls.sslSocketFactory(),false);wrong.start(java.net.InetAddress.getByName("127.0.0.1"),0);
   ExternalCore relay=null;libv2ray.CoreController core=newXray();int port=reservePort();
   try{
    if(kind!=null)relay=ExternalCore.start(context,directProfile(kind),null);
    org.json.JSONObject config=new org.json.JSONObject(xrayFixture(port,relay));
    config.getJSONArray("inbounds").getJSONObject(0).put("protocol","http").put("settings",new org.json.JSONObject());
-   config.put("dns",new org.json.JSONObject().put("hosts",new org.json.JSONObject().put("wrong-fixture.invalid","127.0.0.1")));
    core.startLoop(config.toString(),0);assertTrue(core.getIsRunning());
    for(int i=0;i<3;i++)target.enqueue(new okhttp3.mockwebserver.MockResponse().setResponseCode(204).setHeadersDelay(60,java.util.concurrent.TimeUnit.MILLISECONDS));
-   String url="https://localhost:"+target.getPort()+"/generate_204";
+   String url="https://127.0.0.1:"+target.getPort()+"/generate_204";
    try(com.parvaz.tunnel.core.HttpsLatency.Session measure=new com.parvaz.tunnel.core.HttpsLatency.Session(port)){
     long ms=measure.measure(url,3);assertTrue("Request RTT must include fixture response delay: "+ms,ms>=40&&ms<1500);assertEquals(3,target.getRequestCount());
-    assertEquals(com.parvaz.tunnel.core.HttpsLatency.TLS_ERROR,measure.measure("https://wrong-fixture.invalid:"+target.getPort()+"/",1));
+    assertEquals(com.parvaz.tunnel.core.HttpsLatency.TLS_ERROR,measure.measure("https://127.0.0.1:"+wrong.getPort()+"/",1));
    }
    core.stopLoop();
    try(com.parvaz.tunnel.core.HttpsLatency.Session measure=new com.parvaz.tunnel.core.HttpsLatency.Session(port)){assertEquals(com.parvaz.tunnel.core.HttpsLatency.NETWORK_ERROR,measure.measure(url,1));}
    android.util.Log.i("ParvazProbe","HTTPS_RTT_REAL_ENGINE_OK "+(kind==null?"xray":kind)+" TLS_HOSTNAME_CHECKED NO_DIRECT_FALLBACK SDK="+android.os.Build.VERSION.SDK_INT);
-  }finally{core.stopLoop();if(relay!=null)relay.close();target.shutdown();}
+  }finally{core.stopLoop();if(relay!=null)relay.close();target.shutdown();wrong.shutdown();}
  }
 
  // Loopback-only protocol fixtures, not selected-remote readiness or a live VPN.
