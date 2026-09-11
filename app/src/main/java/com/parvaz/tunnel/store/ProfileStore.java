@@ -429,6 +429,29 @@ public final class ProfileStore {
         catch(org.json.JSONException e){throw new IllegalStateException("Latency persistence failed");}
     }
 
+    /** Read-only ownership of the row used to start the live core. Does not start a
+     * manual test or replace any pending result. Source replacement invalidates it. */
+    public static final class StartupLatency {
+        private final Profile original, snapshot;private final long revision;
+        private StartupLatency(Profile p,long revision){original=p;snapshot=ProfileIdentity.copy(p);this.revision=revision;}
+    }
+    public synchronized StartupLatency captureStartupLatency(Profile expected){
+        recoverPendingRestore();
+        Profile p=expected==null?null:getActiveById(expected.id);
+        if(p==null||!p.subscriptionId.equals(expected.subscriptionId)||!ProfileIdentity.fingerprint(p).equals(ProfileIdentity.fingerprint(expected)))return null;
+        return new StartupLatency(p,revision);
+    }
+    /** Fill only an untested row, never overwrite a manual status/result. Proof is
+     * rechecked at the write, not just when the ticker obtained the duration. */
+    public synchronized boolean publishStartupLatency(StartupLatency owner,int ms,java.util.function.BooleanSupplier proofCurrent){
+        recoverPendingRestore();
+        if(owner==null||ms<=0||revision!=owner.revision||getActiveById(owner.snapshot.id)!=owner.original
+            ||owner.original.ping!=com.parvaz.tunnel.core.LatencyResult.UNTESTED||measurements.containsKey(owner.snapshot.id)
+            ||!owner.snapshot.subscriptionId.equals(owner.original.subscriptionId)
+            ||!ProfileIdentity.fingerprint(owner.snapshot).equals(ProfileIdentity.fingerprint(owner.original))||!proofCurrent.getAsBoolean())return false;
+        owner.original.ping=ms;saveMeasurements();return true;
+    }
+
     /** Transient latency ownership; never written to subscription/profile JSON. */
     private final java.util.Map<String, Measurement> measurements=new java.util.HashMap<>();
     public static final class Measurement {

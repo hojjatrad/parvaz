@@ -120,6 +120,8 @@ public final class ServerAdapter extends RecyclerView.Adapter<ServerAdapter.b> {
         if (profile == null) {
             return;
         }
+        Profile current=ProfileStore.f(this.f366e).getActiveById(profile.id);
+        if(current!=null){profile=current;this.g.set(position,current);}
         profile.normalize();
 
         holder.f369A.setText(profile.remark.isEmpty()
@@ -200,7 +202,9 @@ public final class ServerAdapter extends RecyclerView.Adapter<ServerAdapter.b> {
             ArrayList arrayList = this.g;
             if (i < arrayList.size()) {
                 if (((Profile) arrayList.get(i)).id.equals(str)) {
-                    notifyItemChanged(i);
+                    Profile current=ProfileStore.f(this.f366e).getActiveById(str);
+                    if(current==null){arrayList.remove(i);notifyItemRemoved(i);}
+                    else{arrayList.set(i,current);notifyItemChanged(i);}
                     return;
                 }
                 i++;

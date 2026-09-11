@@ -375,6 +375,7 @@ public class TunnelVpnService extends VpnService {
     public class i implements Runnable {
         private final TrafficSampling sampling;
         private final StartupDiagnostics.Attempt trace=CoreManager.b().startupAttempt();
+        private final long ownerSession=CoreManager.b().sessionId(),ownerTicket=operations.ticket();
         private int lastReadinessLabel;
         public i() {
             long now=android.os.SystemClock.elapsedRealtime();
@@ -481,6 +482,11 @@ public class TunnelVpnService extends VpnService {
             if (p != null) {
                 intent.putExtra("profile_id", p.id);
             }
+            operations.commit(ownerTicket,()->{
+                if(!serviceRunning||switching||svc.h!=this)return;
+                int delay=CoreManager.b().publishStartupLatency(ProfileStore.f(svc),ownerSession);
+                if(delay>0)intent.putExtra("ping",delay);
+            });
             svc.sendBroadcast(intent);
 
             // Live speed in the status bar / notification shade. Rebuilding the

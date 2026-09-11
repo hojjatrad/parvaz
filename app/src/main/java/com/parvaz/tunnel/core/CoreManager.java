@@ -41,6 +41,16 @@ public final class CoreManager {
     synchronized void acceptVerifiedHealth(long owner,long delay,long network){if(owner==generation&&running&&verifiedPort>0&&delay>0&&diagnostics!=null&&NetworkEpoch.owns(network)){diagnostics.probeFinished(true,delay,network);startupWarmup.confirmedExternally();}}
     int verifiedPort(long owner){return owner==generation&&running?verifiedPort:0;}
     private volatile StartupDiagnostics.Attempt diagnostics;
+    private ProfileStore.StartupLatency startupLatency;
+    /** Called by the existing stats ticker, never from a monitor-held callback.
+     * No extra network request, native controller, timer or callback lock inversion. */
+    synchronized int publishStartupLatency(ProfileStore store,long owner){
+        if(owner!=generation||!running||verifiedPort<=0||diagnostics==null)return 0;
+        final StartupDiagnostics.Attempt trace=diagnostics;
+        long measured=trace.verifiedLatency();if(measured<=0)return 0;
+        int ms=(int)Math.min(Integer.MAX_VALUE,measured);
+        return store.publishStartupLatency(startupLatency,ms,()->trace.verifiedLatency()==measured)?ms:0;
+    }
     StartupDiagnostics.Attempt startupAttempt(){return diagnostics;}
 
     /* JADX WARN: Can't change package for inner class: R1.a.a to com.parvaz.tunnel.core.CoreManager$1 */
@@ -169,6 +179,7 @@ public final class CoreManager {
         final long ownerGeneration = generation;
         profile=com.parvaz.tunnel.store.ProfileIdentity.copy(profile);
         liveIdentity=com.parvaz.tunnel.store.ProfileIdentity.fingerprint(profile);
+        startupLatency=ProfileStore.f(context).captureStartupLatency(profile);
         try{
             Prefs prefs=new Prefs(context);String chainId=prefs.f343a.getString("chain_profile","");
             Profile chain=chainId==null||chainId.isEmpty()||chainId.equals(profile.id)?null:ProfileStore.f(context).getById(chainId);
@@ -208,7 +219,7 @@ public final class CoreManager {
     /* renamed from: d */
     public final synchronized void stop() {
         StartupDiagnostics.Attempt trace=diagnostics;if(trace!=null)trace.stop();
-        startupWarmup.cancel();verifiedPort=0;liveIdentity="";
+        startupWarmup.cancel();verifiedPort=0;liveIdentity="";startupLatency=null;
         ++generation; // Invalidate callbacks before closing either core, including intentional restarts.
         HotspotProxyManager.stop();
         this.running = false;

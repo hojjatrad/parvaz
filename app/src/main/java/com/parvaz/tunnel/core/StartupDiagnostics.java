@@ -25,7 +25,8 @@ public final class StartupDiagnostics {
   private final long began,tunMs;private final LongSupplier clock,proofClock;
   private long cleanupMs=-1,configMs=-1,coreMs=-1,responseMs=-1,probeMs=-1,rxMs=-1;
   private boolean stopped,routePinned,responseCurrent;
-  private long proofAt=-1,proofNetwork=-1;
+  private long proofAt=-1,proofNetwork=-1,verifiedDelayMs=-1;
+  synchronized long verifiedLatency(){return proofFresh()&&verifiedDelayMs>0?verifiedDelayMs:-1;}
   synchronized boolean proofFresh(){return owns()&&resolverAtStart==NetworkEpoch.resolver()&&responseCurrent&&proofAt>=0&&NetworkEpoch.owns(proofNetwork)&&proofAge()<PROOF_MAX_AGE_MS;}
   synchronized boolean proofDue(){return !proofFresh()||proofAge()>=PROOF_MAX_AGE_MS/2;}
   synchronized void unconfirmed(){if(owns())responseCurrent=false;}
@@ -38,7 +39,7 @@ public final class StartupDiagnostics {
   synchronized void configDone(){if(owns())configMs=elapsed();}
   synchronized void coreStarted(){if(owns())coreMs=elapsed();}
   synchronized void probeFinished(boolean ok,long duration){probeFinished(ok,duration,NetworkEpoch.current());}
-  synchronized void probeFinished(boolean ok,long duration,long observedNetwork){if(owns()){probeMs=duration<0?-1:duration;if(ok&&routePinned&&resolverAtStart==NetworkEpoch.resolver()&&NetworkEpoch.owns(observedNetwork)){responseCurrent=true;proofNetwork=observedNetwork;proofAt=proofClock.getAsLong();if(responseMs<0)responseMs=elapsed();}}}
+  synchronized void probeFinished(boolean ok,long duration,long observedNetwork){if(owns()){probeMs=duration<0?-1:duration;if(ok&&routePinned&&resolverAtStart==NetworkEpoch.resolver()&&NetworkEpoch.owns(observedNetwork)){verifiedDelayMs=duration>0?duration:-1;responseCurrent=true;proofNetwork=observedNetwork;proofAt=proofClock.getAsLong();if(responseMs<0)responseMs=elapsed();}}}
   synchronized void received(long bytes){if(owns()&&bytes>0&&rxMs<0)rxMs=elapsed();}
   synchronized void stop(){stopped=true;}
   synchronized Confirmation confirmation(){
