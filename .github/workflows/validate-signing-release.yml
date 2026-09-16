@@ -143,3 +143,60 @@ jobs:
       - name: Verify APK signature, package, version and hashes without publishing
         run: |
           python3 tools/release/verify_apk.py
+      - name: Preserve signed candidate APKs for isolated installation validation
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: signed-apks-for-upgrade-test
+          path: release-artifacts/*.apk
+          retention-days: 3
+  install-upgrade:
+    needs: sign-prebuilt
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with: {persist-credentials: false}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with: {name: signed-apks-for-upgrade-test, path: release-artifacts}
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with: {distribution: temurin, java-version: '17'}
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+        with: {gradle-version: '8.9', cache-disabled: true}
+      - name: Enable emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
+        with:
+          api-level: 30
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -writable-system -no-snapshot
+          script: bash tools/upgrade-test/run.sh
+      - name: Report installation fixture outcome
+        if: always()
+        run: |
+          python3 - <<'PYUPGRADE'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          for p in Path('tools/android-probe/build/outputs/androidTest-results').rglob('*.xml'):
+              root=ET.parse(p).getroot()
+              for f in list(root.iter('failure'))+list(root.iter('error')):
+                  message=(f.get('message') or f.text or 'Upgrade fixture failed')[:2800]
+                  print('::error title=APK upgrade fixture::'+message.replace('%','%25').replace('\n','%0A'))
+          p=Path('.cache/upgrade-evidence/device.log')
+          if p.exists():
+              for line in p.read_text(errors='replace').splitlines():
+                  if 'ACTUAL_SIGNED_APK_UPDATE_BUTTON_OK' in line:print('::notice title=APK_UPGRADE_EVIDENCE::'+line)
+          PYUPGRADE
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: actual-apk-upgrade-evidence
+          path: |
+            .cache/upgrade-evidence/
+            tools/android-probe/build/outputs/androidTest-results/
+          include-hidden-files: true
+          retention-days: 5

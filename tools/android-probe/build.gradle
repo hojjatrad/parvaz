@@ -15,6 +15,7 @@ android {
 dependencies {
     androidTestImplementation 'androidx.test:runner:1.5.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    if(project.hasProperty('upgradeProbe')) androidTestImplementation 'androidx.test.uiautomator:uiautomator:2.3.0'
 }
 
 // Isolated helper application, not the full production VPN app.
@@ -61,3 +62,5 @@ if(project.hasProperty('nativeProbe')){
 }
 
 if(project.hasProperty('nativeProbe')) { apply from: '../release/latency-java.gradle' }
+
+if(!project.hasProperty('upgradeProbe')) android.sourceSets.androidTest.java.exclude '**/PublishedUpgradeTest.java'

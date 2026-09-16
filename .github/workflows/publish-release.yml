@@ -46,7 +46,12 @@ jobs:
           java-version: '17'
       - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with: {go-version: '1.26.7', cache: false}
-      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+      - name: Use runner Android SDK
+        run: |
+          set -euo pipefail
+          test -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
       - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
         with:
           gradle-version: '8.9'
@@ -73,6 +78,12 @@ jobs:
           sdkmanager 'ndk;27.2.12479018'
           python3 tools/native/build.py
           python3 tools/native/source_bundle.py
+      - name: Inventory and audit resolved runtime dependencies
+        run: |
+          ./gradlew --no-daemon --max-workers=2 :app:writeRuntimeInventory
+          python3 tools/security/dependency_audit.py --native
+          cp .cache/supply-chain/sbom.cdx.json "release-artifacts/Parvaz-$RELEASE_VERSION-sbom.cdx.json"
+          cp .cache/supply-chain/vulnerability-review.json "release-artifacts/Parvaz-$RELEASE_VERSION-dependency-review.json"
       - name: Validate permanent key and build signed APKs with safe diagnostics
         env:
           PARVAZ_KEYSTORE_BASE64: ${{ secrets.PARVAZ_KEYSTORE_BASE64 }}
@@ -86,7 +97,7 @@ jobs:
           python3 tools/native/verify_packaging.py
       - name: Hash corresponding GPL source
         run: |
-          sha256sum release-artifacts/*-source.tar.gz | sed 's#release-artifacts/##' >> release-artifacts/SHA256SUMS.txt
+          sha256sum release-artifacts/*-source.tar.gz release-artifacts/*-sbom.cdx.json release-artifacts/*-dependency-review.json | sed 's#release-artifacts/##' >> release-artifacts/SHA256SUMS.txt
       - name: Prevent rollback of latest app, versionCode or core
         env:
           GH_TOKEN: ${{ github.token }}
@@ -95,7 +106,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$RELEASE_TAG" release-artifacts/*.apk release-artifacts/*-source.tar.gz release-artifacts/SHA256SUMS.txt \
+          gh release create "$RELEASE_TAG" release-artifacts/*.apk release-artifacts/*-source.tar.gz release-artifacts/*-sbom.cdx.json release-artifacts/*-dependency-review.json release-artifacts/SHA256SUMS.txt \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
             --title "Parvaz $RELEASE_VERSION" \
             --notes-file "docs/releases/$RELEASE_TAG.md" --latest
