@@ -1,0 +1,15 @@
+{
+  "preview_url": "https://github.com/hojjatrad/parvaz/releases/tag/test/v1.28.6-r1",
+  "preview_source": "ae5d51afe53ae6768d3b44cb0f9ace556043b8d6",
+  "file": "/home/user/Parvaz-1.28.6-TEST.apk",
+  "bytes": 88938083,
+  "sha256": "815f09c38507e3031c40369ed22c4ea75a306ec3eaf4ad10fc70849c53022d29",
+  "verification": [
+    "SIGNED_TEST_APK_PACKAGE_VERIFIED com.parvaz.tunnel versionCode=40",
+    "PERMANENT_GENERATION_3_APK_SIGNATURE_VERIFIED d1383b8f34da5d3299b13634de421487289d82c1bb47ec3bc7f20ae8d02fe500"
+  ],
+  "six_native_hashes_match": true,
+  "stable_latest_unchanged": "v1.28.5",
+  "actual_installation": "NOT_YET_TESTED_BY_OWNER",
+  "status": "MANUAL_TEST_ONLY_NOT_STABLE_APPROVAL"
+}
