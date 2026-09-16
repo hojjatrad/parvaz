@@ -1,0 +1,2022 @@
+[
+  {
+    "go_version": "1.26.7",
+    "modules": [
+      {
+        "name": "github.com/ajg/form",
+        "version": "v1.5.1"
+      },
+      {
+        "name": "github.com/andybalholm/brotli",
+        "version": "v1.1.0"
+      },
+      {
+        "name": "github.com/anytls/sing-anytls",
+        "version": "v0.0.11"
+      },
+      {
+        "name": "github.com/caddyserver/certmagic",
+        "version": "v0.25.3-0.20260421143802-60d9d8b415d6"
+      },
+      {
+        "name": "github.com/caddyserver/zerossl",
+        "version": "v0.1.5"
+      },
+      {
+        "name": "github.com/clipperhouse/uax29/v2",
+        "version": "v2.2.0"
+      },
+      {
+        "name": "github.com/coder/websocket",
+        "version": "v1.8.14"
+      },
+      {
+        "name": "github.com/cretz/bine",
+        "version": "v0.2.0"
+      },
+      {
+        "name": "github.com/database64128/netx-go",
+        "version": "v0.1.1"
+      },
+      {
+        "name": "github.com/database64128/tfo-go/v2",
+        "version": "v2.3.2"
+      },
+      {
+        "name": "github.com/florianl/go-nfqueue/v2",
+        "version": "v2.1.0"
+      },
+      {
+        "name": "github.com/fsnotify/fsnotify",
+        "version": "v1.9.0"
+      },
+      {
+        "name": "github.com/go-chi/chi/v5",
+        "version": "v5.2.5"
+      },
+      {
+        "name": "github.com/go-chi/render",
+        "version": "v1.0.3"
+      },
+      {
+        "name": "github.com/gobwas/httphead",
+        "version": "v0.1.0"
+      },
+      {
+        "name": "github.com/gobwas/pool",
+        "version": "v0.2.1"
+      },
+      {
+        "name": "github.com/godbus/dbus/v5",
+        "version": "v5.2.2"
+      },
+      {
+        "name": "github.com/gofrs/uuid/v5",
+        "version": "v5.5.1"
+      },
+      {
+        "name": "github.com/google/btree",
+        "version": "v1.1.3"
+      },
+      {
+        "name": "github.com/google/gopacket",
+        "version": "v1.1.19"
+      },
+      {
+        "name": "github.com/hashicorp/yamux",
+        "version": "v0.1.2"
+      },
+      {
+        "name": "github.com/huin/goupnp",
+        "version": "v1.3.0"
+      },
+      {
+        "name": "github.com/jackpal/go-nat-pmp",
+        "version": "v1.0.2"
+      },
+      {
+        "name": "github.com/jsimonetti/rtnetlink",
+        "version": "v1.4.1"
+      },
+      {
+        "name": "github.com/klauspost/compress",
+        "version": "v1.19.1"
+      },
+      {
+        "name": "github.com/klauspost/cpuid/v2",
+        "version": "v2.3.0"
+      },
+      {
+        "name": "github.com/koron/go-ssdp",
+        "version": "v0.0.4"
+      },
+      {
+        "name": "github.com/libdns/libdns",
+        "version": "v1.1.1"
+      },
+      {
+        "name": "github.com/libp2p/go-nat",
+        "version": "v1.0.1-0.20250821073202-01afc089f138"
+      },
+      {
+        "name": "github.com/libp2p/go-netroute",
+        "version": "v0.2.1"
+      },
+      {
+        "name": "github.com/logrusorgru/aurora",
+        "version": "v2.0.3+incompatible"
+      },
+      {
+        "name": "github.com/mattn/go-runewidth",
+        "version": "v0.0.27"
+      },
+      {
+        "name": "github.com/mdlayher/netlink",
+        "version": "v1.11.2"
+      },
+      {
+        "name": "github.com/mdlayher/socket",
+        "version": "v0.6.0"
+      },
+      {
+        "name": "github.com/metacubex/utls",
+        "version": "v1.8.7"
+      },
+      {
+        "name": "github.com/mholt/acmez/v3",
+        "version": "v3.1.6"
+      },
+      {
+        "name": "github.com/miekg/dns",
+        "version": "v1.1.72"
+      },
+      {
+        "name": "github.com/oschwald/maxminddb-golang",
+        "version": "v1.13.1"
+      },
+      {
+        "name": "github.com/quic-go/qpack",
+        "version": "v0.6.0"
+      },
+      {
+        "name": "github.com/sagernet/bbolt",
+        "version": "v0.0.0-20260823094646-e24805439c9c"
+      },
+      {
+        "name": "github.com/sagernet/cors",
+        "version": "v1.2.1"
+      },
+      {
+        "name": "github.com/sagernet/fswatch",
+        "version": "v0.1.2"
+      },
+      {
+        "name": "github.com/sagernet/gvisor",
+        "version": "v0.0.0-20260727.0-sing-box-mod.1"
+      },
+      {
+        "name": "github.com/sagernet/netlink",
+        "version": "v0.0.0-20260814022025-64455d367bbf"
+      },
+      {
+        "name": "github.com/sagernet/nftables",
+        "version": "v0.3.0-mod.4"
+      },
+      {
+        "name": "github.com/sagernet/quic-go",
+        "version": "v0.61.0-sing-box-mod.7"
+      },
+      {
+        "name": "github.com/sagernet/sing",
+        "version": "v0.9.0-beta.4"
+      },
+      {
+        "name": "github.com/sagernet/sing-mux",
+        "version": "v0.3.5"
+      },
+      {
+        "name": "github.com/sagernet/sing-quic",
+        "version": "v0.7.0-beta.4"
+      },
+      {
+        "name": "github.com/sagernet/sing-shadowsocks",
+        "version": "v0.2.8"
+      },
+      {
+        "name": "github.com/sagernet/sing-shadowsocks2",
+        "version": "v0.2.1"
+      },
+      {
+        "name": "github.com/sagernet/sing-shadowtls",
+        "version": "v0.2.1"
+      },
+      {
+        "name": "github.com/sagernet/sing-snell",
+        "version": "v0.0.0-20260829071736-20f2eaec77c3"
+      },
+      {
+        "name": "github.com/sagernet/sing-tun",
+        "version": "v0.9.0-beta.4"
+      },
+      {
+        "name": "github.com/sagernet/sing-vmess",
+        "version": "v0.2.8-0.20250909125414-3aed155119a1"
+      },
+      {
+        "name": "github.com/sagernet/smux",
+        "version": "v1.5.50-sing-box-mod.1"
+      },
+      {
+        "name": "github.com/sagernet/wireguard-go",
+        "version": "v0.0.5-0.20260823125007-8bd032a91a30"
+      },
+      {
+        "name": "github.com/sagernet/ws",
+        "version": "v0.0.0-20231204124109-acfe8907c854"
+      },
+      {
+        "name": "github.com/spf13/cobra",
+        "version": "v1.10.2"
+      },
+      {
+        "name": "github.com/spf13/pflag",
+        "version": "v1.0.10"
+      },
+      {
+        "name": "github.com/vishvananda/netns",
+        "version": "v0.0.5"
+      },
+      {
+        "name": "github.com/zeebo/blake3",
+        "version": "v0.2.4"
+      },
+      {
+        "name": "go.uber.org/multierr",
+        "version": "v1.11.0"
+      },
+      {
+        "name": "go.uber.org/zap",
+        "version": "v1.27.1"
+      },
+      {
+        "name": "go.uber.org/zap/exp",
+        "version": "v0.3.0"
+      },
+      {
+        "name": "go4.org/netipx",
+        "version": "v0.0.0-20231129151722-fdeea329fbba"
+      },
+      {
+        "name": "golang.org/x/crypto",
+        "version": "v0.54.0"
+      },
+      {
+        "name": "golang.org/x/exp",
+        "version": "v0.0.0-20260410095643-746e56fc9e2f"
+      },
+      {
+        "name": "golang.org/x/mod",
+        "version": "v0.37.0"
+      },
+      {
+        "name": "golang.org/x/net",
+        "version": "v0.57.0"
+      },
+      {
+        "name": "golang.org/x/sync",
+        "version": "v0.22.0"
+      },
+      {
+        "name": "golang.org/x/sys",
+        "version": "v0.47.0"
+      },
+      {
+        "name": "golang.org/x/term",
+        "version": "v0.45.0"
+      },
+      {
+        "name": "golang.org/x/text",
+        "version": "v0.40.0"
+      },
+      {
+        "name": "golang.org/x/time",
+        "version": "v0.15.0"
+      },
+      {
+        "name": "golang.zx2c4.com/wireguard/wgctrl",
+        "version": "v0.0.0-20241231184526-a9ab2273dd10"
+      },
+      {
+        "name": "google.golang.org/genproto/googleapis/rpc",
+        "version": "v0.0.0-20251202230838-ff82c1b0f217"
+      },
+      {
+        "name": "google.golang.org/grpc",
+        "version": "v1.79.1"
+      },
+      {
+        "name": "google.golang.org/protobuf",
+        "version": "v1.36.11"
+      },
+      {
+        "name": "lukechampine.com/blake3",
+        "version": "v1.3.0"
+      },
+      {
+        "name": "github.com/sagernet/sing-box",
+        "version": "v1.14.0",
+        "source_commit": "0b8995879f29a9b98ee027bc17b75e101445b238",
+        "resolution": "locally built pinned root plus documented app patches"
+      }
+    ],
+    "main_module": {
+      "name": "github.com/sagernet/sing-box",
+      "version": "(devel)"
+    },
+    "binary": "app/libs/jni/arm64-v8a/libsingbox.so",
+    "abi": "arm64-v8a",
+    "sha256": "b650947de2f64ae4ad9a4747563d9a3f434a9d77873ec44e68f3cf4b68b7d982"
+  },
+  {
+    "go_version": "1.26.7",
+    "modules": [
+      {
+        "name": "github.com/RyuaNerin/go-krypto",
+        "version": "v1.3.0"
+      },
+      {
+        "name": "github.com/Yawning/aez",
+        "version": "v0.0.0-20211027044916-e49e68abd344"
+      },
+      {
+        "name": "github.com/ajg/form",
+        "version": "v1.7.1"
+      },
+      {
+        "name": "github.com/andybalholm/brotli",
+        "version": "v1.1.1"
+      },
+      {
+        "name": "github.com/bahlo/generic-list-go",
+        "version": "v0.2.0"
+      },
+      {
+        "name": "github.com/bodgit/plumbing",
+        "version": "v1.3.0"
+      },
+      {
+        "name": "github.com/bodgit/windows",
+        "version": "v1.0.1"
+      },
+      {
+        "name": "github.com/coreos/go-iptables",
+        "version": "v0.8.0"
+      },
+      {
+        "name": "github.com/dlclark/regexp2",
+        "version": "v1.12.0"
+      },
+      {
+        "name": "github.com/dunglas/httpsfv",
+        "version": "v1.0.2"
+      },
+      {
+        "name": "github.com/enfein/mieru/v3",
+        "version": "v3.35.0"
+      },
+      {
+        "name": "github.com/ericlagergren/aegis",
+        "version": "v0.0.0-20250325060835-cd0defd64358"
+      },
+      {
+        "name": "github.com/ericlagergren/polyval",
+        "version": "v0.0.0-20220411101811-e25bc10ba391"
+      },
+      {
+        "name": "github.com/ericlagergren/siv",
+        "version": "v0.0.0-20220507050439-0b757b3aa5f1"
+      },
+      {
+        "name": "github.com/ericlagergren/subtle",
+        "version": "v0.0.0-20220507045147-890d697da010"
+      },
+      {
+        "name": "github.com/fsnotify/fsnotify",
+        "version": "v1.9.0"
+      },
+      {
+        "name": "github.com/gaukas/godicttls",
+        "version": "v0.0.4"
+      },
+      {
+        "name": "github.com/gobwas/httphead",
+        "version": "v0.1.0"
+      },
+      {
+        "name": "github.com/gobwas/pool",
+        "version": "v0.2.1"
+      },
+      {
+        "name": "github.com/gobwas/ws",
+        "version": "v1.4.0"
+      },
+      {
+        "name": "github.com/gofrs/uuid/v5",
+        "version": "v5.4.0"
+      },
+      {
+        "name": "github.com/golang/snappy",
+        "version": "v1.0.0"
+      },
+      {
+        "name": "github.com/google/btree",
+        "version": "v1.1.3"
+      },
+      {
+        "name": "github.com/google/pprof",
+        "version": "v0.0.0-20240727154555-813a5fbdbec8"
+      },
+      {
+        "name": "github.com/hashicorp/golang-lru/v2",
+        "version": "v2.0.7"
+      },
+      {
+        "name": "github.com/insomniacslk/dhcp",
+        "version": "v0.0.0-20250109001534-8abf58130905"
+      },
+      {
+        "name": "github.com/josharian/native",
+        "version": "v1.1.0"
+      },
+      {
+        "name": "github.com/klauspost/compress",
+        "version": "v1.17.9"
+      },
+      {
+        "name": "github.com/klauspost/cpuid/v2",
+        "version": "v2.2.6"
+      },
+      {
+        "name": "github.com/klauspost/reedsolomon",
+        "version": "v1.12.3"
+      },
+      {
+        "name": "github.com/mdlayher/netlink",
+        "version": "v1.7.2"
+      },
+      {
+        "name": "github.com/mdlayher/socket",
+        "version": "v0.5.1"
+      },
+      {
+        "name": "github.com/metacubex/age",
+        "version": "v0.0.0-20260603010618-28d156b4ea78"
+      },
+      {
+        "name": "github.com/metacubex/amneziawg-go",
+        "version": "v0.0.0-20260816073447-736a78668832"
+      },
+      {
+        "name": "github.com/metacubex/ascon",
+        "version": "v0.1.0"
+      },
+      {
+        "name": "github.com/metacubex/bart",
+        "version": "v0.29.0"
+      },
+      {
+        "name": "github.com/metacubex/bbolt",
+        "version": "v0.0.0-20260706163408-d4ec34ad7c48"
+      },
+      {
+        "name": "github.com/metacubex/blake3",
+        "version": "v0.1.0"
+      },
+      {
+        "name": "github.com/metacubex/chacha",
+        "version": "v0.1.5"
+      },
+      {
+        "name": "github.com/metacubex/chi",
+        "version": "v0.1.1"
+      },
+      {
+        "name": "github.com/metacubex/connect-ip-go",
+        "version": "v0.0.0-20260727083417-67ccdb0cf771"
+      },
+      {
+        "name": "github.com/metacubex/cpu",
+        "version": "v0.1.1"
+      },
+      {
+        "name": "github.com/metacubex/edwards25519",
+        "version": "v1.2.0"
+      },
+      {
+        "name": "github.com/metacubex/fswatch",
+        "version": "v0.1.1"
+      },
+      {
+        "name": "github.com/metacubex/gopacket",
+        "version": "v1.1.20-0.20230608035415-7e2f98a3e759"
+      },
+      {
+        "name": "github.com/metacubex/hkdf",
+        "version": "v0.1.0"
+      },
+      {
+        "name": "github.com/metacubex/hpke",
+        "version": "v0.1.0"
+      },
+      {
+        "name": "github.com/metacubex/http",
+        "version": "v0.1.7"
+      },
+      {
+        "name": "github.com/metacubex/jls-quic-go",
+        "version": "v0.0.0-20260727080412-732f2fc9a34d"
+      },
+      {
+        "name": "github.com/metacubex/jls-tls",
+        "version": "v0.0.0-20260723084315-67adc0e2f796"
+      },
+      {
+        "name": "github.com/metacubex/kcp-go",
+        "version": "v0.0.0-20260105040817-550693377604"
+      },
+      {
+        "name": "github.com/metacubex/mhurl",
+        "version": "v0.1.0"
+      },
+      {
+        "name": "github.com/metacubex/mipstack",
+        "version": "v0.0.0-20260816065001-b7038299fe13"
+      },
+      {
+        "name": "github.com/metacubex/mlkem",
+        "version": "v0.1.0"
+      },
+      {
+        "name": "github.com/metacubex/nftables",
+        "version": "v0.0.0-20260426003805-208c2c1ba2cb"
+      },
+      {
+        "name": "github.com/metacubex/qpack",
+        "version": "v0.6.0"
+      },
+      {
+        "name": "github.com/metacubex/quic-go",
+        "version": "v0.61.1-0.20260727080200-2548683b76f4"
+      },
+      {
+        "name": "github.com/metacubex/randv2",
+        "version": "v0.2.0"
+      },
+      {
+        "name": "github.com/metacubex/restls-client-go",
+        "version": "v0.1.9"
+      },
+      {
+        "name": "github.com/metacubex/sevenzip",
+        "version": "v1.6.4"
+      },
+      {
+        "name": "github.com/metacubex/sing",
+        "version": "v0.5.7"
+      },
+      {
+        "name": "github.com/metacubex/sing-mux",
+        "version": "v0.3.10"
+      },
+      {
+        "name": "github.com/metacubex/sing-quic",
+        "version": "v0.0.0-20260726014900-38b0e9295f51"
+      },
+      {
+        "name": "github.com/metacubex/sing-shadowsocks",
+        "version": "v0.2.12"
+      },
+      {
+        "name": "github.com/metacubex/sing-shadowsocks2",
+        "version": "v0.2.7"
+      },
+      {
+        "name": "github.com/metacubex/sing-tun",
+        "version": "v0.4.22"
+      },
+      {
+        "name": "github.com/metacubex/sing-vmess",
+        "version": "v0.2.5"
+      },
+      {
+        "name": "github.com/metacubex/sing-wireguard",
+        "version": "v0.0.0-20260810013230-110eac03c3f0"
+      },
+      {
+        "name": "github.com/metacubex/smux",
+        "version": "v0.0.0-20260105030934-d0c8756d3141"
+      },
+      {
+        "name": "github.com/metacubex/ssh",
+        "version": "v0.1.0"
+      },
+      {
+        "name": "github.com/metacubex/tfo-go",
+        "version": "v0.0.0-20260623020846-376a77860b8c"
+      },
+      {
+        "name": "github.com/metacubex/tls",
+        "version": "v0.1.8"
+      },
+      {
+        "name": "github.com/metacubex/utls",
+        "version": "v1.8.7"
+      },
+      {
+        "name": "github.com/metacubex/wireguard-go",
+        "version": "v0.0.0-20250820062549-a6cecdd7f57f"
+      },
+      {
+        "name": "github.com/metacubex/yamux",
+        "version": "v0.0.0-20250918083631-dd5f17c0be49"
+      },
+      {
+        "name": "github.com/metacubex/zerotier-go",
+        "version": "v0.0.0-20260813124750-13fa6f45da5f"
+      },
+      {
+        "name": "github.com/miekg/dns",
+        "version": "v1.1.63"
+      },
+      {
+        "name": "github.com/mroth/weightedrand/v2",
+        "version": "v2.1.0"
+      },
+      {
+        "name": "github.com/oasisprotocol/deoxysii",
+        "version": "v0.0.0-20220228165953-2091330c22b7"
+      },
+      {
+        "name": "github.com/openacid/low",
+        "version": "v0.1.21"
+      },
+      {
+        "name": "github.com/oschwald/maxminddb-golang",
+        "version": "v1.12.0"
+      },
+      {
+        "name": "github.com/pierrec/lz4/v4",
+        "version": "v4.1.27"
+      },
+      {
+        "name": "github.com/rasky/go-lzo",
+        "version": "v0.0.0-20200203143853-96a758eda86e"
+      },
+      {
+        "name": "github.com/sagernet/netlink",
+        "version": "v0.0.0-20240612041022-b9a21c07ac6a"
+      },
+      {
+        "name": "github.com/samber/lo",
+        "version": "v1.53.0"
+      },
+      {
+        "name": "github.com/sina-ghaderi/poly1305",
+        "version": "v0.0.0-20220724002748-c5926b03988b"
+      },
+      {
+        "name": "github.com/sina-ghaderi/rabaead",
+        "version": "v0.0.0-20220730151906-ab6e06b96e8c"
+      },
+      {
+        "name": "github.com/sina-ghaderi/rabbitio",
+        "version": "v0.0.0-20220730151941-9ce26f4f872e"
+      },
+      {
+        "name": "github.com/sirupsen/logrus",
+        "version": "v1.9.4"
+      },
+      {
+        "name": "github.com/stangelandcl/ppmd",
+        "version": "v0.1.1"
+      },
+      {
+        "name": "github.com/u-root/uio",
+        "version": "v0.0.0-20230220225925-ffce2a382923"
+      },
+      {
+        "name": "github.com/ulikunitz/xz",
+        "version": "v0.5.15"
+      },
+      {
+        "name": "github.com/vishvananda/netns",
+        "version": "v0.0.5"
+      },
+      {
+        "name": "github.com/vmihailenco/msgpack/v5",
+        "version": "v5.4.1"
+      },
+      {
+        "name": "github.com/vmihailenco/tagparser/v2",
+        "version": "v2.0.0"
+      },
+      {
+        "name": "github.com/yosida95/uritemplate/v3",
+        "version": "v3.0.2"
+      },
+      {
+        "name": "gitlab.com/go-extension/aes-ccm",
+        "version": "v0.0.0-20230221065045-e58665ef23c7"
+      },
+      {
+        "name": "gitlab.com/yawning/bsaes.git",
+        "version": "v0.0.0-20190805113838-0a714cd429ec"
+      },
+      {
+        "name": "go.uber.org/automaxprocs",
+        "version": "v1.6.0"
+      },
+      {
+        "name": "go4.org/netipx",
+        "version": "v0.0.0-20231129151722-fdeea329fbba"
+      },
+      {
+        "name": "golang.org/x/crypto",
+        "version": "v0.33.0"
+      },
+      {
+        "name": "golang.org/x/exp",
+        "version": "v0.0.0-20240904232852-e7e105dedf7e"
+      },
+      {
+        "name": "golang.org/x/net",
+        "version": "v0.35.0"
+      },
+      {
+        "name": "golang.org/x/sync",
+        "version": "v0.11.0"
+      },
+      {
+        "name": "golang.org/x/sys",
+        "version": "v0.30.0"
+      },
+      {
+        "name": "golang.org/x/text",
+        "version": "v0.22.0"
+      },
+      {
+        "name": "golang.org/x/time",
+        "version": "v0.10.0"
+      },
+      {
+        "name": "github.com/metacubex/protobuf-go",
+        "version": "v0.0.0-20260306035419-7ceee0674686",
+        "upstream_baseline": {
+          "name": "google.golang.org/protobuf",
+          "version": "v1.34.2"
+        }
+      },
+      {
+        "name": "gopkg.in/yaml.v3",
+        "version": "v3.0.1"
+      },
+      {
+        "name": "github.com/metacubex/mihomo",
+        "version": "v1.19.30",
+        "source_commit": "ac017cdd246ce8bd547653d927e7bf77d7ee73d5",
+        "resolution": "locally built pinned root plus documented app patches"
+      }
+    ],
+    "main_module": {
+      "name": "github.com/metacubex/mihomo",
+      "version": "(devel)"
+    },
+    "binary": "app/libs/jni/arm64-v8a/libmihomo.so",
+    "abi": "arm64-v8a",
+    "sha256": "ec4101e4195c3b92f8c092c0dce4f011029ada609ade99729ec593eef11fecc3"
+  },
+  {
+    "go_version": "1.26.7",
+    "modules": [
+      {
+        "name": "github.com/ajg/form",
+        "version": "v1.5.1"
+      },
+      {
+        "name": "github.com/andybalholm/brotli",
+        "version": "v1.1.0"
+      },
+      {
+        "name": "github.com/anytls/sing-anytls",
+        "version": "v0.0.11"
+      },
+      {
+        "name": "github.com/caddyserver/certmagic",
+        "version": "v0.25.3-0.20260421143802-60d9d8b415d6"
+      },
+      {
+        "name": "github.com/caddyserver/zerossl",
+        "version": "v0.1.5"
+      },
+      {
+        "name": "github.com/clipperhouse/uax29/v2",
+        "version": "v2.2.0"
+      },
+      {
+        "name": "github.com/coder/websocket",
+        "version": "v1.8.14"
+      },
+      {
+        "name": "github.com/cretz/bine",
+        "version": "v0.2.0"
+      },
+      {
+        "name": "github.com/database64128/netx-go",
+        "version": "v0.1.1"
+      },
+      {
+        "name": "github.com/database64128/tfo-go/v2",
+        "version": "v2.3.2"
+      },
+      {
+        "name": "github.com/florianl/go-nfqueue/v2",
+        "version": "v2.1.0"
+      },
+      {
+        "name": "github.com/fsnotify/fsnotify",
+        "version": "v1.9.0"
+      },
+      {
+        "name": "github.com/go-chi/chi/v5",
+        "version": "v5.2.5"
+      },
+      {
+        "name": "github.com/go-chi/render",
+        "version": "v1.0.3"
+      },
+      {
+        "name": "github.com/gobwas/httphead",
+        "version": "v0.1.0"
+      },
+      {
+        "name": "github.com/gobwas/pool",
+        "version": "v0.2.1"
+      },
+      {
+        "name": "github.com/godbus/dbus/v5",
+        "version": "v5.2.2"
+      },
+      {
+        "name": "github.com/gofrs/uuid/v5",
+        "version": "v5.5.1"
+      },
+      {
+        "name": "github.com/google/btree",
+        "version": "v1.1.3"
+      },
+      {
+        "name": "github.com/google/gopacket",
+        "version": "v1.1.19"
+      },
+      {
+        "name": "github.com/hashicorp/yamux",
+        "version": "v0.1.2"
+      },
+      {
+        "name": "github.com/huin/goupnp",
+        "version": "v1.3.0"
+      },
+      {
+        "name": "github.com/jackpal/go-nat-pmp",
+        "version": "v1.0.2"
+      },
+      {
+        "name": "github.com/jsimonetti/rtnetlink",
+        "version": "v1.4.1"
+      },
+      {
+        "name": "github.com/klauspost/compress",
+        "version": "v1.19.1"
+      },
+      {
+        "name": "github.com/klauspost/cpuid/v2",
+        "version": "v2.3.0"
+      },
+      {
+        "name": "github.com/koron/go-ssdp",
+        "version": "v0.0.4"
+      },
+      {
+        "name": "github.com/libdns/libdns",
+        "version": "v1.1.1"
+      },
+      {
+        "name": "github.com/libp2p/go-nat",
+        "version": "v1.0.1-0.20250821073202-01afc089f138"
+      },
+      {
+        "name": "github.com/libp2p/go-netroute",
+        "version": "v0.2.1"
+      },
+      {
+        "name": "github.com/logrusorgru/aurora",
+        "version": "v2.0.3+incompatible"
+      },
+      {
+        "name": "github.com/mattn/go-runewidth",
+        "version": "v0.0.27"
+      },
+      {
+        "name": "github.com/mdlayher/netlink",
+        "version": "v1.11.2"
+      },
+      {
+        "name": "github.com/mdlayher/socket",
+        "version": "v0.6.0"
+      },
+      {
+        "name": "github.com/metacubex/utls",
+        "version": "v1.8.7"
+      },
+      {
+        "name": "github.com/mholt/acmez/v3",
+        "version": "v3.1.6"
+      },
+      {
+        "name": "github.com/miekg/dns",
+        "version": "v1.1.72"
+      },
+      {
+        "name": "github.com/oschwald/maxminddb-golang",
+        "version": "v1.13.1"
+      },
+      {
+        "name": "github.com/quic-go/qpack",
+        "version": "v0.6.0"
+      },
+      {
+        "name": "github.com/sagernet/bbolt",
+        "version": "v0.0.0-20260823094646-e24805439c9c"
+      },
+      {
+        "name": "github.com/sagernet/cors",
+        "version": "v1.2.1"
+      },
+      {
+        "name": "github.com/sagernet/fswatch",
+        "version": "v0.1.2"
+      },
+      {
+        "name": "github.com/sagernet/gvisor",
+        "version": "v0.0.0-20260727.0-sing-box-mod.1"
+      },
+      {
+        "name": "github.com/sagernet/netlink",
+        "version": "v0.0.0-20260814022025-64455d367bbf"
+      },
+      {
+        "name": "github.com/sagernet/nftables",
+        "version": "v0.3.0-mod.4"
+      },
+      {
+        "name": "github.com/sagernet/quic-go",
+        "version": "v0.61.0-sing-box-mod.7"
+      },
+      {
+        "name": "github.com/sagernet/sing",
+        "version": "v0.9.0-beta.4"
+      },
+      {
+        "name": "github.com/sagernet/sing-mux",
+        "version": "v0.3.5"
+      },
+      {
+        "name": "github.com/sagernet/sing-quic",
+        "version": "v0.7.0-beta.4"
+      },
+      {
+        "name": "github.com/sagernet/sing-shadowsocks",
+        "version": "v0.2.8"
+      },
+      {
+        "name": "github.com/sagernet/sing-shadowsocks2",
+        "version": "v0.2.1"
+      },
+      {
+        "name": "github.com/sagernet/sing-shadowtls",
+        "version": "v0.2.1"
+      },
+      {
+        "name": "github.com/sagernet/sing-snell",
+        "version": "v0.0.0-20260829071736-20f2eaec77c3"
+      },
+      {
+        "name": "github.com/sagernet/sing-tun",
+        "version": "v0.9.0-beta.4"
+      },
+      {
+        "name": "github.com/sagernet/sing-vmess",
+        "version": "v0.2.8-0.20250909125414-3aed155119a1"
+      },
+      {
+        "name": "github.com/sagernet/smux",
+        "version": "v1.5.50-sing-box-mod.1"
+      },
+      {
+        "name": "github.com/sagernet/wireguard-go",
+        "version": "v0.0.5-0.20260823125007-8bd032a91a30"
+      },
+      {
+        "name": "github.com/sagernet/ws",
+        "version": "v0.0.0-20231204124109-acfe8907c854"
+      },
+      {
+        "name": "github.com/spf13/cobra",
+        "version": "v1.10.2"
+      },
+      {
+        "name": "github.com/spf13/pflag",
+        "version": "v1.0.10"
+      },
+      {
+        "name": "github.com/vishvananda/netns",
+        "version": "v0.0.5"
+      },
+      {
+        "name": "github.com/zeebo/blake3",
+        "version": "v0.2.4"
+      },
+      {
+        "name": "go.uber.org/multierr",
+        "version": "v1.11.0"
+      },
+      {
+        "name": "go.uber.org/zap",
+        "version": "v1.27.1"
+      },
+      {
+        "name": "go.uber.org/zap/exp",
+        "version": "v0.3.0"
+      },
+      {
+        "name": "go4.org/netipx",
+        "version": "v0.0.0-20231129151722-fdeea329fbba"
+      },
+      {
+        "name": "golang.org/x/crypto",
+        "version": "v0.54.0"
+      },
+      {
+        "name": "golang.org/x/exp",
+        "version": "v0.0.0-20260410095643-746e56fc9e2f"
+      },
+      {
+        "name": "golang.org/x/mod",
+        "version": "v0.37.0"
+      },
+      {
+        "name": "golang.org/x/net",
+        "version": "v0.57.0"
+      },
+      {
+        "name": "golang.org/x/sync",
+        "version": "v0.22.0"
+      },
+      {
+        "name": "golang.org/x/sys",
+        "version": "v0.47.0"
+      },
+      {
+        "name": "golang.org/x/term",
+        "version": "v0.45.0"
+      },
+      {
+        "name": "golang.org/x/text",
+        "version": "v0.40.0"
+      },
+      {
+        "name": "golang.org/x/time",
+        "version": "v0.15.0"
+      },
+      {
+        "name": "golang.zx2c4.com/wireguard/wgctrl",
+        "version": "v0.0.0-20241231184526-a9ab2273dd10"
+      },
+      {
+        "name": "google.golang.org/genproto/googleapis/rpc",
+        "version": "v0.0.0-20251202230838-ff82c1b0f217"
+      },
+      {
+        "name": "google.golang.org/grpc",
+        "version": "v1.79.1"
+      },
+      {
+        "name": "google.golang.org/protobuf",
+        "version": "v1.36.11"
+      },
+      {
+        "name": "lukechampine.com/blake3",
+        "version": "v1.3.0"
+      },
+      {
+        "name": "github.com/sagernet/sing-box",
+        "version": "v1.14.0",
+        "source_commit": "0b8995879f29a9b98ee027bc17b75e101445b238",
+        "resolution": "locally built pinned root plus documented app patches"
+      }
+    ],
+    "main_module": {
+      "name": "github.com/sagernet/sing-box",
+      "version": "(devel)"
+    },
+    "binary": "app/libs/jni/armeabi-v7a/libsingbox.so",
+    "abi": "armeabi-v7a",
+    "sha256": "4868be605b184f11c683bbc858bb14a762fb666199056fec3ff7461f187de8ed"
+  },
+  {
+    "go_version": "1.26.7",
+    "modules": [
+      {
+        "name": "github.com/RyuaNerin/go-krypto",
+        "version": "v1.3.0"
+      },
+      {
+        "name": "github.com/Yawning/aez",
+        "version": "v0.0.0-20211027044916-e49e68abd344"
+      },
+      {
+        "name": "github.com/ajg/form",
+        "version": "v1.7.1"
+      },
+      {
+        "name": "github.com/andybalholm/brotli",
+        "version": "v1.1.1"
+      },
+      {
+        "name": "github.com/bahlo/generic-list-go",
+        "version": "v0.2.0"
+      },
+      {
+        "name": "github.com/bodgit/plumbing",
+        "version": "v1.3.0"
+      },
+      {
+        "name": "github.com/bodgit/windows",
+        "version": "v1.0.1"
+      },
+      {
+        "name": "github.com/coreos/go-iptables",
+        "version": "v0.8.0"
+      },
+      {
+        "name": "github.com/dlclark/regexp2",
+        "version": "v1.12.0"
+      },
+      {
+        "name": "github.com/dunglas/httpsfv",
+        "version": "v1.0.2"
+      },
+      {
+        "name": "github.com/enfein/mieru/v3",
+        "version": "v3.35.0"
+      },
+      {
+        "name": "github.com/ericlagergren/aegis",
+        "version": "v0.0.0-20250325060835-cd0defd64358"
+      },
+      {
+        "name": "github.com/ericlagergren/polyval",
+        "version": "v0.0.0-20220411101811-e25bc10ba391"
+      },
+      {
+        "name": "github.com/ericlagergren/siv",
+        "version": "v0.0.0-20220507050439-0b757b3aa5f1"
+      },
+      {
+        "name": "github.com/ericlagergren/subtle",
+        "version": "v0.0.0-20220507045147-890d697da010"
+      },
+      {
+        "name": "github.com/fsnotify/fsnotify",
+        "version": "v1.9.0"
+      },
+      {
+        "name": "github.com/gaukas/godicttls",
+        "version": "v0.0.4"
+      },
+      {
+        "name": "github.com/gobwas/httphead",
+        "version": "v0.1.0"
+      },
+      {
+        "name": "github.com/gobwas/pool",
+        "version": "v0.2.1"
+      },
+      {
+        "name": "github.com/gobwas/ws",
+        "version": "v1.4.0"
+      },
+      {
+        "name": "github.com/gofrs/uuid/v5",
+        "version": "v5.4.0"
+      },
+      {
+        "name": "github.com/golang/snappy",
+        "version": "v1.0.0"
+      },
+      {
+        "name": "github.com/google/btree",
+        "version": "v1.1.3"
+      },
+      {
+        "name": "github.com/google/pprof",
+        "version": "v0.0.0-20240727154555-813a5fbdbec8"
+      },
+      {
+        "name": "github.com/hashicorp/golang-lru/v2",
+        "version": "v2.0.7"
+      },
+      {
+        "name": "github.com/insomniacslk/dhcp",
+        "version": "v0.0.0-20250109001534-8abf58130905"
+      },
+      {
+        "name": "github.com/josharian/native",
+        "version": "v1.1.0"
+      },
+      {
+        "name": "github.com/klauspost/compress",
+        "version": "v1.17.9"
+      },
+      {
+        "name": "github.com/klauspost/cpuid/v2",
+        "version": "v2.2.6"
+      },
+      {
+        "name": "github.com/klauspost/reedsolomon",
+        "version": "v1.12.3"
+      },
+      {
+        "name": "github.com/mdlayher/netlink",
+        "version": "v1.7.2"
+      },
+      {
+        "name": "github.com/mdlayher/socket",
+        "version": "v0.5.1"
+      },
+      {
+        "name": "github.com/metacubex/age",
+        "version": "v0.0.0-20260603010618-28d156b4ea78"
+      },
+      {
+        "name": "github.com/metacubex/amneziawg-go",
+        "version": "v0.0.0-20260816073447-736a78668832"
+      },
+      {
+        "name": "github.com/metacubex/ascon",
+        "version": "v0.1.0"
+      },
+      {
+        "name": "github.com/metacubex/bart",
+        "version": "v0.29.0"
+      },
+      {
+        "name": "github.com/metacubex/bbolt",
+        "version": "v0.0.0-20260706163408-d4ec34ad7c48"
+      },
+      {
+        "name": "github.com/metacubex/blake3",
+        "version": "v0.1.0"
+      },
+      {
+        "name": "github.com/metacubex/chacha",
+        "version": "v0.1.5"
+      },
+      {
+        "name": "github.com/metacubex/chi",
+        "version": "v0.1.1"
+      },
+      {
+        "name": "github.com/metacubex/connect-ip-go",
+        "version": "v0.0.0-20260727083417-67ccdb0cf771"
+      },
+      {
+        "name": "github.com/metacubex/cpu",
+        "version": "v0.1.1"
+      },
+      {
+        "name": "github.com/metacubex/edwards25519",
+        "version": "v1.2.0"
+      },
+      {
+        "name": "github.com/metacubex/fswatch",
+        "version": "v0.1.1"
+      },
+      {
+        "name": "github.com/metacubex/gopacket",
+        "version": "v1.1.20-0.20230608035415-7e2f98a3e759"
+      },
+      {
+        "name": "github.com/metacubex/hkdf",
+        "version": "v0.1.0"
+      },
+      {
+        "name": "github.com/metacubex/hpke",
+        "version": "v0.1.0"
+      },
+      {
+        "name": "github.com/metacubex/http",
+        "version": "v0.1.7"
+      },
+      {
+        "name": "github.com/metacubex/jls-quic-go",
+        "version": "v0.0.0-20260727080412-732f2fc9a34d"
+      },
+      {
+        "name": "github.com/metacubex/jls-tls",
+        "version": "v0.0.0-20260723084315-67adc0e2f796"
+      },
+      {
+        "name": "github.com/metacubex/kcp-go",
+        "version": "v0.0.0-20260105040817-550693377604"
+      },
+      {
+        "name": "github.com/metacubex/mhurl",
+        "version": "v0.1.0"
+      },
+      {
+        "name": "github.com/metacubex/mipstack",
+        "version": "v0.0.0-20260816065001-b7038299fe13"
+      },
+      {
+        "name": "github.com/metacubex/mlkem",
+        "version": "v0.1.0"
+      },
+      {
+        "name": "github.com/metacubex/nftables",
+        "version": "v0.0.0-20260426003805-208c2c1ba2cb"
+      },
+      {
+        "name": "github.com/metacubex/qpack",
+        "version": "v0.6.0"
+      },
+      {
+        "name": "github.com/metacubex/quic-go",
+        "version": "v0.61.1-0.20260727080200-2548683b76f4"
+      },
+      {
+        "name": "github.com/metacubex/randv2",
+        "version": "v0.2.0"
+      },
+      {
+        "name": "github.com/metacubex/restls-client-go",
+        "version": "v0.1.9"
+      },
+      {
+        "name": "github.com/metacubex/sevenzip",
+        "version": "v1.6.4"
+      },
+      {
+        "name": "github.com/metacubex/sing",
+        "version": "v0.5.7"
+      },
+      {
+        "name": "github.com/metacubex/sing-mux",
+        "version": "v0.3.10"
+      },
+      {
+        "name": "github.com/metacubex/sing-quic",
+        "version": "v0.0.0-20260726014900-38b0e9295f51"
+      },
+      {
+        "name": "github.com/metacubex/sing-shadowsocks",
+        "version": "v0.2.12"
+      },
+      {
+        "name": "github.com/metacubex/sing-shadowsocks2",
+        "version": "v0.2.7"
+      },
+      {
+        "name": "github.com/metacubex/sing-tun",
+        "version": "v0.4.22"
+      },
+      {
+        "name": "github.com/metacubex/sing-vmess",
+        "version": "v0.2.5"
+      },
+      {
+        "name": "github.com/metacubex/sing-wireguard",
+        "version": "v0.0.0-20260810013230-110eac03c3f0"
+      },
+      {
+        "name": "github.com/metacubex/smux",
+        "version": "v0.0.0-20260105030934-d0c8756d3141"
+      },
+      {
+        "name": "github.com/metacubex/ssh",
+        "version": "v0.1.0"
+      },
+      {
+        "name": "github.com/metacubex/tfo-go",
+        "version": "v0.0.0-20260623020846-376a77860b8c"
+      },
+      {
+        "name": "github.com/metacubex/tls",
+        "version": "v0.1.8"
+      },
+      {
+        "name": "github.com/metacubex/utls",
+        "version": "v1.8.7"
+      },
+      {
+        "name": "github.com/metacubex/wireguard-go",
+        "version": "v0.0.0-20250820062549-a6cecdd7f57f"
+      },
+      {
+        "name": "github.com/metacubex/yamux",
+        "version": "v0.0.0-20250918083631-dd5f17c0be49"
+      },
+      {
+        "name": "github.com/metacubex/zerotier-go",
+        "version": "v0.0.0-20260813124750-13fa6f45da5f"
+      },
+      {
+        "name": "github.com/miekg/dns",
+        "version": "v1.1.63"
+      },
+      {
+        "name": "github.com/mroth/weightedrand/v2",
+        "version": "v2.1.0"
+      },
+      {
+        "name": "github.com/oasisprotocol/deoxysii",
+        "version": "v0.0.0-20220228165953-2091330c22b7"
+      },
+      {
+        "name": "github.com/openacid/low",
+        "version": "v0.1.21"
+      },
+      {
+        "name": "github.com/oschwald/maxminddb-golang",
+        "version": "v1.12.0"
+      },
+      {
+        "name": "github.com/pierrec/lz4/v4",
+        "version": "v4.1.27"
+      },
+      {
+        "name": "github.com/rasky/go-lzo",
+        "version": "v0.0.0-20200203143853-96a758eda86e"
+      },
+      {
+        "name": "github.com/sagernet/netlink",
+        "version": "v0.0.0-20240612041022-b9a21c07ac6a"
+      },
+      {
+        "name": "github.com/samber/lo",
+        "version": "v1.53.0"
+      },
+      {
+        "name": "github.com/sina-ghaderi/poly1305",
+        "version": "v0.0.0-20220724002748-c5926b03988b"
+      },
+      {
+        "name": "github.com/sina-ghaderi/rabaead",
+        "version": "v0.0.0-20220730151906-ab6e06b96e8c"
+      },
+      {
+        "name": "github.com/sina-ghaderi/rabbitio",
+        "version": "v0.0.0-20220730151941-9ce26f4f872e"
+      },
+      {
+        "name": "github.com/sirupsen/logrus",
+        "version": "v1.9.4"
+      },
+      {
+        "name": "github.com/stangelandcl/ppmd",
+        "version": "v0.1.1"
+      },
+      {
+        "name": "github.com/u-root/uio",
+        "version": "v0.0.0-20230220225925-ffce2a382923"
+      },
+      {
+        "name": "github.com/ulikunitz/xz",
+        "version": "v0.5.15"
+      },
+      {
+        "name": "github.com/vishvananda/netns",
+        "version": "v0.0.5"
+      },
+      {
+        "name": "github.com/vmihailenco/msgpack/v5",
+        "version": "v5.4.1"
+      },
+      {
+        "name": "github.com/vmihailenco/tagparser/v2",
+        "version": "v2.0.0"
+      },
+      {
+        "name": "github.com/yosida95/uritemplate/v3",
+        "version": "v3.0.2"
+      },
+      {
+        "name": "gitlab.com/go-extension/aes-ccm",
+        "version": "v0.0.0-20230221065045-e58665ef23c7"
+      },
+      {
+        "name": "gitlab.com/yawning/bsaes.git",
+        "version": "v0.0.0-20190805113838-0a714cd429ec"
+      },
+      {
+        "name": "go.uber.org/automaxprocs",
+        "version": "v1.6.0"
+      },
+      {
+        "name": "go4.org/netipx",
+        "version": "v0.0.0-20231129151722-fdeea329fbba"
+      },
+      {
+        "name": "golang.org/x/crypto",
+        "version": "v0.33.0"
+      },
+      {
+        "name": "golang.org/x/exp",
+        "version": "v0.0.0-20240904232852-e7e105dedf7e"
+      },
+      {
+        "name": "golang.org/x/net",
+        "version": "v0.35.0"
+      },
+      {
+        "name": "golang.org/x/sync",
+        "version": "v0.11.0"
+      },
+      {
+        "name": "golang.org/x/sys",
+        "version": "v0.30.0"
+      },
+      {
+        "name": "golang.org/x/text",
+        "version": "v0.22.0"
+      },
+      {
+        "name": "golang.org/x/time",
+        "version": "v0.10.0"
+      },
+      {
+        "name": "github.com/metacubex/protobuf-go",
+        "version": "v0.0.0-20260306035419-7ceee0674686",
+        "upstream_baseline": {
+          "name": "google.golang.org/protobuf",
+          "version": "v1.34.2"
+        }
+      },
+      {
+        "name": "gopkg.in/yaml.v3",
+        "version": "v3.0.1"
+      },
+      {
+        "name": "github.com/metacubex/mihomo",
+        "version": "v1.19.30",
+        "source_commit": "ac017cdd246ce8bd547653d927e7bf77d7ee73d5",
+        "resolution": "locally built pinned root plus documented app patches"
+      }
+    ],
+    "main_module": {
+      "name": "github.com/metacubex/mihomo",
+      "version": "(devel)"
+    },
+    "binary": "app/libs/jni/armeabi-v7a/libmihomo.so",
+    "abi": "armeabi-v7a",
+    "sha256": "2ae830464f7bcf2006d77335354a95a7f18aa15b654a1094e904c546b6397b68"
+  },
+  {
+    "go_version": "1.27.1",
+    "modules": [
+      {
+        "name": "github.com/2dust/AndroidLibXrayLite",
+        "version": "v26.9.9",
+        "resolution": "pinned official AAR root/source relationship; not reproducible-build proof",
+        "source_commit": "d0c6c4ae1b09c912070c8288bd0dbcc2e492ac29"
+      },
+      {
+        "name": "github.com/andybalholm/brotli",
+        "version": "v1.2.0"
+      },
+      {
+        "name": "github.com/apernet/quic-go",
+        "version": "v0.61.1-0.20260806010916-184d081eef3e"
+      },
+      {
+        "name": "github.com/cloudflare/circl",
+        "version": "v1.6.5"
+      },
+      {
+        "name": "github.com/ghodss/yaml",
+        "version": "v1.0.1-0.20220118164431-d8423dcdf344"
+      },
+      {
+        "name": "github.com/google/btree",
+        "version": "v1.1.3"
+      },
+      {
+        "name": "github.com/google/gopacket",
+        "version": "v1.1.19"
+      },
+      {
+        "name": "github.com/google/uuid",
+        "version": "v1.6.0"
+      },
+      {
+        "name": "github.com/gorilla/websocket",
+        "version": "v1.5.3"
+      },
+      {
+        "name": "github.com/huin/goupnp",
+        "version": "v1.2.0"
+      },
+      {
+        "name": "github.com/jackpal/go-nat-pmp",
+        "version": "v1.0.2"
+      },
+      {
+        "name": "github.com/juju/ratelimit",
+        "version": "v1.0.2"
+      },
+      {
+        "name": "github.com/klauspost/compress",
+        "version": "v1.18.2"
+      },
+      {
+        "name": "github.com/klauspost/cpuid/v2",
+        "version": "v2.4.0"
+      },
+      {
+        "name": "github.com/koron/go-ssdp",
+        "version": "v0.0.4"
+      },
+      {
+        "name": "github.com/libp2p/go-nat",
+        "version": "v1.0.1-0.20250821073202-01afc089f138"
+      },
+      {
+        "name": "github.com/libp2p/go-netroute",
+        "version": "v0.2.1"
+      },
+      {
+        "name": "github.com/miekg/dns",
+        "version": "v1.1.73"
+      },
+      {
+        "name": "github.com/pelletier/go-toml",
+        "version": "v1.9.5"
+      },
+      {
+        "name": "github.com/pion/dtls/v3",
+        "version": "v3.1.5"
+      },
+      {
+        "name": "github.com/pion/logging",
+        "version": "v0.2.4"
+      },
+      {
+        "name": "github.com/pion/stun/v3",
+        "version": "v3.1.7"
+      },
+      {
+        "name": "github.com/pion/transport/v4",
+        "version": "v4.1.0"
+      },
+      {
+        "name": "github.com/pires/go-proxyproto",
+        "version": "v0.15.0"
+      },
+      {
+        "name": "github.com/quic-go/qpack",
+        "version": "v0.6.0"
+      },
+      {
+        "name": "github.com/refraction-networking/utls",
+        "version": "v1.8.3-0.20260301010127-aa6edf4b11af"
+      },
+      {
+        "name": "github.com/robfig/cron/v3",
+        "version": "v3.0.1"
+      },
+      {
+        "name": "github.com/sagernet/sing",
+        "version": "v0.7.13"
+      },
+      {
+        "name": "github.com/sagernet/sing-shadowsocks",
+        "version": "v0.2.9"
+      },
+      {
+        "name": "github.com/vishvananda/netlink",
+        "version": "v1.3.1"
+      },
+      {
+        "name": "github.com/vishvananda/netns",
+        "version": "v0.0.5"
+      },
+      {
+        "name": "github.com/wlynxg/anet",
+        "version": "v0.0.5"
+      },
+      {
+        "name": "github.com/xtls/reality",
+        "version": "v0.0.0-20260908062103-8cdf7bf9c7f0"
+      },
+      {
+        "name": "github.com/xtls/xray-core",
+        "version": "v1.260327.1-0.20260908222543-52a412d9e2f5"
+      },
+      {
+        "name": "go4.org/netipx",
+        "version": "v0.0.0-20231129151722-fdeea329fbba"
+      },
+      {
+        "name": "golang.org/x/crypto",
+        "version": "v0.57.0"
+      },
+      {
+        "name": "golang.org/x/exp",
+        "version": "v0.0.0-20240506185415-9bf2ced13842"
+      },
+      {
+        "name": "golang.org/x/mobile",
+        "version": "v0.0.0-20260908204917-8b95e45f8d3e"
+      },
+      {
+        "name": "golang.org/x/net",
+        "version": "v0.59.0"
+      },
+      {
+        "name": "golang.org/x/sync",
+        "version": "v0.23.0"
+      },
+      {
+        "name": "golang.org/x/sys",
+        "version": "v0.48.0"
+      },
+      {
+        "name": "golang.org/x/text",
+        "version": "v0.42.0"
+      },
+      {
+        "name": "golang.org/x/time",
+        "version": "v0.14.0"
+      },
+      {
+        "name": "golang.zx2c4.com/wireguard",
+        "version": "v0.0.0-20250521234502-f333402bd9cb"
+      },
+      {
+        "name": "google.golang.org/genproto/googleapis/rpc",
+        "version": "v0.0.0-20260526163538-3dc84a4a5aaa"
+      },
+      {
+        "name": "google.golang.org/grpc",
+        "version": "v1.83.2"
+      },
+      {
+        "name": "google.golang.org/protobuf",
+        "version": "v1.36.12"
+      },
+      {
+        "name": "gopkg.in/yaml.v2",
+        "version": "v2.4.0"
+      },
+      {
+        "name": "gvisor.dev/gvisor",
+        "version": "v0.0.0-20260122175437-89a5d21be8f0"
+      },
+      {
+        "name": "lukechampine.com/blake3",
+        "version": "v1.4.1"
+      }
+    ],
+    "main_module": {
+      "name": "gobind",
+      "version": "(devel)"
+    },
+    "binary": "libv2ray.aar!/jni/arm64-v8a/libgojni.so",
+    "abi": "arm64-v8a",
+    "sha256": "1605ddb3d2a6331b7bc1d3cff4bf20829d4a0f41e4c64d502528ca8d0bede9da"
+  },
+  {
+    "go_version": "1.27.1",
+    "modules": [
+      {
+        "name": "github.com/2dust/AndroidLibXrayLite",
+        "version": "v26.9.9",
+        "resolution": "pinned official AAR root/source relationship; not reproducible-build proof",
+        "source_commit": "d0c6c4ae1b09c912070c8288bd0dbcc2e492ac29"
+      },
+      {
+        "name": "github.com/andybalholm/brotli",
+        "version": "v1.2.0"
+      },
+      {
+        "name": "github.com/apernet/quic-go",
+        "version": "v0.61.1-0.20260806010916-184d081eef3e"
+      },
+      {
+        "name": "github.com/cloudflare/circl",
+        "version": "v1.6.5"
+      },
+      {
+        "name": "github.com/ghodss/yaml",
+        "version": "v1.0.1-0.20220118164431-d8423dcdf344"
+      },
+      {
+        "name": "github.com/google/btree",
+        "version": "v1.1.3"
+      },
+      {
+        "name": "github.com/google/gopacket",
+        "version": "v1.1.19"
+      },
+      {
+        "name": "github.com/google/uuid",
+        "version": "v1.6.0"
+      },
+      {
+        "name": "github.com/gorilla/websocket",
+        "version": "v1.5.3"
+      },
+      {
+        "name": "github.com/huin/goupnp",
+        "version": "v1.2.0"
+      },
+      {
+        "name": "github.com/jackpal/go-nat-pmp",
+        "version": "v1.0.2"
+      },
+      {
+        "name": "github.com/juju/ratelimit",
+        "version": "v1.0.2"
+      },
+      {
+        "name": "github.com/klauspost/compress",
+        "version": "v1.18.2"
+      },
+      {
+        "name": "github.com/klauspost/cpuid/v2",
+        "version": "v2.4.0"
+      },
+      {
+        "name": "github.com/koron/go-ssdp",
+        "version": "v0.0.4"
+      },
+      {
+        "name": "github.com/libp2p/go-nat",
+        "version": "v1.0.1-0.20250821073202-01afc089f138"
+      },
+      {
+        "name": "github.com/libp2p/go-netroute",
+        "version": "v0.2.1"
+      },
+      {
+        "name": "github.com/miekg/dns",
+        "version": "v1.1.73"
+      },
+      {
+        "name": "github.com/pelletier/go-toml",
+        "version": "v1.9.5"
+      },
+      {
+        "name": "github.com/pion/dtls/v3",
+        "version": "v3.1.5"
+      },
+      {
+        "name": "github.com/pion/logging",
+        "version": "v0.2.4"
+      },
+      {
+        "name": "github.com/pion/stun/v3",
+        "version": "v3.1.7"
+      },
+      {
+        "name": "github.com/pion/transport/v4",
+        "version": "v4.1.0"
+      },
+      {
+        "name": "github.com/pires/go-proxyproto",
+        "version": "v0.15.0"
+      },
+      {
+        "name": "github.com/quic-go/qpack",
+        "version": "v0.6.0"
+      },
+      {
+        "name": "github.com/refraction-networking/utls",
+        "version": "v1.8.3-0.20260301010127-aa6edf4b11af"
+      },
+      {
+        "name": "github.com/robfig/cron/v3",
+        "version": "v3.0.1"
+      },
+      {
+        "name": "github.com/sagernet/sing",
+        "version": "v0.7.13"
+      },
+      {
+        "name": "github.com/sagernet/sing-shadowsocks",
+        "version": "v0.2.9"
+      },
+      {
+        "name": "github.com/vishvananda/netlink",
+        "version": "v1.3.1"
+      },
+      {
+        "name": "github.com/vishvananda/netns",
+        "version": "v0.0.5"
+      },
+      {
+        "name": "github.com/wlynxg/anet",
+        "version": "v0.0.5"
+      },
+      {
+        "name": "github.com/xtls/reality",
+        "version": "v0.0.0-20260908062103-8cdf7bf9c7f0"
+      },
+      {
+        "name": "github.com/xtls/xray-core",
+        "version": "v1.260327.1-0.20260908222543-52a412d9e2f5"
+      },
+      {
+        "name": "go4.org/netipx",
+        "version": "v0.0.0-20231129151722-fdeea329fbba"
+      },
+      {
+        "name": "golang.org/x/crypto",
+        "version": "v0.57.0"
+      },
+      {
+        "name": "golang.org/x/exp",
+        "version": "v0.0.0-20240506185415-9bf2ced13842"
+      },
+      {
+        "name": "golang.org/x/mobile",
+        "version": "v0.0.0-20260908204917-8b95e45f8d3e"
+      },
+      {
+        "name": "golang.org/x/net",
+        "version": "v0.59.0"
+      },
+      {
+        "name": "golang.org/x/sync",
+        "version": "v0.23.0"
+      },
+      {
+        "name": "golang.org/x/sys",
+        "version": "v0.48.0"
+      },
+      {
+        "name": "golang.org/x/text",
+        "version": "v0.42.0"
+      },
+      {
+        "name": "golang.org/x/time",
+        "version": "v0.14.0"
+      },
+      {
+        "name": "golang.zx2c4.com/wireguard",
+        "version": "v0.0.0-20250521234502-f333402bd9cb"
+      },
+      {
+        "name": "google.golang.org/genproto/googleapis/rpc",
+        "version": "v0.0.0-20260526163538-3dc84a4a5aaa"
+      },
+      {
+        "name": "google.golang.org/grpc",
+        "version": "v1.83.2"
+      },
+      {
+        "name": "google.golang.org/protobuf",
+        "version": "v1.36.12"
+      },
+      {
+        "name": "gopkg.in/yaml.v2",
+        "version": "v2.4.0"
+      },
+      {
+        "name": "gvisor.dev/gvisor",
+        "version": "v0.0.0-20260122175437-89a5d21be8f0"
+      },
+      {
+        "name": "lukechampine.com/blake3",
+        "version": "v1.4.1"
+      }
+    ],
+    "main_module": {
+      "name": "gobind",
+      "version": "(devel)"
+    },
+    "binary": "libv2ray.aar!/jni/armeabi-v7a/libgojni.so",
+    "abi": "armeabi-v7a",
+    "sha256": "bf1aac9d0d767361de45f5edbe1b54919fe5ded4de57e4d2dc6a982a9eb51de9"
+  }
+]
