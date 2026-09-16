@@ -90,10 +90,12 @@ public class CleanIpActivity extends com.parvaz.tunnel.LockedActivity {
         if(com.parvaz.tunnel.core.TunnelVpnService.serviceRunning){Snackbar.make(applyBtn,R.string.cdn_stop_first,Snackbar.LENGTH_LONG).show();return;}
         com.parvaz.tunnel.store.ProfileStore.StartupLatency owner=store.captureStartupLatency(original);applyBtn.setEnabled(false);
         final long epoch=com.parvaz.tunnel.core.LatencyStamp.networkRevision();
-        verifyWorker=new Thread(()->{long measured=-1;try{measured=com.parvaz.tunnel.core.ProxyMeasurement.measureQueued(getApplicationContext(),candidate,"https://www.gstatic.com/generate_204");}catch(Exception ignored){}
+        final com.parvaz.tunnel.store.SnapshotPreferences settings=new com.parvaz.tunnel.store.SnapshotPreferences(getSharedPreferences("parvaz_prefs",0).getAll(),java.util.Collections.emptyMap());
+        final com.parvaz.tunnel.store.Prefs probePrefs=new com.parvaz.tunnel.store.Prefs(getApplicationContext(),settings);
+        verifyWorker=new Thread(()->{long measured=-1;try{measured=com.parvaz.tunnel.core.ProxyMeasurement.measureWithPreferences(getApplicationContext(),candidate,"https://www.gstatic.com/generate_204",probePrefs);}catch(Exception ignored){}
             final long result=measured;runOnUiThread(()->afterUnlock(()->{
                 if(isFinishing()||isDestroyed())return;applyBtn.setEnabled(true);
-                if(result<=0||epoch!=com.parvaz.tunnel.core.LatencyStamp.networkRevision()||com.parvaz.tunnel.core.TunnelVpnService.serviceRunning||!store.replaceEndpoint(owner,candidate)){Snackbar.make(applyBtn,R.string.cdn_not_applied,Snackbar.LENGTH_LONG).show();return;}
+                if(result<=0||!settings.getAll().equals(getSharedPreferences("parvaz_prefs",0).getAll())||epoch!=com.parvaz.tunnel.core.LatencyStamp.networkRevision()||com.parvaz.tunnel.core.TunnelVpnService.serviceRunning||!store.replaceEndpoint(owner,candidate)){Snackbar.make(applyBtn,R.string.cdn_not_applied,Snackbar.LENGTH_LONG).show();return;}
                 Snackbar.make(applyBtn,R.string.cdn_applied_one,Snackbar.LENGTH_INDEFINITE).setAction(R.string.undo,v->{
                     if(com.parvaz.tunnel.core.TunnelVpnService.serviceRunning||!store.undoEndpointEdit())Snackbar.make(applyBtn,R.string.cdn_not_applied,Snackbar.LENGTH_LONG).show();
                 }).show();
