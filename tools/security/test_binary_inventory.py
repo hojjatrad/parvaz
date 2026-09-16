@@ -6,7 +6,7 @@ class BinaryInventoryTest(unittest.TestCase):
   self.assertEqual(value,{'go_version':'1.26.7','modules':[{'name':'example.org/library','version':'v1.2.3'}],'main_module':{'name':'example.org/engine','version':'(devel)'}})
  def test_replacement_uses_actual_module_not_original(self):
   value=inventory.parse('engine.so: go1.26.7\n\tdep\texample.org/original\tv1.0.0\th1:x\n\t=>\texample.org/fork\tv1.0.2\th1:y\n')
-  self.assertEqual(value['modules'],[{'name':'example.org/fork','version':'v1.0.2'}])
+  self.assertEqual(value['modules'],[{'name':'example.org/fork','version':'v1.0.2','upstream_baseline':{'name':'example.org/original','version':'v1.0.0'}}])
  def test_only_explicit_pinned_wrapper_root_can_resolve_gomobile_local_main(self):
   text='engine.so: go1.27.1\n dep github.com/2dust/AndroidLibXrayLite v0.0.0-00010101000000-000000000000\n => /runner/source (devel)\n'
   with self.assertRaises(ValueError):inventory.parse(text)

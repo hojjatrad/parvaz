@@ -1,0 +1,44 @@
+{
+  "scope": "govulncheck1.8.0 symbol scan of prior1.28.5 ARM64 sing-box only; not an exploit proof or candidate scan",
+  "config": {
+    "protocol_version": "v1.0.0",
+    "scanner_name": "govulncheck",
+    "scanner_version": "v1.8.0",
+    "db": "https://vuln.go.dev",
+    "db_last_modified": "2026-09-15T18:39:25Z",
+    "scan_level": "symbol",
+    "scan_mode": "binary"
+  },
+  "module_matches": [
+    "GO-2026-4762",
+    "GO-2026-5774",
+    "GO-2026-5775",
+    "GO-2026-5777",
+    "GO-2026-5932",
+    "GO-2026-6061",
+    "GO-2026-6179",
+    "GO-2026-6180",
+    "GO-2026-6303",
+    "GO-2026-6348",
+    "GO-2026-6354",
+    "GO-2026-6355",
+    "GO-2026-6441",
+    "GO-2026-6443"
+  ],
+  "symbol_matches": [
+    "GO-2026-4762",
+    "GO-2026-5774",
+    "GO-2026-5775",
+    "GO-2026-5777",
+    "GO-2026-5932",
+    "GO-2026-6061",
+    "GO-2026-6179",
+    "GO-2026-6180",
+    "GO-2026-6303",
+    "GO-2026-6348",
+    "GO-2026-6354",
+    "GO-2026-6355",
+    "GO-2026-6441",
+    "GO-2026-6443"
+  ]
+}

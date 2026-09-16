@@ -36,7 +36,11 @@ def components(native):
   for binary in binaries:
    evidence={'binary':binary['binary'],'abi':binary['abi'],'sha256':binary['sha256']}
    add('Go','stdlib',binary['go_version'],evidence)
-   for module in binary['modules']:add('Go',module['name'],module['version'],evidence)
+   for module in binary['modules']:
+    add('Go',module['name'],module['version'],evidence)
+    upstream=module.get('upstream_baseline')
+    if upstream:
+     add('Go',upstream['name'],upstream['version'],dict(evidence,fork_target=module['name']+'@'+module['version'],scope='conservative upstream baseline; fork patch applicability requires review'))
   sources=ROOT/'.cache/native';locks=json.loads((ROOT/'tools/native/engines-lock.json').read_text())
   locks.append(dict(json.loads((ROOT/'tools/native/xray-source-lock.json').read_text()),name='xray-wrapper'))
   for lock in locks:

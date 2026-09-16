@@ -21,7 +21,9 @@ def parse(text,local_root=None):
    if fields[2]=='(devel)':
     if not local_root or pending['name']!=local_root['name'] or pending['version']!='v0.0.0-00010101000000-000000000000':raise ValueError('Unversioned binary dependency requires review')
     pending.update(version=local_root['version'],resolution='pinned official AAR root/source relationship; not reproducible-build proof',source_commit=local_root['commit'])
-   else:pending.update(name=fields[1],version=fields[2])
+   else:
+    pending['upstream_baseline']={'name':pending['name'],'version':pending['version']}
+    pending.update(name=fields[1],version=fields[2])
   else:pending=None
  if not modules:raise ValueError('Missing binary dependency table; cannot infer non-applicability')
  if any(not r['version'].startswith('v') for r in modules):raise ValueError('Unversioned binary dependency requires review')
