@@ -12,7 +12,7 @@
     <string name="app_lock_prompt">باز کردن پرواز</string>
     <string name="app_lock_subtitle">برای ادامه احراز هویت کنید</string>
     <string name="app_lock_unavailable">قفل بیومتریک یا رمز دستگاه تنظیم نشده</string>
-    <string name="app_name">پرواز</string>
+    <string name="app_name">پرواز (آزمایشی)</string>
     <string name="auto_switch">تعویض هوشمند خودکار</string>
     <string name="auto_switch_desc">اگر اتصال قطع شد یا کند شد، خودکار سرور را عوض کن</string>
     <string name="back">بازگشت</string>

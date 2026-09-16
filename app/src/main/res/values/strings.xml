@@ -12,7 +12,7 @@
     <string name="app_lock_prompt">Unlock Parvaz</string>
     <string name="app_lock_subtitle">Authenticate to continue</string>
     <string name="app_lock_unavailable">No biometric or device lock set up</string>
-    <string name="app_name">Parvaz</string>
+    <string name="app_name">Parvaz (TEST)</string>
     <string name="auto_switch">Smart auto-switch</string>
     <string name="auto_switch_desc">Switch server automatically when the connection drops or gets slow</string>
     <string name="back">Back</string>
