@@ -1,0 +1,8 @@
+{
+  "version": "1.28.6",
+  "version_code": 40,
+  "tag": "test/v1.28.6-r1",
+  "purpose": "Owner explicitly requested a manually installed experimental build, not stable approval.",
+  "final_minimum_version": "1.28.7",
+  "final_minimum_version_code": 41
+}

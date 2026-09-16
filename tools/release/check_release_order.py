@@ -17,6 +17,10 @@ def validate_order(candidate,previous):
         if name not in candidate.get('native',{}) or version(candidate['native'][name])<version(tag):raise ValueError('Refusing native engine downgrade: '+name)
     if previous.get('core') and version(candidate['core'])<version(previous['core']):raise ValueError('Refusing a core downgrade from published stable release')
 
+def validate_preview_reservation(candidate, reservation):
+    if candidate['code']<=reservation['version_code'] or version(candidate['version'])<=version(reservation['version']):
+        raise ValueError('Final release must upgrade the owner-installed test APK; increase both versionName and versionCode')
+
 def api(path):
     request=urllib.request.Request('https://api.github.com/repos/'+os.environ['GITHUB_REPOSITORY']+path,headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json','User-Agent':'Parvaz-release-order-guard'})
     with urllib.request.urlopen(request,timeout=30) as response:
@@ -35,6 +39,8 @@ def app(text):
 def main():
     candidate=app((ROOT/'app/build.gradle').read_text());candidate['core']=json.loads((ROOT/'tools/release/core-lock.json').read_text())['tag']
     candidate['native']={e['name']:e['tag'] for e in json.loads((ROOT/'tools/native/engines-lock.json').read_text())}
+    reservation=ROOT/'tools/release/install-preview-reservation.json'
+    if reservation.is_file():validate_preview_reservation(candidate,json.loads(reservation.read_text()))
     try:latest=api('/releases/latest')
     except urllib.error.HTTPError as error:
         if error.code==404:return
