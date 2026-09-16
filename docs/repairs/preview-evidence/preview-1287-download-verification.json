@@ -1,0 +1,54 @@
+{
+  "preview_url": "https://github.com/hojjatrad/parvaz/releases/tag/test/v1.28.7-r1",
+  "preview_source": "d14268ce236a85299d6958cae84698ecec09a3b7",
+  "file": "/home/user/Parvaz-1.28.7-TEST.apk",
+  "bytes": 88938083,
+  "sha256": "5392bab6f8a362fafcc6200e741d17db0f8f0785abb60a4caefc555bc0a6d6bc",
+  "signature": {
+    "verified": true,
+    "signer_sha256": "d1383b8f34da5d3299b13634de421487289d82c1bb47ec3bc7f20ae8d02fe500",
+    "v2": false,
+    "v3": true
+  },
+  "package": "com.parvaz.tunnel",
+  "version": "1.28.7",
+  "version_code": 41,
+  "min_sdk": 24,
+  "debuggable": false,
+  "six_native_hashes_match": true,
+  "native_hashes": [
+    {
+      "entry": "lib/arm64-v8a/libsingbox.so",
+      "sha256": "b650947de2f64ae4ad9a4747563d9a3f434a9d77873ec44e68f3cf4b68b7d982"
+    },
+    {
+      "entry": "lib/arm64-v8a/libmihomo.so",
+      "sha256": "ec4101e4195c3b92f8c092c0dce4f011029ada609ade99729ec593eef11fecc3"
+    },
+    {
+      "entry": "lib/armeabi-v7a/libsingbox.so",
+      "sha256": "4868be605b184f11c683bbc858bb14a762fb666199056fec3ff7461f187de8ed"
+    },
+    {
+      "entry": "lib/armeabi-v7a/libmihomo.so",
+      "sha256": "2ae830464f7bcf2006d77335354a95a7f18aa15b654a1094e904c546b6397b68"
+    },
+    {
+      "entry": "lib/arm64-v8a/libgojni.so",
+      "sha256": "1605ddb3d2a6331b7bc1d3cff4bf20829d4a0f41e4c64d502528ca8d0bede9da"
+    },
+    {
+      "entry": "lib/armeabi-v7a/libgojni.so",
+      "sha256": "bf1aac9d0d767361de45f5edbe1b54919fe5ded4de57e4d2dc6a982a9eb51de9"
+    }
+  ],
+  "stable_latest_unchanged": "v1.28.5",
+  "actual_installation": "NEW_CANDIDATE_NOT_YET_RETESTED_BY_OWNER",
+  "status": "MANUAL_TEST_ONLY_NOT_STABLE_APPROVAL",
+  "delivery": "present_file succeeded for the verified universal APK",
+  "signature_check_platform_range": [
+    29,
+    35
+  ],
+  "signature_check_note": "Apksig verified the selected applicable signature scheme over SDK29\u201335. A false per-scheme flag is not proof that that scheme is absent."
+}

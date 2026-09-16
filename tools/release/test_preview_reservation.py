@@ -6,4 +6,9 @@ class PreviewReservationTest(unittest.TestCase):
    with self.assertRaises(ValueError):order.validate_preview_reservation(candidate,{'version':'1.28.6','version_code':40})
  def test_higher_code_and_version_is_upgradeable(self):
   order.validate_preview_reservation({'code':41,'version':'1.28.7'},{'version':'1.28.6','version_code':40})
+ def test_ping_followup_preview_also_requires_a_higher_final(self):
+  reserved={'version':'1.28.7','version_code':41}
+  for candidate in [{'code':41,'version':'1.28.8'},{'code':42,'version':'1.28.7'}]:
+   with self.assertRaises(ValueError):order.validate_preview_reservation(candidate,reserved)
+  order.validate_preview_reservation({'code':42,'version':'1.28.8'},reserved)
 if __name__=='__main__':unittest.main()

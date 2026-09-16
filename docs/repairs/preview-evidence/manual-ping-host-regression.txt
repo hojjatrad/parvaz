@@ -1,0 +1,26 @@
+Actual store/refresh classes; local Android API substitutes, no physical device or user endpoint.
+PARSER/BUILDER TOTAL: 35 regression assertions passed.
+HTTP/TLS TOTAL: 63 assertions passed. TLS tests are desktop JVM, not Android trust-store tests.
+PHASE B TOTAL: 93 assertions passed (test substitutes, not Android device/durability tests).
+SMART IMPORT TOTAL: 38 assertions passed.
+FORMAT TOTAL: 16 assertions passed.
+NETWORK TOTAL: 6 assertions passed.
+REFRESH/DEDUP TOTAL: 53 assertions passed.
+PASS MANUAL_PING_REFRESH: background fetch is deferred while a manual row is queued
+PASS MANUAL_PING_REFRESH: queued ownership survives a deferred background refresh
+PASS MANUAL_PING_REFRESH: genuine result still publishes
+PASS MANUAL_PING_REFRESH: in-flight background commit defers for manual test; response kind=0
+PASS MANUAL_PING_REFRESH: response cannot replace the tested profile; kind=0
+PASS MANUAL_PING_REFRESH: active test can publish after deferred response; kind=0
+PASS MANUAL_PING_REFRESH: in-flight background commit defers for manual test; response kind=1
+PASS MANUAL_PING_REFRESH: response cannot replace the tested profile; kind=1
+PASS MANUAL_PING_REFRESH: active test can publish after deferred response; kind=1
+PASS MANUAL_PING_REFRESH: in-flight background commit defers for manual test; response kind=2
+PASS MANUAL_PING_REFRESH: response cannot replace the tested profile; kind=2
+PASS MANUAL_PING_REFRESH: active test can publish after deferred response; kind=2
+PASS MANUAL_PING_REFRESH: idle automatic refresh still works
+PASS MANUAL_PING_REFRESH: explicit refresh still invalidates old tests instead of publishing stale data
+PASS MANUAL_PING_REFRESH: old result never reaches the replacement row
+PASS MANUAL_PING_REFRESH: A-B-A source switch is still rejected
+PASS MANUAL_PING_REFRESH: source switch never becomes a successful ping
+MANUAL_PING_REFRESH_CHECKS=17

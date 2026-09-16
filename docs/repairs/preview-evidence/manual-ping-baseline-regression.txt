@@ -1,0 +1,6 @@
+Base:4664510; new ManualPingRefreshAudit test, no production fix applied.
+Exception in thread "main" java.lang.AssertionError: background fetch is deferred while a manual row is queued
+	at com.parvaz.tunnel.core.ManualPingRefreshAudit.check(ManualPingRefreshAudit.java:9)
+	at com.parvaz.tunnel.core.ManualPingRefreshAudit.pendingBeforeFetch(ManualPingRefreshAudit.java:15)
+	at com.parvaz.tunnel.core.ManualPingRefreshAudit.main(ManualPingRefreshAudit.java:39)
+Expected exit=1

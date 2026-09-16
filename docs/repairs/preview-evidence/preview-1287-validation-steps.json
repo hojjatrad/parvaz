@@ -1,0 +1,149 @@
+{
+  "url": "https://github.com/hojjatrad/parvaz/actions/runs/35085574767/job/104759466353",
+  "steps": [
+    {
+      "name": "Set up job",
+      "conclusion": "success",
+      "started-at": "2026-09-16T10:32:59Z",
+      "completed-at": "2026-09-16T10:33:01Z"
+    },
+    {
+      "name": "Reclaim unused runner toolchains before large native builds",
+      "conclusion": "success",
+      "started-at": "2026-09-16T10:33:01Z",
+      "completed-at": "2026-09-16T10:33:11Z"
+    },
+    {
+      "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+      "conclusion": "success",
+      "started-at": "2026-09-16T10:33:12Z",
+      "completed-at": "2026-09-16T10:33:12Z"
+    },
+    {
+      "name": "Require explicitly labelled manual-install preview, never stable publication",
+      "conclusion": "success",
+      "started-at": "2026-09-16T10:33:12Z",
+      "completed-at": "2026-09-16T10:33:12Z"
+    },
+    {
+      "name": "Test signing guards with synthetic data",
+      "conclusion": "success",
+      "started-at": "2026-09-16T10:33:12Z",
+      "completed-at": "2026-09-16T10:33:13Z"
+    },
+    {
+      "name": "Test staged transport boundaries with dummy bytes",
+      "conclusion": "success",
+      "started-at": "2026-09-16T10:33:13Z",
+      "completed-at": "2026-09-16T10:33:13Z"
+    },
+    {
+      "name": "Run actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961",
+      "conclusion": "success",
+      "started-at": "2026-09-16T10:33:13Z",
+      "completed-at": "2026-09-16T10:33:13Z"
+    },
+    {
+      "name": "Run actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16",
+      "conclusion": "success",
+      "started-at": "2026-09-16T10:33:13Z",
+      "completed-at": "2026-09-16T10:33:22Z"
+    },
+    {
+      "name": "Use runner Android SDK",
+      "conclusion": "success",
+      "started-at": "2026-09-16T10:33:22Z",
+      "completed-at": "2026-09-16T10:33:22Z"
+    },
+    {
+      "name": "Run gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a",
+      "conclusion": "success",
+      "started-at": "2026-09-16T10:33:22Z",
+      "completed-at": "2026-09-16T10:33:30Z"
+    },
+    {
+      "name": "Run host regressions and prepare SDK/core",
+      "conclusion": "success",
+      "started-at": "2026-09-16T10:33:30Z",
+      "completed-at": "2026-09-16T10:33:44Z"
+    },
+    {
+      "name": "Check both ordinary fail-closed and explicit unsigned build guards before native builds",
+      "conclusion": "success",
+      "started-at": "2026-09-16T10:33:44Z",
+      "completed-at": "2026-09-16T10:34:23Z"
+    },
+    {
+      "name": "Check lint against reviewed legacy baseline",
+      "conclusion": "success",
+      "started-at": "2026-09-16T10:34:23Z",
+      "completed-at": "2026-09-16T10:35:41Z"
+    },
+    {
+      "name": "Run Android unit tests",
+      "conclusion": "success",
+      "started-at": "2026-09-16T10:35:41Z",
+      "completed-at": "2026-09-16T10:36:55Z"
+    },
+    {
+      "name": "Build pinned engines and prepare corresponding source after fast checks",
+      "conclusion": "success",
+      "started-at": "2026-09-16T10:36:55Z",
+      "completed-at": "2026-09-16T10:46:42Z"
+    },
+    {
+      "name": "Inventory and audit resolved Java and native Go dependencies",
+      "conclusion": "success",
+      "started-at": "2026-09-16T10:46:42Z",
+      "completed-at": "2026-09-16T10:47:08Z"
+    },
+    {
+      "name": "Preserve supply-chain review evidence",
+      "conclusion": "success",
+      "started-at": "2026-09-16T10:47:08Z",
+      "completed-at": "2026-09-16T10:47:08Z"
+    },
+    {
+      "name": "Build and seal unsigned APKs for the isolated-signing path",
+      "conclusion": "success",
+      "started-at": "2026-09-16T10:47:08Z",
+      "completed-at": "2026-09-16T10:48:53Z"
+    },
+    {
+      "name": "Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+      "conclusion": "success",
+      "started-at": "2026-09-16T10:48:53Z",
+      "completed-at": "2026-09-16T10:49:13Z"
+    },
+    {
+      "name": "Post Run gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a",
+      "conclusion": "success",
+      "started-at": "2026-09-16T10:49:13Z",
+      "completed-at": "2026-09-16T10:49:13Z"
+    },
+    {
+      "name": "Post Run actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16",
+      "conclusion": "success",
+      "started-at": "2026-09-16T10:49:13Z",
+      "completed-at": "2026-09-16T10:49:13Z"
+    },
+    {
+      "name": "Post Run actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961",
+      "conclusion": "success",
+      "started-at": "2026-09-16T10:49:13Z",
+      "completed-at": "2026-09-16T10:49:13Z"
+    },
+    {
+      "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+      "conclusion": "success",
+      "started-at": "2026-09-16T10:49:13Z",
+      "completed-at": "2026-09-16T10:49:13Z"
+    },
+    {
+      "name": "Complete job",
+      "conclusion": "success",
+      "started-at": "2026-09-16T10:49:13Z",
+      "completed-at": "2026-09-16T10:49:13Z"
+    }
+  ]
+}
