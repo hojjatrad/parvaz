@@ -8,7 +8,7 @@ import android.os.Looper;
 
 import androidx.core.content.FileProvider;
 
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.parvaz.tunnel.core.SecureDialogBuilder;
 import com.parvaz.tunnel.R;
 import com.parvaz.tunnel.model.Profile;
 import com.parvaz.tunnel.store.ProfileStore;
@@ -96,7 +96,7 @@ public final class UpdateFlow {
                     + ":\n" + notes;
         }
 
-        new MaterialAlertDialogBuilder(activity)
+        new SecureDialogBuilder(activity)
                 .setTitle(R.string.update_title)
                 .setMessage(message)
                 .setPositiveButton(R.string.update_download,
@@ -176,7 +176,7 @@ public final class UpdateFlow {
         if(activity.isFinishing()||activity.isDestroyed())return;
         String report="Parvaz "+UpdateChecker.currentVersion(activity)+"; SDK_"+android.os.Build.VERSION.SDK_INT+"; "+failure;
         activity.getSharedPreferences("parvaz_update",0).edit().putString("last_error",report).apply();
-        new MaterialAlertDialogBuilder(activity).setTitle(R.string.update_title)
+        new SecureDialogBuilder(activity).setTitle(R.string.update_title)
             .setMessage(activity.getString(R.string.update_failed,report))
             .setPositiveButton(R.string.update_retry,(dialog,which)->retry.run())
             .setNeutralButton(R.string.update_official_page,(dialog,which)->{
@@ -206,7 +206,7 @@ public final class UpdateFlow {
                             message = message + "\n\n"
                                     + activity.getString(R.string.saved);
                         }
-                        new MaterialAlertDialogBuilder(activity)
+                        new SecureDialogBuilder(activity)
                                 .setTitle(R.string.diag_title)
                                 .setMessage(message)
                                 .setPositiveButton(R.string.ok, null)
@@ -265,7 +265,7 @@ public final class UpdateFlow {
                                 ? activity.getString(R.string.frag_tuned,
                                         result.length + " / " + result.interval + " ms")
                                 : activity.getString(R.string.frag_tune_failed);
-                        new MaterialAlertDialogBuilder(activity)
+                        new SecureDialogBuilder(activity)
                                 .setTitle(R.string.frag_tune)
                                 .setMessage(message)
                                 .setPositiveButton(result.found?R.string.apply:R.string.ok, (d,w)->{if(result.found&&!FragmentTuner.applyWinner(activity,result))toast(activity,activity.getString(R.string.cdn_not_applied));})

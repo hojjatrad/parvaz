@@ -19,7 +19,7 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SwitchCompat;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.parvaz.tunnel.core.SecureDialogBuilder;
 import com.google.android.material.snackbar.Snackbar;
 import com.parvaz.tunnel.RulesActivity__ExternalSyntheticOutline0;
 import com.parvaz.tunnel.SettingsActivity_28;
@@ -352,7 +352,7 @@ public class SettingsActivity extends com.parvaz.tunnel.LockedActivity {
             SettingsActivity settingsActivity = SettingsActivity.this;
             settingsActivity.getClass();
             if (uri2 != null) {
-                MaterialAlertDialogBuilder materialAlertDialogBuilder = new MaterialAlertDialogBuilder(settingsActivity);
+                SecureDialogBuilder materialAlertDialogBuilder = new SecureDialogBuilder(settingsActivity);
                 materialAlertDialogBuilder.setMessage(R.string.restore_confirm);
                 materialAlertDialogBuilder.setNegativeButton(R.string.cancel, null);
                 materialAlertDialogBuilder.setPositiveButton(R.string.ok, new SettingsActivity_28(settingsActivity, uri2));
@@ -636,7 +636,7 @@ public class SettingsActivity extends com.parvaz.tunnel.LockedActivity {
         wrap.setPadding(pad, pad / 2, pad, 0);
         wrap.addView(input);
 
-        new MaterialAlertDialogBuilder(this)
+        new SecureDialogBuilder(this)
                 .setTitle(R.string.backup_password_title)
                 .setMessage(R.string.backup_password_body)
                 .setView(wrap)
@@ -674,7 +674,7 @@ public class SettingsActivity extends com.parvaz.tunnel.LockedActivity {
         wrap.setPadding(pad, pad / 2, pad, 0);
         wrap.addView(input);
 
-        new MaterialAlertDialogBuilder(this)
+        new SecureDialogBuilder(this)
                 .setTitle(R.string.backup_locked_title)
                 .setMessage(R.string.backup_locked_body)
                 .setView(wrap)
@@ -818,7 +818,7 @@ public class SettingsActivity extends com.parvaz.tunnel.LockedActivity {
             appVersion = "1.8";
         }
         textView.setText(getString(R.string.version_fmt,appVersion,str)+"\n"+getString(R.string.bundled_native_versions)+"\nGPLv3 / LGPLv3 — github.com/hojjatrad/parvaz");
-        textView.setOnClickListener(v->new MaterialAlertDialogBuilder(this).setTitle(R.string.core_update_title)
+        textView.setOnClickListener(v->new SecureDialogBuilder(this).setTitle(R.string.core_update_title)
             .setMessage(R.string.core_update_help).setPositiveButton(R.string.core_update_check,(dialog,which)->UpdateFlow.checkForUpdate(this,false))
             .setNegativeButton(R.string.cancel,null).show());
         // ---- v1.8 tools -------------------------------------------------
@@ -1039,15 +1039,15 @@ public class SettingsActivity extends com.parvaz.tunnel.LockedActivity {
             lanSwitch.setOnCheckedChangeListener((button,checked)->{
                 C.f343a.edit().putBoolean("lan_proxy",false).apply();
                 if(!checked){com.parvaz.tunnel.core.HotspotProxyManager.stop();return;}
-                if(!com.parvaz.tunnel.core.TunnelVpnService.serviceRunning){lanSwitch.setChecked(false);new com.google.android.material.dialog.MaterialAlertDialogBuilder(this).setMessage(R.string.lan_need_vpn).setPositiveButton(android.R.string.ok,null).show();return;}
+                if(!com.parvaz.tunnel.core.TunnelVpnService.serviceRunning){lanSwitch.setChecked(false);new com.parvaz.tunnel.core.SecureDialogBuilder(this).setMessage(R.string.lan_need_vpn).setPositiveButton(android.R.string.ok,null).show();return;}
                 java.util.List<String> addresses=com.parvaz.tunnel.core.HotspotProxyManager.addresses();
-                if(addresses.isEmpty()){lanSwitch.setChecked(false);new com.google.android.material.dialog.MaterialAlertDialogBuilder(this).setMessage(R.string.lan_no_interface).setPositiveButton(android.R.string.ok,null).show();return;}
-                new com.google.android.material.dialog.MaterialAlertDialogBuilder(this).setTitle(R.string.lan_select_interface)
+                if(addresses.isEmpty()){lanSwitch.setChecked(false);new com.parvaz.tunnel.core.SecureDialogBuilder(this).setMessage(R.string.lan_no_interface).setPositiveButton(android.R.string.ok,null).show();return;}
+                new com.parvaz.tunnel.core.SecureDialogBuilder(this).setTitle(R.string.lan_select_interface)
                     .setItems(addresses.toArray(new String[0]),(dialog,index)->{
                         C.f343a.edit().putString("lan_bind_address",addresses.get(index)).apply();
-                        if(!com.parvaz.tunnel.core.HotspotProxyManager.start(this)){lanSwitch.setChecked(false);new com.google.android.material.dialog.MaterialAlertDialogBuilder(this).setMessage(R.string.lan_start_failed).setPositiveButton(android.R.string.ok,null).show();return;}
+                        if(!com.parvaz.tunnel.core.HotspotProxyManager.start(this)){lanSwitch.setChecked(false);new com.parvaz.tunnel.core.SecureDialogBuilder(this).setMessage(R.string.lan_start_failed).setPositiveButton(android.R.string.ok,null).show();return;}
                         String guide=getString(R.string.lan_secure_guide,com.parvaz.tunnel.core.HotspotProxyManager.boundAddress(),com.parvaz.tunnel.core.HotspotProxyManager.LAN_HTTP_PORT,com.parvaz.tunnel.core.HotspotProxyManager.password());
-                        androidx.appcompat.app.AlertDialog info=new com.google.android.material.dialog.MaterialAlertDialogBuilder(this).setTitle(R.string.lan_proxy).setMessage(guide).setPositiveButton(android.R.string.ok,null).create();
+                        androidx.appcompat.app.AlertDialog info=new com.parvaz.tunnel.core.SecureDialogBuilder(this).setTitle(R.string.lan_proxy).setMessage(guide).setPositiveButton(android.R.string.ok,null).create();
                         if(info.getWindow()!=null)info.getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE);info.show();
                     }).setNegativeButton(R.string.cancel,(d,w)->lanSwitch.setChecked(false)).setOnCancelListener(d->lanSwitch.setChecked(false)).show();
             });

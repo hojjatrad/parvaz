@@ -11,7 +11,7 @@ import org.json.*;
 public final class ProfileIdentity {
     private ProfileIdentity() {}
     public static Profile copy(Profile p) {
-        try { Profile result=Profile.fromJson(p.toJson());result.ping=p.ping;return result; }
+        try { Profile result=Profile.fromJson(p.toJson());result.ping=p.ping;result.latency=p.latency;return result; }
         catch(JSONException e){throw new IllegalArgumentException("Profile serialization failed");}
     }
     public static String fingerprint(Profile profile) {

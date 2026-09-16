@@ -40,6 +40,7 @@ public class Profile {
     public String reserved = "";
     public int wgMtu = 1420;
     public transient int ping = -1;
+    public transient com.parvaz.tunnel.core.LatencyStamp latency;
 
     public static Profile fromJson(JSONObject jSONObject) {
         Profile profile = new Profile();

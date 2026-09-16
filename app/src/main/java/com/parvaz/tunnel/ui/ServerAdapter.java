@@ -158,7 +158,11 @@ public final class ServerAdapter extends RecyclerView.Adapter<ServerAdapter.b> {
         androidx.core.view.ViewCompat.setTooltipText(pingText,this.f366e.getString(R.string.latency_rtt_hint));
         int ping = profile.ping;
         if (ping > 0) {
-            pingText.setText(ping + " ms");
+            boolean fresh=profile.latency!=null&&profile.latency.fresh();
+            pingText.setText(ping + " ms"+(fresh?"":" · "+this.f366e.getString(R.string.latency_history)));
+            String details=this.f366e.getString(R.string.latency_rtt_hint);
+            if(profile.latency!=null)details+="\n"+profile.latency.source+" / "+profile.latency.target+"\n"+new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss",java.util.Locale.getDefault()).format(new java.util.Date(profile.latency.measuredAt));
+            androidx.core.view.ViewCompat.setTooltipText(pingText,details);
             int color;
             if (ping < 300) {
                 color = -13730510;     // green
@@ -167,7 +171,7 @@ public final class ServerAdapter extends RecyclerView.Adapter<ServerAdapter.b> {
             } else {
                 color = -1754827;      // red
             }
-            pingText.setTextColor(color);
+            pingText.setTextColor(fresh?color:-6381922);
         } else if (ping == -2) {
             pingText.setText(this.f366e.getString(R.string.latency_failed));
             pingText.setTextColor(-1754827);

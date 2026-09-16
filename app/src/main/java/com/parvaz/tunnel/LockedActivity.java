@@ -4,6 +4,8 @@ import androidx.appcompat.app.AppCompatActivity;import androidx.biometric.Biomet
 import com.parvaz.tunnel.core.AppLock;
 /** Shared fail-closed gate for all sensitive app screens and incoming operations. */
 public abstract class LockedActivity extends AppCompatActivity {
+ private final java.util.ArrayList<java.lang.ref.WeakReference<android.app.Dialog>> dialogs=new java.util.ArrayList<>();
+ public final void registerSensitiveDialog(android.app.Dialog dialog){dialogs.add(new java.lang.ref.WeakReference<>(dialog));if(AppLock.enabled(this)&&dialog.getWindow()!=null)dialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);}
  private boolean authenticating,resumed;private final java.util.ArrayDeque<Runnable> pending=new java.util.ArrayDeque<>();
  public final boolean isAccessGranted(){return AppLock.allowed(this);}
  public final void afterUnlock(Runnable task){if(isAccessGranted())task.run();else if(pending.size()<8)pending.addLast(task);}
@@ -24,6 +26,6 @@ public abstract class LockedActivity extends AppCompatActivity {
  private void drain(){while(isAccessGranted()&&!pending.isEmpty()&&!isFinishing())pending.removeFirst().run();}
  protected void onAccessGranted(){}
  @Override protected void onPause(){resumed=false;super.onPause();}
- @Override protected void onStop(){if(AppLock.enabled(this))getWindow().getDecorView().setVisibility(View.INVISIBLE);super.onStop();}
+ @Override protected void onStop(){if(AppLock.enabled(this)){getWindow().getDecorView().setVisibility(View.INVISIBLE);for(java.lang.ref.WeakReference<android.app.Dialog> ref:dialogs){android.app.Dialog dialog=ref.get();if(dialog!=null&&dialog.isShowing())dialog.cancel();}dialogs.clear();}super.onStop();}
  @Override protected void onDestroy(){pending.clear();super.onDestroy();}
 }

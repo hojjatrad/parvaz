@@ -7,19 +7,32 @@ public final class NetworkAutomation {
  private NetworkAutomation(){}
  public static synchronized void install(Context context){
   if(installed)return;Context c=context.getApplicationContext();ConnectivityManager cm=(ConnectivityManager)c.getSystemService(Context.CONNECTIVITY_SERVICE);if(cm==null)return;
-  try{cm.registerDefaultNetworkCallback(new ConnectivityManager.NetworkCallback(){
+  try{ConnectivityManager.NetworkCallback callback=new ConnectivityManager.NetworkCallback(){
    public void onAvailable(Network n){schedule(c);}
    public void onCapabilitiesChanged(Network n,NetworkCapabilities caps){schedule(c);}
    public void onLost(Network n){schedule(c);}
-  });installed=true;schedule(c);}catch(RuntimeException ignored){}
+  };cm.registerNetworkCallback(new NetworkRequest.Builder().addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET).addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN).build(),callback);installed=true;schedule(c);}catch(RuntimeException ignored){}
  }
  private static Runnable pending;
  private static synchronized void schedule(Context c){if(pending!=null)MAIN.removeCallbacks(pending);pending=()->{synchronized(NetworkAutomation.class){pending=null;}evaluate(c);};MAIN.postDelayed(pending,1200);}
- static String key(Context c){try{ConnectivityManager cm=(ConnectivityManager)c.getSystemService(Context.CONNECTIVITY_SERVICE);Network n=cm==null?null:cm.getActiveNetwork();NetworkCapabilities caps=n==null?null:cm.getNetworkCapabilities(n);if(caps==null||caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN))return "";return n.getNetworkHandle()+":"+NetContext.transport(c);}catch(RuntimeException e){return "";}}
+ static String key(Context c){try{
+  ConnectivityManager cm=(ConnectivityManager)c.getSystemService(Context.CONNECTIVITY_SERVICE);if(cm==null)return "";
+  Network n=cm.getActiveNetwork();NetworkCapabilities caps=n==null?null:cm.getNetworkCapabilities(n);
+  if(caps!=null&&caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)){
+   if(!TunnelVpnService.serviceRunning)return "";
+   n=null;caps=null;int best=-1;
+   for(Network candidate:cm.getAllNetworks()){NetworkCapabilities value=cm.getNetworkCapabilities(candidate);if(value==null||value.hasTransport(NetworkCapabilities.TRANSPORT_VPN)||!value.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET))continue;
+    int score=(value.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)?4:0)+(value.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)?2:0);
+    if(score>best){best=score;n=candidate;caps=value;}
+   }
+  }
+  if(caps==null||n==null)return "";
+  return n.getNetworkHandle()+":"+(caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)?"wifi":caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)?"mobile":"other");
+ }catch(RuntimeException e){return "";}}
  public static synchronized void manualChoice(Context c){manual=key(c);handled=manual;}
  public static synchronized void settingsChanged(Context c){handled="";manual="";schedule(c.getApplicationContext());}
  public static synchronized void evaluate(Context c){
-  String key=key(c);if(!key.equals(observed)){observed=key;if(!key.equals(manual))manual="";NetworkEpoch.changed();}
+  String key=key(c);if(!key.equals(observed)){observed=key;if(!key.isEmpty()&&!key.equals(manual))manual="";NetworkEpoch.changed();}
   if(key.isEmpty()||key.equals(handled)||key.equals(manual)||SafeMode.sTrippedThisRun)return;
   int action=AutoProfile.decide(c);if(action==AutoProfile.ACTION_NONE)return;handled=key;
   if(action==AutoProfile.ACTION_DISCONNECT){if(TunnelVpnService.serviceRunning)c.startService(new Intent(c,TunnelVpnService.class).setAction("com.parvaz.tunnel.STOP").putExtra("automatic_network_rule",true));return;}

@@ -255,7 +255,7 @@ public class AppPickerActivity extends com.parvaz.tunnel.LockedActivity {
                 getString(R.string.split_preset_no_banking),
                 getString(R.string.split_preset_clear)
         };
-        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+        new com.parvaz.tunnel.core.SecureDialogBuilder(this)
                 .setTitle(R.string.split_presets)
                 .setItems(labels, new android.content.DialogInterface.OnClickListener() {
                     @Override
@@ -305,7 +305,7 @@ public class AppPickerActivity extends com.parvaz.tunnel.LockedActivity {
                 return;
             }
             String names = com.parvaz.tunnel.core.SplitPresets.labelsFor(this, hits, 4);
-            new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            new com.parvaz.tunnel.core.SecureDialogBuilder(this)
                     .setTitle(R.string.split_banking_title)
                     .setMessage(getString(R.string.split_banking_body, names))
                     .setPositiveButton(R.string.split_banking_exclude,

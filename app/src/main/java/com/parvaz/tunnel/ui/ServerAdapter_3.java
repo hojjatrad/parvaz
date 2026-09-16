@@ -1,7 +1,7 @@
 package com.parvaz.tunnel.ui;
 
 import android.view.View;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.parvaz.tunnel.core.SecureDialogBuilder;
 import com.parvaz.tunnel.MainActivity;
 import com.parvaz.tunnel.model.Profile;
 import com.parvaz.tunnel.R;
@@ -23,7 +23,7 @@ public final class ServerAdapter_3 implements View.OnLongClickListener {
     public final boolean onLongClick(View view) {
         MainActivity mainActivity = this.b.d.outer();
         String[] strArr = {mainActivity.getString(R.string.share_link), mainActivity.getString(R.string.show_qr), mainActivity.getString(R.string.delete), mainActivity.getString(R.string.delete_all)};
-        MaterialAlertDialogBuilder materialAlertDialogBuilder = new MaterialAlertDialogBuilder(mainActivity);
+        SecureDialogBuilder materialAlertDialogBuilder = new SecureDialogBuilder(mainActivity);
         Profile profile = this.f361a;
         materialAlertDialogBuilder.setTitle(profile.remark);
         materialAlertDialogBuilder.setItems(strArr,

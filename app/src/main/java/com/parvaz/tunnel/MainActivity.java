@@ -39,7 +39,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import androidx.work.impl.WorkManagerImplExtKt;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.parvaz.tunnel.core.SecureDialogBuilder;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.zxing.EncodeHintType;
@@ -337,7 +337,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
                 View inflate = mainActivity.getLayoutInflater().inflate(R.layout.dialog_input, (ViewGroup) null);
                 TextInputEditText textInputEditText = (TextInputEditText) inflate.findViewById(R.id.input);
                 textInputEditText.setHint(R.string.hint_link);
-                MaterialAlertDialogBuilder materialAlertDialogBuilder = new MaterialAlertDialogBuilder(mainActivity);
+                SecureDialogBuilder materialAlertDialogBuilder = new SecureDialogBuilder(mainActivity);
                 materialAlertDialogBuilder.setTitle(R.string.add_manual_link);
                 materialAlertDialogBuilder.setView(inflate);
                 materialAlertDialogBuilder.setNegativeButton(R.string.cancel, null);
@@ -351,7 +351,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
                 textInputEditText2.setHint(R.string.hint_raw_json);
                 textInputEditText2.setSingleLine(false);
                 textInputEditText2.setMaxLines(8);
-                MaterialAlertDialogBuilder materialAlertDialogBuilder2 = new MaterialAlertDialogBuilder(mainActivity);
+                SecureDialogBuilder materialAlertDialogBuilder2 = new SecureDialogBuilder(mainActivity);
                 materialAlertDialogBuilder2.setTitle(R.string.add_raw_json);
                 materialAlertDialogBuilder2.setView(inflate2);
                 materialAlertDialogBuilder2.setNegativeButton(R.string.cancel, null);
@@ -363,7 +363,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
                 View inflate3 = mainActivity.getLayoutInflater().inflate(R.layout.dialog_input, (ViewGroup) null);
                 TextInputEditText textInputEditText3 = (TextInputEditText) inflate3.findViewById(R.id.input);
                 textInputEditText3.setHint(R.string.hint_subscription);
-                MaterialAlertDialogBuilder materialAlertDialogBuilder3 = new MaterialAlertDialogBuilder(mainActivity);
+                SecureDialogBuilder materialAlertDialogBuilder3 = new SecureDialogBuilder(mainActivity);
                 materialAlertDialogBuilder3.setTitle(R.string.add_subscription);
                 materialAlertDialogBuilder3.setView(inflate3);
                 materialAlertDialogBuilder3.setNegativeButton(R.string.cancel, null);
@@ -416,7 +416,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
         public final boolean onLongClick(View view) {
             MainActivity mainActivity = MainActivity.this;
             mainActivity.getClass();
-            MaterialAlertDialogBuilder materialAlertDialogBuilder = new MaterialAlertDialogBuilder(mainActivity);
+            SecureDialogBuilder materialAlertDialogBuilder = new SecureDialogBuilder(mainActivity);
             materialAlertDialogBuilder.setTitle(R.string.data_reset);
             materialAlertDialogBuilder.setPositiveButton(R.string.ok, new z());
             materialAlertDialogBuilder.setNegativeButton(R.string.cancel, null);
@@ -819,7 +819,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
                         int i10 = (int) (mainActivity.getResources().getDisplayMetrics().density * 16.0f);
                         imageView.setPadding(i10, i10, i10, i10);
                         imageView.setAdjustViewBounds(true);
-                        MaterialAlertDialogBuilder materialAlertDialogBuilder = new MaterialAlertDialogBuilder(mainActivity);
+                        SecureDialogBuilder materialAlertDialogBuilder = new SecureDialogBuilder(mainActivity);
                         materialAlertDialogBuilder.setTitle(profile.remark);
                         materialAlertDialogBuilder.setView(imageView);
                         materialAlertDialogBuilder.setPositiveButton(R.string.ok, null);
@@ -849,7 +849,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
                 mainActivity.reload();
                 return;
             }
-            MaterialAlertDialogBuilder materialAlertDialogBuilder2 = new MaterialAlertDialogBuilder(mainActivity);
+            SecureDialogBuilder materialAlertDialogBuilder2 = new SecureDialogBuilder(mainActivity);
             materialAlertDialogBuilder2.setMessage(R.string.confirm_delete_all);
             materialAlertDialogBuilder2.setNegativeButton(R.string.cancel, null);
             materialAlertDialogBuilder2.setPositiveButton(R.string.ok, new DialogInterfaceOnClickListenerC0029k());
@@ -1091,7 +1091,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
 
     /* renamed from: C */
     private void importFullConfiguration(){
-        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this).setTitle(R.string.import_full_config).setMessage(R.string.full_config_warning)
+        new com.parvaz.tunnel.core.SecureDialogBuilder(this).setTitle(R.string.import_full_config).setMessage(R.string.full_config_warning)
           .setPositiveButton(R.string.import_full_paste,(d,w)->{
             android.content.ClipboardManager clipboard=(android.content.ClipboardManager)getSystemService(Context.CLIPBOARD_SERVICE);
             if(clipboard==null||!clipboard.hasPrimaryClip())return;
@@ -1128,7 +1128,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
                 if(value.isEmpty())Snackbar.make(findViewById(android.R.id.content),R.string.shared_input_failed,Snackbar.LENGTH_SHORT).show();else importText(value);
             });
         },"parvaz-share-file");sharedInputWorker.start();};
-        new MaterialAlertDialogBuilder(this).setTitle(R.string.shared_import_title).setMessage(R.string.shared_import_confirm)
+        new SecureDialogBuilder(this).setTitle(R.string.shared_import_title).setMessage(R.string.shared_import_confirm)
             .setPositiveButton(android.R.string.ok,(dialog,which)->approved.run())
             .setNegativeButton(android.R.string.cancel,(dialog,which)->readingSharedInput=false)
             .setOnCancelListener(dialog->readingSharedInput=false).show();
@@ -1165,7 +1165,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
 
     public final void showLastImportReport() {
         String report=L.f343a.getString("last_import_report",getString(R.string.import_report_empty));
-        new MaterialAlertDialogBuilder(this).setTitle(R.string.last_import_report)
+        new SecureDialogBuilder(this).setTitle(R.string.last_import_report)
             .setMessage(getString(R.string.import_report_help)+"\n\n"+report)
             .setPositiveButton(R.string.ok,null)
             .setNeutralButton(R.string.copy_safe_report,(dialog,which)->{
@@ -1176,10 +1176,10 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
 
     public final void showPrimarySubscriptionPicker(boolean refreshAfter) {
         if(importing||manualRefreshing){Snackbar.make(findViewById(android.R.id.content),R.string.refresh_busy,Snackbar.LENGTH_LONG).show();return;}
-        if(TunnelVpnService.serviceRunning||state==1){new MaterialAlertDialogBuilder(this).setMessage(R.string.primary_disconnect).setPositiveButton(R.string.ok,null).show();return;}
+        if(TunnelVpnService.serviceRunning||state==1){new SecureDialogBuilder(this).setMessage(R.string.primary_disconnect).setPositiveButton(R.string.ok,null).show();return;}
         java.util.ArrayList<Subscription> subs=b0.f();String[] names=new String[subs.size()];
         for(int i=0;i<subs.size();i++){Subscription sub=subs.get(i);names[i]=(i+1)+". "+sub.name+" — "+sub.count+" "+getString(R.string.primary_count);}
-        new MaterialAlertDialogBuilder(this).setTitle(R.string.primary_subscription)
+        new SecureDialogBuilder(this).setTitle(R.string.primary_subscription)
             .setItems(names,(dialog,which)->applyPrimarySubscription(subs.get(which).id,refreshAfter))
             .setNegativeButton(R.string.cancel,null)
             .setPositiveButton(R.string.manual_group,(d,w)->applyPrimarySubscription(ProfileStore.MANUAL_GROUP,false))
@@ -1210,7 +1210,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
 
     public final void showStoredReport(String key,int title,int help) {
         String report=L.f343a.getString(key,getString(R.string.import_report_empty));
-        new MaterialAlertDialogBuilder(this).setTitle(title).setMessage(getString(help)+"\n\n"+report)
+        new SecureDialogBuilder(this).setTitle(title).setMessage(getString(help)+"\n\n"+report)
             .setPositiveButton(R.string.ok,null).setNeutralButton(R.string.copy_safe_report,(dialog,which)->{
                 ClipboardManager clipboard=(ClipboardManager)getSystemService("clipboard");
                 if(clipboard!=null)clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Parvaz safe report",report));
@@ -1219,7 +1219,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
 
     private void removeDuplicateConnections() {
         if(importing||manualRefreshing){Snackbar.make(findViewById(android.R.id.content),R.string.refresh_busy,Snackbar.LENGTH_LONG).show();return;}
-        new MaterialAlertDialogBuilder(this).setTitle(R.string.remove_duplicates)
+        new SecureDialogBuilder(this).setTitle(R.string.remove_duplicates)
             .setMessage(R.string.remove_duplicates_confirm).setNegativeButton(R.string.cancel,null)
             .setPositiveButton(R.string.ok,(dialog,which)->{
                 try {
@@ -1240,7 +1240,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
         if(result.rejected==0 && result.warnings==0)return;
         StringBuilder summary=new StringBuilder(getString(R.string.import_result_summary,result.profiles.size(),result.rejected,result.warnings));
         for(int i=0;i<Math.min(8,result.issues.size());i++)summary.append("\n").append(result.issues.get(i));
-        new MaterialAlertDialogBuilder(this).setTitle(R.string.import_result_title).setMessage(summary.toString())
+        new SecureDialogBuilder(this).setTitle(R.string.import_result_title).setMessage(summary.toString())
                 .setPositiveButton(R.string.ok,null).show();
     }
 
@@ -1270,7 +1270,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
             String name = p2.remark.isEmpty() ? p2.displayAddress() : p2.remark;
             labels[i] = p2.ping > 0 ? (name + "  \u2014  " + p2.ping + " ms") : name;
         }
-        MaterialAlertDialogBuilder dialog = new MaterialAlertDialogBuilder(this);
+        SecureDialogBuilder dialog = new SecureDialogBuilder(this);
         dialog.setTitle(R.string.quick_switch_title);
         dialog.setItems(labels, new DialogInterface.OnClickListener() {
             @Override
@@ -1304,7 +1304,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
             if (n <= 0) {
                 return;
             }
-            MaterialAlertDialogBuilder dialog = new MaterialAlertDialogBuilder(this);
+            SecureDialogBuilder dialog = new SecureDialogBuilder(this);
             dialog.setTitle(R.string.unsupported_badge);
             dialog.setMessage(getString(R.string.unsupported_import_warn, Integer.valueOf(n)));
             dialog.setPositiveButton(R.string.ok, null);
@@ -1450,7 +1450,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
     }
     private void showStartupReport(){
         final String report="Parvaz "+com.parvaz.tunnel.core.UpdateChecker.currentVersion(this)+"; SDK_"+android.os.Build.VERSION.SDK_INT+"\n"+com.parvaz.tunnel.core.StartupDiagnostics.safeReport();
-        new MaterialAlertDialogBuilder(this).setTitle(R.string.startup_report_title).setMessage(getString(R.string.startup_report_help)+"\n\n"+report)
+        new SecureDialogBuilder(this).setTitle(R.string.startup_report_title).setMessage(getString(R.string.startup_report_help)+"\n\n"+report)
             .setPositiveButton(R.string.ok,null).setNeutralButton(R.string.copy_safe_report,(dialog,which)->{
                 android.content.ClipboardManager clipboard=(android.content.ClipboardManager)getSystemService(Context.CLIPBOARD_SERVICE);
                 if(clipboard!=null)clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Parvaz startup diagnostics",report));
@@ -1593,7 +1593,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
                 }
             }
 
-            new MaterialAlertDialogBuilder(this)
+            new SecureDialogBuilder(this)
                     .setTitle(R.string.quota_details_title)
                     .setMessage(sb.toString().trim())
                     .setPositiveButton(R.string.quota_refresh, new DialogInterface.OnClickListener() {
@@ -1605,7 +1605,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
                     .setNegativeButton(R.string.dismiss, null)
                     .show();
         } else {
-            new MaterialAlertDialogBuilder(this).setTitle(R.string.quota_details_title).setMessage(R.string.quota_no_metadata)
+            new SecureDialogBuilder(this).setTitle(R.string.quota_details_title).setMessage(R.string.quota_no_metadata)
                 .setPositiveButton(R.string.quota_refresh,(dialog,which)->updateSubscriptions()).setNegativeButton(R.string.dismiss,null).show();
         }
     }
@@ -1618,7 +1618,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
         input.setText(String.valueOf((int) currentGb));
         input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
 
-        new MaterialAlertDialogBuilder(this)
+        new SecureDialogBuilder(this)
                 .setTitle(R.string.service_set_manual)
                 .setMessage(R.string.service_gb_hint)
                 .setView(inflate)
@@ -1800,7 +1800,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
     /* renamed from: N */
     public final void showAddDialog() {
         String[] strArr = {getString(R.string.scan_qr), getString(R.string.add_from_clipboard), getString(R.string.add_manual_link), getString(R.string.add_raw_json), getString(R.string.add_subscription), getString(R.string.update_subscriptions), getString(R.string.backup_restore), getString(R.string.remove_duplicates),getString(R.string.last_import_report),getString(R.string.last_refresh_report),getString(R.string.last_duplicate_report),getString(R.string.primary_subscription),getString(R.string.import_file),getString(R.string.import_full_config),getString(R.string.startup_report_title)};
-        MaterialAlertDialogBuilder materialAlertDialogBuilder = new MaterialAlertDialogBuilder(this);
+        SecureDialogBuilder materialAlertDialogBuilder = new SecureDialogBuilder(this);
         materialAlertDialogBuilder.setTitle(R.string.add_server);
         materialAlertDialogBuilder.setItems(strArr, new F());
         materialAlertDialogBuilder.show();
@@ -2038,7 +2038,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
         if (current < 0 || current >= 5) {
             current = 0;
         }
-        new MaterialAlertDialogBuilder(this)
+        new SecureDialogBuilder(this)
                 .setTitle(R.string.sort_by)
                 .setSingleChoiceItems(labels, current, new android.content.DialogInterface.OnClickListener() {
                     @Override
@@ -2386,7 +2386,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
             }
             if (z2) {
                 this.L.f343a.edit().putBoolean("connect_on_boot", false).apply();
-                new MaterialAlertDialogBuilder(this)
+                new SecureDialogBuilder(this)
                         .setTitle(R.string.safe_mode_title)
                         .setMessage(R.string.safe_mode_desc)
                         .setPositiveButton(android.R.string.ok, null)
@@ -2399,7 +2399,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
         }
         try {
             if (CrashReporter.latest(this) != null && (latest = CrashReporter.latest(this)) != null) {
-                new MaterialAlertDialogBuilder(this)
+                new SecureDialogBuilder(this)
                         .setTitle(R.string.crash_title)
                         .setMessage(R.string.crash_desc)
                         .setPositiveButton(R.string.view, new C(latest))

@@ -75,9 +75,9 @@ public class CleanIpActivity extends com.parvaz.tunnel.LockedActivity {
         for(com.parvaz.tunnel.model.Profile p:store.activeProfiles())if(CleanIpScanner.eligible(p))eligible.add(com.parvaz.tunnel.store.ProfileIdentity.copy(p));
         if(eligible.isEmpty()){Snackbar.make(applyBtn,R.string.cdn_no_candidates,Snackbar.LENGTH_LONG).show();return;}
         String[] names=new String[eligible.size()];for(int i=0;i<names.length;i++)names[i]=eligible.get(i).remark;
-        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this).setTitle(R.string.cdn_select_one).setItems(names,(dialog,index)->{
+        new com.parvaz.tunnel.core.SecureDialogBuilder(this).setTitle(R.string.cdn_select_one).setItems(names,(dialog,index)->{
             com.parvaz.tunnel.model.Profile original=eligible.get(index),candidate=CleanIpScanner.candidate(original,ip);
-            new com.google.android.material.dialog.MaterialAlertDialogBuilder(this).setTitle(R.string.cdn_verify_title)
+            new com.parvaz.tunnel.core.SecureDialogBuilder(this).setTitle(R.string.cdn_verify_title)
                 .setMessage(original.address+" → "+candidate.address+"\nSNI: "+candidate.sni+"\n"+getString(R.string.cdn_verify_help))
                 .setPositiveButton(R.string.ok,(d,w)->verifyEdit(store,original,candidate)).setNegativeButton(R.string.cancel,null).show();
         }).setNegativeButton(R.string.cancel,null).show();

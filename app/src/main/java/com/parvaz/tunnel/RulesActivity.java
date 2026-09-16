@@ -15,7 +15,7 @@ import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.parvaz.tunnel.core.SecureDialogBuilder;
 import com.parvaz.tunnel.RulesActivity__ExternalSyntheticOutline0;
 import com.parvaz.tunnel.core.TunnelVpnService;
 import com.parvaz.tunnel.store.Prefs;
@@ -303,7 +303,7 @@ public class RulesActivity extends com.parvaz.tunnel.LockedActivity {
             spinner2.setSelection(i3);
             editText.setText(optJSONObject.optString("value", ""));
         }
-        MaterialAlertDialogBuilder materialAlertDialogBuilder = new MaterialAlertDialogBuilder(this);
+        SecureDialogBuilder materialAlertDialogBuilder = new SecureDialogBuilder(this);
         if (i < 0) {
             i2 = R.string.rule_add;
         } else {

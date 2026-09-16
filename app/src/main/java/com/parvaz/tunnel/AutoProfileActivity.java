@@ -67,7 +67,7 @@ public class AutoProfileActivity extends com.parvaz.tunnel.LockedActivity {
             public void onClick(View v) {
                 if(!normaliseSsids(trustedInput.getText().toString()).isEmpty()
                     &&androidx.core.content.ContextCompat.checkSelfPermission(AutoProfileActivity.this,android.Manifest.permission.ACCESS_FINE_LOCATION)!=android.content.pm.PackageManager.PERMISSION_GRANTED){
-                    new com.google.android.material.dialog.MaterialAlertDialogBuilder(AutoProfileActivity.this).setTitle(R.string.trusted_wifi_permission_title).setMessage(R.string.trusted_wifi_permission_help)
+                    new com.parvaz.tunnel.core.SecureDialogBuilder(AutoProfileActivity.this).setTitle(R.string.trusted_wifi_permission_title).setMessage(R.string.trusted_wifi_permission_help)
                       .setPositiveButton(R.string.ok,(d,w)->androidx.core.app.ActivityCompat.requestPermissions(AutoProfileActivity.this,new String[]{android.Manifest.permission.ACCESS_COARSE_LOCATION,android.Manifest.permission.ACCESS_FINE_LOCATION},905))
                       .setNegativeButton(R.string.cancel,null).show();return;
                 }

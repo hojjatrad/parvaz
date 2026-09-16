@@ -473,7 +473,7 @@ public final class ProfileStore {
             ||owner.original.ping!=com.parvaz.tunnel.core.LatencyResult.UNTESTED||measurements.containsKey(owner.snapshot.id)
             ||!owner.snapshot.subscriptionId.equals(owner.original.subscriptionId)
             ||!ProfileIdentity.fingerprint(owner.snapshot).equals(ProfileIdentity.fingerprint(owner.original))||!proofCurrent.getAsBoolean())return false;
-        owner.original.ping=ms;saveMeasurements();return true;
+        owner.original.ping=ms;owner.original.latency=com.parvaz.tunnel.core.LatencyStamp.live();saveMeasurements();return true;
     }
 
     /** Transient latency ownership; never written to subscription/profile JSON. */
@@ -500,11 +500,12 @@ public final class ProfileStore {
             &&m.snapshot.subscriptionId.equals(m.original.subscriptionId)
             &&ProfileIdentity.fingerprint(m.snapshot).equals(ProfileIdentity.fingerprint(m.original));
     }
-    public synchronized boolean finishMeasurement(Measurement m,int result){
+    public synchronized boolean finishMeasurement(Measurement m,int result){return finishMeasurement(m,result,null);}
+    public synchronized boolean finishMeasurement(Measurement m,int result,String target){
         recoverPendingRestore();
         if(m==null||measurements.get(m.snapshot.id)!=m)return false;
         boolean valid=ownsMeasurement(m);measurements.remove(m.snapshot.id);
-        if(valid){m.original.ping=result;return true;}
+        if(valid){m.original.ping=result;m.original.latency=result>0?com.parvaz.tunnel.core.LatencyStamp.manual(target):null;return true;}
         // Retire our own pending marker only, never a newer measurement/result.
         if(m.original.ping==com.parvaz.tunnel.core.LatencyResult.TESTING)m.original.ping=com.parvaz.tunnel.core.LatencyResult.CANCELLED;
         return getActiveById(m.snapshot.id)==m.original;
@@ -515,7 +516,7 @@ public final class ProfileStore {
         Profile byId = getById(str);
         if (byId != null) {
             if(measurements.containsKey(str))return; // A live-health sample must not impersonate a pending manual/target test.
-            byId.ping = i;
+            byId.ping = i;byId.latency=i>0?com.parvaz.tunnel.core.LatencyStamp.live():null;
         }
     }
 

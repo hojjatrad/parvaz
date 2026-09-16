@@ -64,7 +64,7 @@ public final class PingManager implements AutoCloseable {
  }
  private final class Job implements Runnable {
   final String id;final ProfileStore.Measurement measurement;final Batch owner;final Measurer selected;
-  final AtomicBoolean finished=new AtomicBoolean();volatile long observedNetwork=-1;Listener listener;Future<?> future;
+  final AtomicBoolean finished=new AtomicBoolean();volatile long observedNetwork=-1;volatile String target;Listener listener;Future<?> future;
   Job(String id,ProfileStore.Measurement m,Batch owner,Listener listener,Measurer selected){this.id=id;this.measurement=m;this.owner=owner;this.listener=listener;this.selected=selected;}
   void cancel(){if(future!=null)future.cancel(true);finish(LatencyResult.CANCELLED);}
   void finish(int value){
@@ -72,7 +72,7 @@ public final class PingManager implements AutoCloseable {
    handler.post(()->{
     synchronized(PingManager.this){
      int scoped=observedNetwork<0?value:LatencyResult.scoped(value,NetworkEpoch.owns(observedNetwork));
-     boolean applied=store.finishMeasurement(measurement,scoped);
+     boolean applied=store.finishMeasurement(measurement,scoped,target);
      if(jobs.get(id)==this)jobs.remove(id);
      Listener callback=listener;listener=null;
      if(!closed&&applied&&callback!=null)callback.onResult(id);
@@ -84,7 +84,8 @@ public final class PingManager implements AutoCloseable {
   @Override public void run(){
    if(finished.get())return;
    int result=LatencyResult.CANCELLED;long network=NetworkEpoch.current();observedNetwork=network;
-   try{if(store.ownsMeasurement(measurement))result=LatencyResult.measured(selected.measure(measurement.snapshot));}
+   VerifiedProbe.clearTarget();
+   try{if(store.ownsMeasurement(measurement))result=LatencyResult.measured(selected.measure(measurement.snapshot));target=VerifiedProbe.lastTarget();}
    catch(InterruptedException e){Thread.currentThread().interrupt();result=LatencyResult.CANCELLED;}
    catch(Exception e){result=LatencyResult.UNCONFIRMED;}
    result=LatencyResult.scoped(result,NetworkEpoch.owns(network));

@@ -8,7 +8,7 @@ import android.view.View;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.parvaz.tunnel.core.SecureDialogBuilder;
 import com.parvaz.tunnel.store.Prefs;
 import com.parvaz.tunnel.ui.UsageChartView;
 import com.parvaz.tunnel.R;
@@ -210,7 +210,7 @@ public class UsageActivity extends com.parvaz.tunnel.LockedActivity {
     }
 
     public void lambda$onCreate$2(View view) {
-        MaterialAlertDialogBuilder materialAlertDialogBuilder = new MaterialAlertDialogBuilder(this);
+        SecureDialogBuilder materialAlertDialogBuilder = new SecureDialogBuilder(this);
         materialAlertDialogBuilder.setMessage(R.string.usage_chart);
         materialAlertDialogBuilder.setNegativeButton(R.string.cancel, null);
         materialAlertDialogBuilder.setPositiveButton(R.string.ok, new c());
