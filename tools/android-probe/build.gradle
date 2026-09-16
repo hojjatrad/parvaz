@@ -33,6 +33,8 @@ def prepareProbeSources=tasks.register('prepareProbeSources',Sync){
             include 'com/parvaz/tunnel/config/ReadinessConfig.java'
             include 'com/parvaz/tunnel/config/ProtocolNames.java'
             include 'com/parvaz/tunnel/model/Profile.java'
+            include 'com/parvaz/tunnel/core/LatencyStamp.java'
+            include 'com/parvaz/tunnel/core/NetworkEpoch.java'
         }
     }
     into layout.buildDirectory.dir('generated/probeJava')

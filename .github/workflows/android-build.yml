@@ -60,6 +60,10 @@ jobs:
               root=ET.parse(path).getroot()
               counts={k:int(root.get(k,'0')) for k in totals}
               for k in totals:totals[k]+=counts[k]
+              for case in root.findall('testcase'):
+                  for failure in list(case.findall('failure'))+list(case.findall('error')):
+                      text=(case.get('classname','')+'.'+case.get('name','')+'\n'+(failure.text or ''))[:2800]
+                      print('::error title=Public regression fixture::'+text.replace('%','%25').replace('\r','%0D').replace('\n','%0A'))
               if any(x in root.get('name','') for x in ['Restore','BackupPreservation','V115Regression','StartupWarmup','ReadinessMonitor','ReadinessConfig','TrafficSampling','NetworkMonitorRegression','ResumableDownload','BoundedProbeRace','HealthPolicy','ProbeOwnershipRegression','StartupDiagnostics','SerialConnectionQueue','DnsReconnectPolicyRegression','ReconnectOwnership','ResolverIdentity','ManualLatency','LatencyResult','StartupLatencyDisplay','HttpsLatency','LastConnected','AuditRepair']):selected[root.get('name','')]=counts
               if root.get('name','').endswith('V115RegressionTest'):
                   for output in root.iter('system-out'):

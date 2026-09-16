@@ -82,6 +82,8 @@ public final class AutoProfile {
     /** Current Wi-Fi SSID with the quotes the framework wraps it in stripped. */
     public static String currentSsid(Context context) {
         try {
+            if(androidx.core.content.ContextCompat.checkSelfPermission(context,android.Manifest.permission.ACCESS_FINE_LOCATION)!=android.content.pm.PackageManager.PERMISSION_GRANTED)return "";
+            if(android.os.Build.VERSION.SDK_INT>=28){android.location.LocationManager location=(android.location.LocationManager)context.getSystemService(Context.LOCATION_SERVICE);if(location==null||!location.isLocationEnabled())return "";}
             WifiManager wm = (WifiManager) context.getApplicationContext()
                     .getSystemService(Context.WIFI_SERVICE);
             if (wm == null) {

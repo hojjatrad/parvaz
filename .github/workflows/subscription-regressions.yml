@@ -23,6 +23,7 @@ jobs:
           set -euo pipefail
           mkdir -p test-results
           bash tools/audit/run.sh | tee test-results/subscription-tests.txt
+          python3 tools/audit-repair/run_probe_policy.py | tee test-results/probe-policy.txt
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:

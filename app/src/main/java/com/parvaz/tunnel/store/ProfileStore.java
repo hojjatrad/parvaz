@@ -453,7 +453,7 @@ public final class ProfileStore {
             Profile before=Profile.fromJson(undo.getJSONObject("before")),current=getActiveById(before.id);
             if(current==null||!current.subscriptionId.equals(before.subscriptionId)||!ProfileIdentity.fingerprint(current).equals(undo.getString("after")))return false;
             return writeEndpoint(captureStartupLatency(current),before,null);
-        }catch(org.json.JSONException error){return false;}
+        }catch(Exception error){return false;}
     }
 
     /** Latency-only persistence must not change the subscription/source revision. */

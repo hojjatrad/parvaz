@@ -41,6 +41,7 @@ public final class NetworkAutomation {
    com.parvaz.tunnel.store.LastConnected.restore(c);
    try{ContextCompat.startForegroundService(c,new Intent(c,TunnelVpnService.class).setAction("com.parvaz.tunnel.START").putExtra("automatic_network_rule",true));return;}catch(RuntimeException restricted){}
   }
+  if(Build.VERSION.SDK_INT>=33&&ContextCompat.checkSelfPermission(c,android.Manifest.permission.POST_NOTIFICATIONS)!=android.content.pm.PackageManager.PERMISSION_GRANTED)return;
   try{NotificationManager nm=(NotificationManager)c.getSystemService(Context.NOTIFICATION_SERVICE);if(nm==null)return;
    if(Build.VERSION.SDK_INT>=26)nm.createNotificationChannel(new NotificationChannel("network_rules",c.getString(R.string.auto_profile),NotificationManager.IMPORTANCE_LOW));
    Intent open=new Intent(c,MainActivity.class).putExtra("com.parvaz.tunnel.AUTO_CONNECT",true);
