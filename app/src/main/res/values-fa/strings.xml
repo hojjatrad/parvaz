@@ -487,4 +487,7 @@
     <string name="trusted_wifi_permission_help">اندروید برای خواندن نام Wi-Fi به مجوز مکان و روشن‌بودن Location نیاز دارد. نام فقط محلی استفاده می‌شود، نه برای ردیابی GPS. دسترسی مکان پس‌زمینه درخواست نمی‌شود؛ تشخیص نام مورداعتماد ممکن است در پس‌زمینه در دسترس نباشد. پس از اجازه دوباره ذخیره را بزنید.</string>
     <string name="apply">اعمال</string>
     <string name="latency_history">تست قبلی</string>
+    <string name="latency_start_error">راه‌اندازی آزمون ناموفق</string>
+    <string name="latency_route_unverified">مسیر آزمون قابل تأیید نیست</string>
+    <string name="latency_network_changed">شبکه عوض شد؛ تکرار تست</string>
 </resources>

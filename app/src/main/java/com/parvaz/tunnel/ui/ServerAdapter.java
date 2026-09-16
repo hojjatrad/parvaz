@@ -179,7 +179,9 @@ public final class ServerAdapter extends RecyclerView.Adapter<ServerAdapter.b> {
             int label=ping==-3?R.string.latency_testing:ping==-4?R.string.latency_unconfirmed:
                 ping==-5?R.string.latency_busy:ping==-6?R.string.latency_cancelled:
                 ping==-7?R.string.latency_timeout:ping==-8?R.string.latency_tls_error:
-                ping==-9?R.string.latency_http_error:ping==-10?R.string.latency_network_error:R.string.latency_untested;
+                ping==-9?R.string.latency_http_error:ping==-10?R.string.latency_network_error:
+                ping==-11?R.string.latency_start_error:ping==-12?R.string.latency_route_unverified:
+                ping==-13?R.string.latency_network_changed:R.string.latency_untested;
             pingText.setText(this.f366e.getString(label));
             pingText.setTextColor(-6381922);
         }

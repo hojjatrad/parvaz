@@ -76,7 +76,10 @@ public final class SubscriptionRefresh {
         catch(InterruptedException e){Thread.currentThread().interrupt();result.cancelled=true;result.fail("CANCELLED",true);return result;}
         if(!acquired){result.fail("REFRESH_ALREADY_RUNNING",true);return result;}
         try {
-            store.removeDuplicates(prefs);
+            synchronized(store){
+                if(!wait)store.requireBackgroundRefreshIdle();
+                store.removeDuplicates(prefs);
+            }
             if(activeOnly){
                 targetId=store.primarySubscription();
                 if(targetId.isEmpty()||ProfileStore.MANUAL_GROUP.equals(targetId)){
@@ -105,6 +108,10 @@ public final class SubscriptionRefresh {
                     result.note("FORMAT_"+response.format);
                     for(String issue:parsed.issues)result.note(issue);
                     result.warnings+=parsed.warnings;
+                    // A manual test may have started while the HTTP fetch was running.
+                    // The check and commit share ProfileStore's monitor with beginMeasurement.
+                    synchronized(store){
+                    if(!wait)store.requireBackgroundRefreshIdle();
                     if(!parsed.safeToReplace()) {
                         if(!parsed.fatal&&!parsed.profiles.isEmpty()) {
                             if(stop(cancelled,result))break;
@@ -124,13 +131,16 @@ public final class SubscriptionRefresh {
                             System.currentTimeMillis(),prefs.getString("selected_profile",""));
                     result.outcome("UPDATED; recognized="+parsed.profiles.size()+"; current="+plan.count);
                     result.updated++;result.serverCount+=plan.count;result.added+=plan.added;result.retained+=plan.retained;result.removed+=plan.removed;
-                }catch(ProfileStore.StaleRefresh e){result.fail("STALE_RESPONSE_IGNORED",true);}
+                    }
+                }catch(ProfileStore.ManualLatencyActive e){result.fail("MANUAL_LATENCY_ACTIVE",true);}
+                 catch(ProfileStore.StaleRefresh e){result.fail("STALE_RESPONSE_IGNORED",true);}
                  catch(SubscriptionHttpClient.FetchException e){result.fail(e.error.name()+(e.httpStatus>0?"_"+e.httpStatus:""),transientError(e));result.diagnostic(e.diagnostic());}
                  catch(IOException e){result.fail("NETWORK_FAILURE",true);}
                  catch(IllegalArgumentException e){result.fail("INVALID_SUBSCRIPTION",false);}
                  catch(Exception e){result.fail("REFRESH_FAILED",true);}
             }
-        }catch(Exception e){result.fail("REFRESH_FAILED",true);}
+        }catch(ProfileStore.ManualLatencyActive e){result.fail("MANUAL_LATENCY_ACTIVE",true);}
+         catch(Exception e){result.fail("REFRESH_FAILED",true);}
         finally{
             try {
                 java.util.List<com.parvaz.tunnel.model.Profile> active=store.activeProfiles();

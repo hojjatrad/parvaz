@@ -501,6 +501,15 @@ public final class ProfileStore {
         private final long revision;
         private Measurement(Profile original,long revision){this.original=original;this.revision=revision;this.snapshot=ProfileIdentity.copy(original);}
     }
+    /** Called under this same monitor immediately before automatic refresh writes.
+     * Manual tests win this race; explicit source changes still invalidate tickets. */
+    public static final class ManualLatencyActive extends IllegalStateException {
+        public ManualLatencyActive(){super("MANUAL_LATENCY_ACTIVE");}
+    }
+    public synchronized boolean hasPendingMeasurements(){recoverPendingRestore();return !measurements.isEmpty();}
+    public synchronized void requireBackgroundRefreshIdle(){
+        recoverPendingRestore();if(!measurements.isEmpty())throw new ManualLatencyActive();
+    }
     public synchronized Measurement beginMeasurement(Profile profile){
         recoverPendingRestore();
         if(profile==null)return null;

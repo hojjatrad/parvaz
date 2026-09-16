@@ -505,4 +505,7 @@ Tap + to paste a config link or add a subscription."</string>
     <string name="trusted_wifi_permission_help">Android requires location permission and Location enabled to read a Wi-Fi name. Parvaz uses the name locally, not GPS tracking. No background-location permission is requested; trusted-SSID detection may be unavailable in the background. After allowing, tap Save again.</string>
     <string name="apply">Apply</string>
     <string name="latency_history">previous test</string>
+    <string name="latency_start_error">Test engine could not start</string>
+    <string name="latency_route_unverified">Test route cannot be verified</string>
+    <string name="latency_network_changed">Network changed; test again</string>
 </resources>

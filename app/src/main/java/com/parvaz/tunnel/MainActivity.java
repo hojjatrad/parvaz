@@ -1931,7 +1931,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
         if(isFinishing()||isDestroyed())return;
         long now=System.currentTimeMillis();
         long last=L.f343a.getLong("quota_refresh_attempt",0);
-        if(!importing&&!manualRefreshing&&!ProfileStore.MANUAL_GROUP.equals(b0.primarySubscription())&&!b0.f().isEmpty()&&(now-last>=300000L||now<last)) {
+        if(!importing&&!manualRefreshing&&!b0.hasPendingMeasurements()&&!ProfileStore.MANUAL_GROUP.equals(b0.primarySubscription())&&!b0.f().isEmpty()&&(now-last>=300000L||now<last)) {
             L.f343a.edit().putLong("quota_refresh_attempt",now).apply();
             new Thread(new SubscriptionUpdater_4(new SubscriptionUpdater(MainActivity.this),new J()),"parvaz-quota-refresh").start();
         }

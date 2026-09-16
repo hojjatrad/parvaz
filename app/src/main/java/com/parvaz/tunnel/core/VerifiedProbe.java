@@ -1,7 +1,7 @@
 package com.parvaz.tunnel.core;
 /** Consistent authenticated HTTPS RTT; never includes queue/core/TLS setup time. */
 final class VerifiedProbe {
- static final long UNKNOWN=-2;
+ static final long UNKNOWN=-2,START_FAILED=-25,ROUTE_UNVERIFIED=-26;
  private static final ThreadLocal<String> TARGET=new ThreadLocal<>();
  static void clearTarget(){TARGET.remove();}static String lastTarget(){return TARGET.get();}
  static String[] endpoints(String configured,boolean strict){return strict?new String[]{configured}:ReadinessMonitor.endpoints(configured);}

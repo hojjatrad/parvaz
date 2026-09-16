@@ -36,7 +36,7 @@ public final class ProxyMeasurement {
   try{
    Prefs prefs=snapshot==null?new Prefs(context):snapshot;String config;boolean nativeProfile=EngineConfig.external(profile.protocol);
    String chainId=prefs.f343a.getString("chain_profile","");Profile chain=chainId==null||chainId.isEmpty()||chainId.equals(profile.id)?null:ProfileStore.f(context).getById(chainId);
-   if(chain!=null&&(nativeProfile||FullConfig.isFull(profile.protocol)||EngineConfig.external(chain.protocol)))return VerifiedProbe.UNKNOWN;
+   if(chain!=null&&(nativeProfile||FullConfig.isFull(profile.protocol)||EngineConfig.external(chain.protocol)))return wait?VerifiedProbe.ROUTE_UNVERIFIED:VerifiedProbe.UNKNOWN;
    if(nativeProfile){
     external=ExternalCore.start(context,profile,null);config=ManagedConfig.xray(profile,external.relay(profile),prefs,external.dnsPort,false,false);
    }else if(profile.protocol.equals("full-xray")){
@@ -46,11 +46,11 @@ public final class ProxyMeasurement {
    JSONObject root=new JSONObject(config);root.put("inbounds",new JSONArray());
    int port;try(ServerSocket socket=new ServerSocket(0,1,InetAddress.getByName("127.0.0.1"))){port=socket.getLocalPort();}
    ReadinessConfig.Plan plan=ReadinessConfig.prepare(root.toString(),profile,external!=null&&external.readinessRemoteOnly,port);
-   if(!plan.pinned)return VerifiedProbe.UNKNOWN;
+   if(!plan.pinned)return wait?VerifiedProbe.ROUTE_UNVERIFIED:VerifiedProbe.UNKNOWN;
    if(Thread.currentThread().isInterrupted())throw new InterruptedException();
    controller=Libv2ray.newCoreController(new CoreCallbackHandler(){public long startup(){return 0;}public long shutdown(){return 0;}public long onEmitStatus(long code,String message){return 0;}});
    CoreManager.b().startIsolatedProbe(controller,plan.config);
-   if(!controller.getIsRunning()||(external!=null&&!external.isRunning()))return wait?VerifiedProbe.UNKNOWN:-1;
+   if(!controller.getIsRunning()||(external!=null&&!external.isRunning()))return wait?VerifiedProbe.START_FAILED:-1;
    return wait?VerifiedProbe.measureDetailed(port,url,true,strictTarget):VerifiedProbe.measure(port,url,true);
   }finally{
    // Keep capacity until the Xray instance really returns from StopLoop.

@@ -87,7 +87,7 @@ public final class PingManager implements AutoCloseable {
    VerifiedProbe.clearTarget();
    try{if(store.ownsMeasurement(measurement))result=LatencyResult.measured(selected.measure(measurement.snapshot));target=VerifiedProbe.lastTarget();}
    catch(InterruptedException e){Thread.currentThread().interrupt();result=LatencyResult.CANCELLED;}
-   catch(Exception e){result=LatencyResult.UNCONFIRMED;}
+   catch(Exception e){result=LatencyResult.START_ERROR;}
    result=LatencyResult.scoped(result,NetworkEpoch.owns(network));
    finish(result);
   }
