@@ -55,4 +55,29 @@ public class ManualLatencyTest {
 
  @Test public void identicalStaleRowTestsCanonicalReplacement()throws Exception{Profile old=profiles(1).get(0);Profile stale=ProfileIdentity.copy(old);store.restoreRecords(Collections.singletonList(ProfileIdentity.copy(old)),Collections.emptyList(),ProfileStore.MANUAL_GROUP);Profile current=store.getActiveById(old.id);Listener l=new Listener();manager(p->42).testOne(stale,l);until(()->l.finished==1);assertEquals(42,current.ping);}
  @Test public void staleChangedCredentialsCannotStartDifferentMeasurement(){Profile current=profiles(1).get(0);Profile stale=ProfileIdentity.copy(current);current.uuid="22222222-2222-4222-8222-222222222222";assertNull(store.beginMeasurement(stale));assertEquals(LatencyResult.UNTESTED,current.ping);}
+ private List<Profile> subscriptionRows(int count)throws Exception{
+  List<Profile> rows=profiles(count);for(int i=0;i<rows.size();i++){rows.get(i).subscriptionId="current";rows.get(i).address="fixture-"+i+".invalid";rows.get(i).port=443;}
+  com.parvaz.tunnel.model.Subscription sub=new com.parvaz.tunnel.model.Subscription();sub.id="current";sub.url="https://panel.invalid/sub";
+  store.restoreRecords(rows,Collections.singletonList(sub),"current");return store.activeProfiles();
+ }
+ @Test public void backgroundRefreshCannotCancelRunningAndQueuedBatchRows()throws Exception{
+  List<Profile> rows=subscriptionRows(8);CountDownLatch entered=new CountDownLatch(3),release=new CountDownLatch(1);Listener listener=new Listener();
+  PingManager m=manager(p->{entered.countDown();release.await();return 81;});m.startBatch(rows,listener);
+  try{
+   assertTrue(entered.await(3,TimeUnit.SECONDS));
+   SubscriptionRefresh.Result r=SubscriptionRefresh.runActive(store,app.getSharedPreferences("parvaz_prefs",0),()->false,url->{throw new AssertionError("Background refresh must defer before fetching");},false);
+   assertTrue(r.retryable);assertTrue(r.codes.contains("MANUAL_LATENCY_ACTIVE"));
+  }finally{release.countDown();}
+  until(()->listener.finished==1);assertFalse(listener.cancelled);assertEquals(8,listener.results);for(Profile p:rows)assertEquals(81,p.ping);
+ }
+ @Test public void batchStartingDuringBackgroundFetchKeepsAllRealResults()throws Exception{
+  List<Profile> rows=subscriptionRows(8);Listener listener=new Listener();PingManager m=manager(p->74);
+  SubscriptionRefresh.Result r=SubscriptionRefresh.runActive(store,app.getSharedPreferences("parvaz_prefs",0),()->false,url->{
+   com.parvaz.tunnel.config.ImportResult parsed=new com.parvaz.tunnel.config.ImportResult();for(Profile p:rows)parsed.add(ProfileIdentity.copy(p));
+   assertTrue(m.startBatch(rows,listener));return new SubscriptionUpdater.b("",null,0,parsed);
+  },false);
+  assertTrue(r.retryable);assertTrue(r.codes.contains("MANUAL_LATENCY_ACTIVE"));until(()->listener.finished==1);
+  assertFalse(listener.cancelled);assertEquals(8,listener.results);for(Profile p:rows){assertSame(p,store.getActiveById(p.id));assertEquals(74,p.ping);}
+ }
+
 }
