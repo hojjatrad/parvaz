@@ -7,7 +7,7 @@ git('init');git('remote','add','origin','https://github.com/'+os.environ['GITHUB
 if git('fetch','--depth=1','origin','qa/upgrade-evidence',check=False).returncode==0:git('checkout','-B','qa/upgrade-evidence','FETCH_HEAD')
 else:git('checkout','--orphan','qa/upgrade-evidence')
 run=os.environ['GITHUB_RUN_ID'];dest=repo/'runs'/run;dest.mkdir(parents=True,exist_ok=True)
-allowed={'summary.json','sbom.cdx.json','vulnerability-review.json'}
+allowed={'summary.json','sbom.cdx.json','vulnerability-review.json','binary-runtime.json'}
 for p in root.rglob('*'):
  if not p.is_file() or p.is_symlink():continue
  if p.name not in allowed and not (p.suffix in ('.png','.xml') and p.stem in {'01-prior-data','02-upgraded-data','03-small-fa','04-tablet-fa','99-final-ui'}):continue

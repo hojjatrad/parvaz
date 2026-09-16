@@ -1,9 +1,20 @@
 #!/usr/bin/env python3
-import hashlib,struct,zipfile
+import hashlib,json,struct,zipfile
 from pathlib import Path
+inventory=json.loads(Path('.cache/supply-chain/binary-runtime.json').read_text())
+if len(inventory)!=6:raise SystemExit('All six shipped native binary scan records are required')
+expected={}
+for row in inventory:
+ name='lib/'+row['abi']+'/'+row['binary'].split('/')[-1]
+ if name in expected:raise SystemExit('Duplicate native scan identity')
+ expected[name]=row['sha256']
 for apk in Path('app/build/outputs/apk/release').glob('*.apk'):
  abis=['arm64-v8a'] if 'arm64-v8a' in apk.name else ['armeabi-v7a'] if 'armeabi-v7a' in apk.name else ['arm64-v8a','armeabi-v7a']
  with zipfile.ZipFile(apk) as z:
+  for abi in abis:
+   for library in ['libgojni.so','libsingbox.so','libmihomo.so']:
+    name='lib/'+abi+'/'+library
+    if hashlib.sha256(z.read(name)).hexdigest()!=expected.get(name):raise SystemExit('Packaged ELF differs from vulnerability-scanned bytes: '+name)
   for abi in abis:
    for engine in ['singbox','mihomo']:
     name='lib/'+abi+'/lib'+engine+'.so';data=z.read(name)

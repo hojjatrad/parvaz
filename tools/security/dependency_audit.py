@@ -4,7 +4,7 @@ No private profiles, URLs, keys or user data are read/sent. OSV receives public
 third-party package coordinates only. Inventory is conservative pre-R8/module
 scope, NOT a claim every vulnerable function is reachable or every flaw known.
 """
-import argparse,datetime,hashlib,json,os,pathlib,subprocess,time,urllib.request,urllib.parse
+import argparse,datetime,hashlib,json,os,pathlib,re,subprocess,time,urllib.request,urllib.parse
 ROOT=pathlib.Path(__file__).resolve().parents[2]
 OUT=ROOT/'.cache/supply-chain'
 
@@ -29,6 +29,14 @@ def components(native):
   if extra:value['sources'].append(extra)
  for c in data['components']:add('Maven',c['group']+':'+c['name'],c['version'],{'artifacts':c['artifacts']})
  if native:
+  import importlib.util
+  spec=importlib.util.spec_from_file_location('binary_inventory',pathlib.Path(__file__).with_name('binary_inventory.py'));binary_inventory=importlib.util.module_from_spec(spec);spec.loader.exec_module(binary_inventory)
+  binaries=binary_inventory.scan(ROOT)
+  (OUT/'binary-runtime.json').write_text(json.dumps(binaries,indent=2)+'\n')
+  for binary in binaries:
+   evidence={'binary':binary['binary'],'abi':binary['abi'],'sha256':binary['sha256']}
+   add('Go','stdlib',binary['go_version'],evidence)
+   for module in binary['modules']:add('Go',module['name'],module['version'],evidence)
   sources=ROOT/'.cache/native';locks=json.loads((ROOT/'tools/native/engines-lock.json').read_text())
   locks.append(dict(json.loads((ROOT/'tools/native/xray-source-lock.json').read_text()),name='xray-wrapper'))
   for lock in locks:
@@ -64,8 +72,10 @@ def purl(c):
   group,name=c['name'].split(':',1);return 'pkg:maven/'+group+'/'+name+'@'+c['version']
  if c['ecosystem']=='Git':
   parsed=urllib.parse.urlsplit(c['name'])
-  if parsed.hostname!='github.com':raise ValueError('Unsupported Git source PURL host')
-  return 'pkg:github/'+parsed.path.strip('/').removesuffix('.git')+'@'+c['version']
+  if parsed.hostname=='github.com':name=parsed.path.strip('/').removesuffix('.git')
+  elif not parsed.scheme and re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+',c['name']):name=c['name']
+  else:raise ValueError('Unsupported Git source PURL host')
+  return 'pkg:github/'+name.lower()+'@'+c['version']
  return 'pkg:golang/'+c['name']+'@'+c['version']
 
 def run(native):
@@ -75,7 +85,7 @@ def run(native):
   comp.append({'type':'library','name':c['name'],'version':c['version'],'purl':purl(c),'bom-ref':purl(c),'properties':[{'name':'parvaz:inventory-evidence','value':json.dumps(c['sources'],sort_keys=True)}]})
  local=ROOT/'app/libs/libv2ray.aar'
  if local.is_file():comp.append({'type':'library','name':'libv2ray.aar','version':json.loads((ROOT/'tools/release/core-lock.json').read_text())['tag'],'hashes':[{'alg':'SHA-256','content':sha(local)}]})
- bom={'bomFormat':'CycloneDX','specVersion':'1.5','version':1,'metadata':{'timestamp':now,'properties':[{'name':'parvaz:scope','value':'resolved release Java modules'+('; three native Go dependency graphs and toolchains' if native else '; JAVA ONLY, native scan not performed')},{'name':'parvaz:limitations','value':'Conservative pre-R8/module inventory. Android OS/NDK system libraries and unknown vulnerabilities are not covered; source toolchains are recorded, not inferred as hardware evidence.'}]},'components':comp}
+ bom={'bomFormat':'CycloneDX','specVersion':'1.5','version':1,'metadata':{'timestamp':now,'properties':[{'name':'parvaz:scope','value':'resolved release Java modules'+('; three native Go dependency graphs and toolchains' if native else '; JAVA ONLY, native scan not performed')},{'name':'parvaz:limitations','value':'Conservative pre-R8/module inventory. Android OS/NDK system libraries and unknown vulnerabilities are not covered; All six shipped ARM engine module tables and embedded Go compilers are checked. Source-only module matches remain listed with explicit non-shipped disposition; this is not function reachability or hardware evidence.'}]},'components':comp}
  (OUT/'sbom.cdx.json').write_text(json.dumps(bom,indent=2)+'\n')
  findings=[]
  for start in range(0,len(items),100):
@@ -89,8 +99,14 @@ def run(native):
  for row in findings:
   for v in row['vulnerabilities']:
    if v['id'] not in details:details[v['id']]=request('vulns/'+urllib.parse.quote(v['id'],safe=''))
- actionable=[r for r in findings if any(not details[v['id']].get('withdrawn') for v in r['vulnerabilities'])]
- report={'timestamp':now,'source_commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),'native_graphs_included':native,'components_queried':len(items),'status':'REVIEW_REQUIRED' if actionable else 'NO_KNOWN_MATCHES_IN_SCANNED_SCOPE','findings':findings,'advisories':details}
+ actionable=[]
+ for row in findings:
+  active=any(not details[v['id']].get('withdrawn') for v in row['vulnerabilities'])
+  c=row['component']
+  not_built=native and c['ecosystem']=='Go' and not any('binary' in source for source in c['sources'])
+  row['disposition']='WITHDRAWN' if not active else ('NOT_IN_ANY_SHIPPED_BINARY_MODULE_TABLE' if not_built else 'REVIEW_REQUIRED')
+  if active and not not_built:actionable.append(row)
+ report={'timestamp':now,'source_commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),'native_graphs_included':native,'components_queried':len(items),'binary_runtime_verified':native,'status':'REVIEW_REQUIRED' if actionable else ('NO_APPLICABLE_MATCHES_IN_BUILT_RUNTIME' if findings else 'NO_KNOWN_MATCHES_IN_SCANNED_SCOPE'),'findings':findings,'advisories':details}
  (OUT/'vulnerability-review.json').write_text(json.dumps(report,indent=2)+'\n')
  print('::notice title=DEPENDENCY_REVIEW::'+report['status']+' components='+str(len(items))+' native_graphs='+str(native))
  for row in actionable:

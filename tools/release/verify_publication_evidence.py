@@ -5,7 +5,8 @@ def verify(root,version,commit):
  if len(reports)!=1:raise SystemExit('Exactly one upgrade proof required')
  proof=json.loads(reports[0].read_text());review=json.loads((root/'.cache/supply-chain/vulnerability-review.json').read_text())
  if proof.get('source_commit')!=commit or review.get('source_commit')!=commit:raise SystemExit('Evidence must match exact source commit')
- if not review.get('native_graphs_included') or review.get('status')!='NO_KNOWN_MATCHES_IN_SCANNED_SCOPE':raise SystemExit('Dependency review incomplete or unresolved')
+ if not review.get('native_graphs_included') or review.get('status') not in ('NO_KNOWN_MATCHES_IN_SCANNED_SCOPE','NO_APPLICABLE_MATCHES_IN_BUILT_RUNTIME'):raise SystemExit('Dependency review incomplete or unresolved')
+ if review.get('status')=='NO_APPLICABLE_MATCHES_IN_BUILT_RUNTIME' and (not review.get('binary_runtime_verified') or any(r.get('disposition') not in ('WITHDRAWN','NOT_IN_ANY_SHIPPED_BINARY_MODULE_TABLE') for r in review.get('findings',[]))):raise SystemExit('Non-applicability lacks binary evidence')
  tests=proof.get('tests',[])
  if sum(r['tests'] for r in tests)!=1 or any(r[k] for r in tests for k in ['failures','errors','skipped']):raise SystemExit('Upgrade test did not pass exactly once')
  artifacts=root/'release-artifacts';expected={f'Parvaz-{version}-arm64.apk': 'app-arm64-v8a-release.apk',f'Parvaz-{version}.apk':'app-universal-release.apk'}

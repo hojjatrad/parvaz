@@ -22,6 +22,11 @@ class PublicationEvidenceTest(unittest.TestCase):
   for change in [{'native_graphs_included':False},{'status':'REVIEW_REQUIRED'}]:
    self.review.update(change);self.save()
    with self.assertRaises(SystemExit):gate.verify(self.root,'1.28.6','commit')
+ def test_nonapplicability_without_complete_binary_evidence_rejected(self):
+  self.review['status']='NO_APPLICABLE_MATCHES_IN_BUILT_RUNTIME';self.save()
+  with self.assertRaises(SystemExit):gate.verify(self.root,'1.28.6','commit')
+  self.review.update(binary_runtime_verified=True,findings=[{'disposition':'REVIEW_REQUIRED'}]);self.save()
+  with self.assertRaises(SystemExit):gate.verify(self.root,'1.28.6','commit')
  def test_missing_or_skipped_upgrade_rejected(self):
   for tests in [[],[{'tests':1,'failures':0,'errors':0,'skipped':1}]]:
    self.proof['tests']=tests;self.save()
