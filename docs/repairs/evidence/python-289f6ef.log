@@ -1,0 +1,6 @@
+....................................
+----------------------------------------------------------------------
+Ran 36 tests in 0.101s
+
+OK
+::notice title=CORE_DISCOVERY_OK::Official stable metadata checked for Xray and 2 native engines; newer native candidates=1. Check-only run never publishes.

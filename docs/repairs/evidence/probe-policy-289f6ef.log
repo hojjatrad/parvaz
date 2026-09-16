@@ -1,0 +1,1 @@
+PROBE_POLICY_OK strict target rejects alternate-site success; normal readiness fallback still works (6 assertions; fake transport)

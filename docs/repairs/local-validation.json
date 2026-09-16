@@ -1,21 +1,12 @@
 {
-  "executable_commit": "9e94b3f80f37fee4f13b7c336cc24bd46ac5c66f",
+  "executable_commit": "289f6ef6215afbda0cc2804bc123dada99c2cd96",
   "host_assertions": 304,
   "python_tests": 36,
-  "strict_probe_policy_assertions": 6,
-  "scope": "Desktop JVM/host fixtures, not phone tests",
+  "probe_policy_assertions": 6,
+  "scope": "Host JVM and transport/framework substitutes; not physical Android",
   "files": {
-    ".cache/repair/host.log": {
-      "sha256": "5617782a5159384820a580a6ea758df770a8f2b58d205e1c9db3215e55cdf3a9",
-      "bytes": 15375
-    },
-    ".cache/repair/python.log": {
-      "sha256": "541a909f7b11c81811d069ae6d6f97ec5dc87a61977acaa163ea3f0397eb4830",
-      "bytes": 292
-    },
-    ".cache/repair/geo-check.log": {
-      "sha256": "446d141bad5681976df1625dea17e5ebd87c56ae2bc77303e65453ffa73a58e8",
-      "bytes": 204
-    }
+    "docs/repairs/evidence/host-289f6ef.log": "5617782a5159384820a580a6ea758df770a8f2b58d205e1c9db3215e55cdf3a9",
+    "docs/repairs/evidence/probe-policy-289f6ef.log": "027e2b14b56fffed5cbedecdae86130203c810b1838bad3d6bb427732aa2c021",
+    "docs/repairs/evidence/python-289f6ef.log": "75678ed8ccf9b3b06349b6f4679527e1be715ca8771736b0bfd16480ac1c98e5"
   }
 }
