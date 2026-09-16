@@ -1,9 +1,10 @@
 name: Native engines and loopback protocol validation
 on:
+  workflow_call:
   push:
     branches: ['ci/native-engines']
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: parvaz-native-validation-${{ github.ref }}
   cancel-in-progress: true
 permissions:
   contents: read

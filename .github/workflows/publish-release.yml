@@ -9,104 +9,59 @@ concurrency:
   group: parvaz-stable-publication
   cancel-in-progress: false
 jobs:
+  candidate:
+    uses: ./.github/workflows/validate-signing-release.yml
+    secrets: inherit
+  native:
+    uses: ./.github/workflows/native-engines.yml
+  archive:
+    uses: ./.github/workflows/platform-update-probe.yml
   signed-release:
+    needs: [candidate, native, archive]
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-      - name: Require existing permanent signing secrets and consistent version
-        env:
-          PARVAZ_KEYSTORE_BASE64: ${{ secrets.PARVAZ_KEYSTORE_BASE64 }}
-          PARVAZ_KEYSTORE_PASSWORD: ${{ secrets.PARVAZ_KEYSTORE_PASSWORD }}
-          PARVAZ_KEY_ALIAS: ${{ secrets.PARVAZ_KEY_ALIAS }}
-          PARVAZ_KEY_PASSWORD: ${{ secrets.PARVAZ_KEY_PASSWORD }}
-        shell: bash
+        with: {persist-credentials: false}
+      - name: Require immutable version-specific tag and release notes
         run: |
-          set -euo pipefail
-          python3 tools/release/build_signed.py --inputs-only
           python3 - <<'PY'
-          import os, re
+          import os,re
           from pathlib import Path
-          version = re.search(r'versionName\s+"([^"]+)"', Path('app/build.gradle').read_text()).group(1)
-          tag = 'v' + version
-          if os.environ.get('GITHUB_REF_TYPE') != 'tag' or os.environ.get('GITHUB_REF_NAME') != tag:
-              raise SystemExit('Tag does not match app version; publication refused.')
-          if not Path('docs/releases/' + tag + '.md').is_file():
-              raise SystemExit('Version-specific release/migration notes are missing.')
-          with open(os.environ['GITHUB_ENV'], 'a') as out:
-              out.write('RELEASE_VERSION=' + version + '\nRELEASE_TAG=' + tag + '\n')
+          version=re.search(r'versionName\s+"([^"]+)"',Path('app/build.gradle').read_text())[1]
+          tag='v'+version
+          if os.environ.get('GITHUB_REF_TYPE')!='tag' or os.environ.get('GITHUB_REF_NAME')!=tag:raise SystemExit('Publication requires matching version tag')
+          if not Path('docs/releases/'+tag+'.md').is_file():raise SystemExit('Release notes missing')
+          with open(os.environ['GITHUB_ENV'],'a') as out:out.write('RELEASE_VERSION='+version+'\nRELEASE_TAG='+tag+'\n')
           PY
-      - name: Test signing guards with synthetic data
-        run: python3 -m unittest discover -s tools/release -p 'test_*.py'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with: {name: signed-apks-for-upgrade-test, path: release-artifacts}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with: {name: sealed-signing-validation-candidate, path: .cache/core-candidate}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with: {name: supply-chain-review, path: .cache/supply-chain}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with: {name: actual-apk-upgrade-evidence, path: .cache/upgrade-validated}
       - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
-        with:
-          distribution: temurin
-          java-version: '17'
-      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
-        with: {go-version: '1.26.7', cache: false}
-      - name: Use runner Android SDK
+        with: {distribution: temurin, java-version: '17'}
+      - name: Use runner SDK without executing candidate code or accessing signing secrets
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'build-tools;34.0.0'
+      - name: Enforce exact tested APK bytes, source tree and dependency review
+        run: |
+          python3 tools/release/core_candidate_artifacts.py verify "$RELEASE_VERSION"
+          python3 tools/release/verify_publication_evidence.py
+          python3 tools/release/verify_apk.py
+          sha256sum release-artifacts/*-source.tar.gz release-artifacts/*-sbom.cdx.json release-artifacts/*-dependency-review.json release-artifacts/*-upgrade-verification.json | sed 's#release-artifacts/##' >> release-artifacts/SHA256SUMS.txt
+      - name: Prevent rollback of latest app, versionCode or core
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: python3 tools/release/check_release_order.py
+      - name: Publish only fully uploaded, tested release assets
+        env: {GH_TOKEN: '${{ github.token }}'}
         run: |
           set -euo pipefail
-          test -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
-          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
-      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
-        with:
-          gradle-version: '8.9'
-          cache-disabled: true
-      - name: Refuse to overwrite an existing release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
           if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo '::error::This version already has a release. Increment versionCode/versionName; do not overwrite old APKs.'
-            exit 1
+            echo 'Existing release must never be overwritten'; exit 1
           fi
-      - name: Run JVM regressions and prepare SDK/core
-        run: |
-          bash tools/audit/run.sh
-          sdkmanager 'platforms;android-34' 'build-tools;34.0.0'
-          bash tools/release/fetch_core.sh
-      - name: Check release lint against reviewed legacy baseline
-        run: ./gradlew --no-daemon --max-workers=2 :app:lintRelease
-      - name: Run Android unit tests
-        run: ./gradlew --no-daemon --max-workers=2 :app:testDebugUnitTest
-      - name: Build pinned engines, corresponding source and dependency notices
-        run: |
-          sdkmanager 'ndk;27.2.12479018'
-          python3 tools/native/build.py
-          python3 tools/native/source_bundle.py
-      - name: Inventory and audit resolved runtime dependencies
-        run: |
-          ./gradlew --no-daemon --max-workers=2 :app:writeRuntimeInventory
-          python3 tools/security/dependency_audit.py --native
-          cp .cache/supply-chain/sbom.cdx.json "release-artifacts/Parvaz-$RELEASE_VERSION-sbom.cdx.json"
-          cp .cache/supply-chain/vulnerability-review.json "release-artifacts/Parvaz-$RELEASE_VERSION-dependency-review.json"
-      - name: Validate permanent key and build signed APKs with safe diagnostics
-        env:
-          PARVAZ_KEYSTORE_BASE64: ${{ secrets.PARVAZ_KEYSTORE_BASE64 }}
-          PARVAZ_KEYSTORE_PASSWORD: ${{ secrets.PARVAZ_KEYSTORE_PASSWORD }}
-          PARVAZ_KEY_ALIAS: ${{ secrets.PARVAZ_KEY_ALIAS }}
-          PARVAZ_KEY_PASSWORD: ${{ secrets.PARVAZ_KEY_PASSWORD }}
-        run: python3 tools/release/build_signed.py
-      - name: Verify APK signatures, package, version and file hashes
-        run: |
-          python3 tools/release/verify_apk.py
-          python3 tools/native/verify_packaging.py
-      - name: Hash corresponding GPL source
-        run: |
-          sha256sum release-artifacts/*-source.tar.gz release-artifacts/*-sbom.cdx.json release-artifacts/*-dependency-review.json | sed 's#release-artifacts/##' >> release-artifacts/SHA256SUMS.txt
-      - name: Prevent rollback of latest app, versionCode or core
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: python3 tools/release/check_release_order.py
-      - name: Publish updater-visible release only after all checks pass
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release create "$RELEASE_TAG" release-artifacts/*.apk release-artifacts/*-source.tar.gz release-artifacts/*-sbom.cdx.json release-artifacts/*-dependency-review.json release-artifacts/SHA256SUMS.txt \
-            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-            --title "Parvaz $RELEASE_VERSION" \
-            --notes-file "docs/releases/$RELEASE_TAG.md" --latest
+          gh release create "$RELEASE_TAG" release-artifacts/*.apk release-artifacts/*-source.tar.gz release-artifacts/*.json release-artifacts/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Parvaz $RELEASE_VERSION" --notes-file "docs/releases/$RELEASE_TAG.md" --draft
+          gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest

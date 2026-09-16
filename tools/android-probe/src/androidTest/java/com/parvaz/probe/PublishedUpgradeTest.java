@@ -14,6 +14,9 @@ public class PublishedUpgradeTest {
  private static final String APP="com.parvaz.tunnel";
  private UiObject2 waitFor(BySelector selector,long timeout){UiObject2 object=device.wait(Until.findObject(selector),timeout);assertNotNull("Missing UI "+selector,object);return object;}
  private void screenshot(String name)throws Exception{File dir=InstrumentationRegistry.getInstrumentation().getTargetContext().getExternalFilesDir("parvaz-upgrade-evidence");dir.mkdirs();assertTrue(device.takeScreenshot(new File(dir,name+".png")));device.dumpWindowHierarchy(new File(dir,name+".xml"));}
+ @org.junit.After public void retainFinalUiAndResetEmulator()throws Exception{
+  if(device!=null){try{screenshot("99-final-ui");}finally{device.executeShellCommand("wm size reset");device.executeShellCommand("wm density reset");}}
+ }
  @Test public void updateButtonInstallsPermanentCandidateAndKeepsProfile()throws Exception{
   device=UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());device.wakeUp();device.pressHome();
   assertTrue(device.executeShellCommand("dumpsys package "+APP).contains("versionCode=39"));
@@ -24,8 +27,13 @@ public class PublishedUpgradeTest {
   waitFor(By.res(APP,"btn_settings"),15000).click();
   UiScrollable scroll=new UiScrollable(new UiSelector().scrollable(true));scroll.setMaxSearchSwipes(30);
   assertTrue(scroll.scrollIntoView(new UiSelector().resourceId(APP+":id/btn_check_update")));
-  java.net.HttpURLConnection control=(java.net.HttpURLConnection)new java.net.URL("http://10.0.2.2:8766/enable").openConnection(java.net.Proxy.NO_PROXY);
-  control.setConnectTimeout(5000);control.setReadTimeout(5000);control.setRequestMethod("POST");assertEquals(204,control.getResponseCode());control.disconnect();
+  // Separate fixture-control socket: no Android cleartext-policy change and no app transport override.
+  try(java.net.Socket control=new java.net.Socket()){
+   control.connect(new java.net.InetSocketAddress("10.0.2.2",8766),5000);control.setSoTimeout(5000);
+   control.getOutputStream().write("POST /enable HTTP/1.0\r\nHost: 10.0.2.2\r\nContent-Length: 0\r\n\r\n".getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+   String status=new java.io.BufferedReader(new java.io.InputStreamReader(control.getInputStream(),java.nio.charset.StandardCharsets.US_ASCII)).readLine();
+   assertNotNull(status);assertTrue(status.contains(" 204 "));
+  }
   waitFor(By.res(APP,"btn_check_update"),10000).click();
   waitFor(By.res("android","button1"),40000).click();
   // Handle Android's install-source permission and installer confirmation, not pm install.

@@ -13,7 +13,7 @@ for f in root.glob('*.apk'):
  with f.open('rb') as stream:
   while block:=stream.read(65536):h.update(block)
  files[f.name]=(f,f.stat().st_size,h.hexdigest())
-if len(files)!=2:raise SystemExit('Exactly two verified APK variants required')
+if set(files)!={f'Parvaz-{a.version}.apk',f'Parvaz-{a.version}-arm64.apk'}:raise SystemExit('Exactly the two expected verified APK variants required')
 base='https://github.com/hojjatrad/parvaz/releases/download/v'+a.version+'/'
 metadata=json.dumps({'tag_name':'v'+a.version,'draft':False,'prerelease':False,'body':'CI-only staged release transport. Permanent signed bytes; not yet published.','assets':[{'name':n,'size':size,'digest':'sha256:'+digest,'browser_download_url':base+n} for n,(f,size,digest) in files.items()]}).encode()
 enabled=threading.Event()

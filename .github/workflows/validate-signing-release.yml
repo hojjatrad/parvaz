@@ -1,9 +1,10 @@
 name: Validate permanent signing and release APKs without publication
 on:
+  workflow_call:
   push:
     branches: ['release/signing-validation-v3']
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: parvaz-candidate-validation-${{ github.ref }}
   cancel-in-progress: true
 permissions:
   contents: read
@@ -22,6 +23,8 @@ jobs:
           persist-credentials: false
       - name: Test signing guards with synthetic data
         run: python3 -m unittest discover -s tools/release -p 'test_*.py'
+      - name: Test staged transport boundaries with dummy bytes
+        run: python3 -m unittest discover -s tools/upgrade-test -p 'test_*.py'
       - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           distribution: temurin
@@ -200,3 +203,23 @@ jobs:
             tools/android-probe/build/outputs/androidTest-results/
           include-hidden-files: true
           retention-days: 5
+  public-review-evidence:
+    needs: [validate, install-upgrade]
+    if: always() && github.ref == 'refs/heads/release/signing-validation-v3'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with: {persist-credentials: false}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        continue-on-error: true
+        with: {name: actual-apk-upgrade-evidence, path: .cache/public-review/upgrade}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        continue-on-error: true
+        with: {name: supply-chain-review, path: .cache/public-review/supply-chain}
+      - name: Publish synthetic screenshots and public dependency review, never APKs or keys
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/upgrade-test/publish_evidence.py

@@ -9,6 +9,8 @@ class DependencyAuditTest(unittest.TestCase):
  def test_package_coordinates_keep_transitive_identity(self):
   self.assertEqual(audit.purl({'ecosystem':'Maven','name':'a.b:transitive','version':'1.2'}),'pkg:maven/a.b/transitive@1.2')
   self.assertEqual(audit.purl({'ecosystem':'Go','name':'example.org/a/b','version':'v1.2.3'}),'pkg:golang/example.org/a/b@v1.2.3')
+ def test_git_source_purl_is_a_package_not_an_embedded_url(self):
+  self.assertEqual(audit.purl({'ecosystem':'Git','name':'https://github.com/owner/project','version':'abcd'}),'pkg:github/owner/project@abcd')
  def test_inventory_contains_platform_nodes_and_resolved_artifacts(self):
   with tempfile.TemporaryDirectory() as temp:
    out=pathlib.Path(temp);(out/'java-runtime.json').write_text(json.dumps({'components':[{'group':'a','name':'bom','version':'1','artifacts':[]},{'group':'a','name':'nested','version':'2','artifacts':[{'file':'nested.aar','sha256':'0'*64}]}]}))

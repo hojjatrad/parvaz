@@ -1,9 +1,10 @@
 name: Android archive and backup security probes
 on:
+  workflow_call:
   push:
     branches: ['ci/platform-update-probe']
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: parvaz-archive-validation-${{ github.ref }}
   cancel-in-progress: true
 permissions:
   contents: read

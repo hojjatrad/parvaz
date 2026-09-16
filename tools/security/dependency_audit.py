@@ -62,7 +62,11 @@ def request(path,payload=None):
 def purl(c):
  if c['ecosystem']=='Maven':
   group,name=c['name'].split(':',1);return 'pkg:maven/'+group+'/'+name+'@'+c['version']
- return 'pkg:'+('golang' if c['ecosystem']=='Go' else 'github')+'/'+c['name']+'@'+c['version']
+ if c['ecosystem']=='Git':
+  parsed=urllib.parse.urlsplit(c['name'])
+  if parsed.hostname!='github.com':raise ValueError('Unsupported Git source PURL host')
+  return 'pkg:github/'+parsed.path.strip('/').removesuffix('.git')+'@'+c['version']
+ return 'pkg:golang/'+c['name']+'@'+c['version']
 
 def run(native):
  OUT.mkdir(parents=True,exist_ok=True);items=components(native);now=datetime.datetime.now(datetime.timezone.utc).isoformat()
