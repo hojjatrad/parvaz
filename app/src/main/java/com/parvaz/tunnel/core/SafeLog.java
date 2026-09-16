@@ -6,12 +6,13 @@ public final class SafeLog {
  private static final Pattern URL=Pattern.compile("(?i)\\b[a-z][a-z0-9+.-]*://[^\\s<>]+"),
  SECRET=Pattern.compile("(?i)(password|passwd|token|uuid|secret|authorization|private.?key|public.?key|sni|host)\\s*[=:]\\s*(?:\"[^\"]*\"|'[^']*'|[^\\s,;]+)"),
  UUID=Pattern.compile("(?i)\\b[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\\b"),
- HOST=Pattern.compile("(?i)(?<![\\w])(?:[a-z0-9_-]+\\.)+[a-z][a-z0-9-]{1,62}\\b"),
+ HOST=Pattern.compile("(?i)(?<![\\w])(?:[a-z0-9_-]{1,63}\\.){1,127}[a-z][a-z0-9-]{1,62}\\b"),
  IP=Pattern.compile("(?<![\\w])(?:\\d{1,3}\\.){3}\\d{1,3}(?![\\w])"),
- IPV6=Pattern.compile("(?i)(?<![\\w])(?:[0-9a-f]{0,4}:){2,}[0-9a-f:.]*(?:%[\\w]+)?");
+ IPV6=Pattern.compile("(?i)(?<![\\w])(?:[0-9a-f]{0,4}:){2,8}[0-9a-f:.]*(?:%[\\w]+)?");
  public static String message(String value){
   if(value==null)return "";if(value.length()>32768)value=value.substring(0,32768)+" [truncated]";
   StringBuilder safe=new StringBuilder();for(String line:value.split("\\n",-1)){
+   if(line.length()>4096)line="[oversized event; private details omitted]";
    String lower=line.toLowerCase(java.util.Locale.ROOT);
    if(lower.contains("connected:")||lower.contains("switching to ")||lower.contains("error:")||lower.contains("failed:"))line="[connection event; private details omitted]";
    line=URL.matcher(line).replaceAll("[url]");line=SECRET.matcher(line).replaceAll("$1=[redacted]");line=UUID.matcher(line).replaceAll("[id]");line=IP.matcher(line).replaceAll("[ip]");line=IPV6.matcher(line).replaceAll("[ipv6]");line=HOST.matcher(line).replaceAll("[host]");

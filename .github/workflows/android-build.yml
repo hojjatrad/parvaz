@@ -5,6 +5,9 @@ on:
     paths: ['app/**', 'tools/**', '*.gradle', 'gradle.properties', '.github/workflows/android-build.yml']
   pull_request:
   workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:

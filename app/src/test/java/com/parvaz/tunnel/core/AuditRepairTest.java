@@ -39,5 +39,6 @@ public class AuditRepairTest {
   }finally{release.countDown();assertTrue(finished.await(5,java.util.concurrent.TimeUnit.SECONDS));}
  }
  @Test public void deniedSsidPermissionNeverMeansTrusted(){app.getSharedPreferences("parvaz_prefs",0).edit().putString("trusted_wifi","Office").commit();org.robolectric.Shadows.shadowOf((Application)app).denyPermissions(android.Manifest.permission.ACCESS_FINE_LOCATION);assertFalse(AutoProfile.isTrustedWifi(app,app.getSharedPreferences("parvaz_prefs",0)));}
+ @Test public void adversarialLogTextCannotOverflowRegexStack(){StringBuilder longHost=new StringBuilder(),colons=new StringBuilder();for(int i=0;i<16000;i++){longHost.append("a.");colons.append("::");}assertTrue(SafeLog.message(longHost.toString()).contains("omitted"));assertTrue(SafeLog.message(colons.toString()).contains("omitted"));assertNotNull(SafeLog.message(longHost.substring(0,4000)));assertNotNull(SafeLog.message(colons.substring(0,4000)));}
  private Profile profile(){Profile p=new Profile();p.id="a";p.protocol="vless";p.address="origin.invalid";p.port=443;p.uuid="11111111-1111-4111-8111-111111111111";return p;}
 }

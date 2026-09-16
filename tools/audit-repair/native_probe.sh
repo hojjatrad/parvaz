@@ -8,7 +8,7 @@ if ! ./gradlew -p tools/android-probe -PnativeProbe --no-daemon --max-workers=2 
   tail -100 "$log"
   python3 - "$log" <<'PY'
 import pathlib,sys
-text=pathlib.Path(sys.argv[1]).read_text(errors='replace')[-5500:]
+text=pathlib.Path(sys.argv[1]).read_text(errors='replace')[-3200:]
 print('::error title=Native helper build and execution::'+text.replace('%','%25').replace('\r','%0D').replace('\n','%0A'))
 PY
   exit 1
