@@ -113,6 +113,12 @@
                 android:layout_marginTop="10dp"
                 android:enabled="false"
                 android:text="@string/clean_ip_apply" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_undo_clean_ip"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="@string/undo" />
 
             <TextView
                 android:layout_width="match_parent"

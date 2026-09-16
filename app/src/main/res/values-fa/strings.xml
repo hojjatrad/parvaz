@@ -480,7 +480,7 @@
     <string name="cdn_verify_help">فقط همین کانفیگ، پس از پاسخ معتبر HTTPS از مسیر جدید تغییر می‌کند. سایر منابع دست‌نخورده می‌مانند.</string>
     <string name="cdn_stop_first">پیش از بررسی و تغییر کانفیگ، VPN را متوقف کنید.</string>
     <string name="cdn_not_applied">اعمال نشد: تأیید ناموفق بود یا کانفیگ/نشست تغییر کرد.</string>
-    <string name="cdn_applied_one">یک کانفیگ تأییدشده تغییر کرد؛ تا بازبودن این پیام امکان بازگردانی وجود دارد.</string>
+    <string name="cdn_applied_one">یک کانفیگ تأییدشده تغییر کرد؛ بازگردانی برای این منبع به‌صورت رمز‌شده ذخیره شد.</string>
     <string name="undo">بازگردانی</string>
     <string name="auto_profile_tap_connect">قاعدهٔ شبکه درخواست اتصال دارد؛ برای شروع مجاز لمس کنید.</string>
     <string name="trusted_wifi_permission_title">دسترسی به نام Wi-Fi</string>

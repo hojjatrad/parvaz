@@ -14,14 +14,15 @@ public abstract class LockedActivity extends AppCompatActivity {
  @Override protected void onResume(){super.onResume();resumed=true;if(isAccessGranted()){getWindow().getDecorView().setVisibility(View.VISIBLE);drain();}else{conceal();authenticate();}}
  private void authenticate(){
   if(authenticating||isFinishing())return;authenticating=true;
-  try{new BiometricPrompt(this,ContextCompat.getMainExecutor(this),new BiometricPrompt.AuthenticationCallback(){
+  try{startAuthentication(new BiometricPrompt.AuthenticationCallback(){
    @Override public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult result){
     authenticating=false;if(isFinishing()||isDestroyed())return;AppLock.grant();getWindow().getDecorView().setVisibility(View.VISIBLE);drain();if(resumed)onAccessGranted();
    }
    @Override public void onAuthenticationError(int code,CharSequence text){deny();}
-  }).authenticate(new BiometricPrompt.PromptInfo.Builder().setTitle(getString(R.string.app_lock_prompt)).setSubtitle(getString(R.string.app_lock_subtitle)).setAllowedAuthenticators(33023).build());}
+  });}
   catch(RuntimeException unavailable){deny();}
  }
+ protected void startAuthentication(BiometricPrompt.AuthenticationCallback callback){new BiometricPrompt(this,ContextCompat.getMainExecutor(this),callback).authenticate(new BiometricPrompt.PromptInfo.Builder().setTitle(getString(R.string.app_lock_prompt)).setSubtitle(getString(R.string.app_lock_subtitle)).setAllowedAuthenticators(33023).build());}
  private void deny(){authenticating=false;pending.clear();AppLock.lock();conceal();finish();}
  private void drain(){while(isAccessGranted()&&!pending.isEmpty()&&!isFinishing())pending.removeFirst().run();}
  protected void onAccessGranted(){}

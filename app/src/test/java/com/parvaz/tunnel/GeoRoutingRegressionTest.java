@@ -59,21 +59,18 @@ public class GeoRoutingRegressionTest {
     }
 
     /**
-     * Writes a fake geo .dat carrying the given upper-case tags. The scanner looks for
-     * ASCII tag runs, so a protobuf-shaped stub is enough.
+     * Writes valid minimal protobuf entries. Incidental ASCII is no longer accepted.
+     * The fixture deliberately changes the process-pinned test directory.
      */
     private void writeGeoFile(String name, String... tags) throws Exception {
-        File f = new File(context.getFilesDir(), name);
-        FileOutputStream out = new FileOutputStream(f);
-        try {
-            for (String tag : tags) {
-                out.write(0x0a);
-                out.write(tag.length());
-                out.write(tag.getBytes("US-ASCII"));
-                out.write(new byte[]{0x12, 0x04, 1, 2, 3, 4});
+        File f = new File(com.parvaz.tunnel.core.GeoAssets.directory(context), name);
+        f.getParentFile().mkdirs();
+        try(FileOutputStream out=new FileOutputStream(f)){
+            for(String tag:tags){
+                byte[] record=name.equals("geoip.dat")?new byte[]{10,4,1,2,3,4,16,24}:new byte[]{8,2,18,3,'c','o','m'};
+                java.io.ByteArrayOutputStream entry=new java.io.ByteArrayOutputStream();entry.write(10);entry.write(tag.length());entry.write(tag.getBytes("US-ASCII"));entry.write(18);entry.write(record.length);entry.write(record);
+                out.write(10);out.write(entry.size());out.write(entry.toByteArray());
             }
-        } finally {
-            out.close();
         }
         GeoIndex.invalidate();
     }
@@ -209,8 +206,8 @@ public class GeoRoutingRegressionTest {
 
     @Test
     public void configStillBuildsWhenGeoFilesAreEntirelyMissing() throws Exception {
-        new File(context.getFilesDir(), "geosite.dat").delete();
-        new File(context.getFilesDir(), "geoip.dat").delete();
+        new File(com.parvaz.tunnel.core.GeoAssets.directory(context), "geosite.dat").delete();
+        new File(com.parvaz.tunnel.core.GeoAssets.directory(context), "geoip.dat").delete();
         GeoIndex.invalidate();
 
         String json = XrayConfigBuilder.b(profile(), prefs, null, true, true);
@@ -228,7 +225,7 @@ public class GeoRoutingRegressionTest {
         assertFalse(GeoIndex.hasGeosite(context, "category-porn"));
 
         // Missing files must report "nothing available" rather than throwing.
-        new File(context.getFilesDir(), "geoip.dat").delete();
+        new File(com.parvaz.tunnel.core.GeoAssets.directory(context), "geoip.dat").delete();
         GeoIndex.invalidate();
         assertFalse(GeoIndex.hasGeoip(context, "private"));
     }

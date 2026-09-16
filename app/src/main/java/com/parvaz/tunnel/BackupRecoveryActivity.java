@@ -6,7 +6,7 @@ import android.widget.*;
 import com.parvaz.tunnel.store.ProfileStore;
 
 /** No automatic report, deletion, fallback to mixed data, or credential logging. */
-public final class BackupRecoveryActivity extends Activity {
+public final class BackupRecoveryActivity extends LockedActivity {
  @Override protected void attachBaseContext(Context context){super.attachBaseContext(App.wrapLocale(context));}
  @Override public void onCreate(Bundle state){
   super.onCreate(state);setTitle(R.string.recovery_title);

@@ -433,10 +433,27 @@ public final class ProfileStore {
         if(owner==null||revision!=owner.revision||getActiveById(owner.snapshot.id)!=owner.original
             ||!ProfileIdentity.fingerprint(owner.snapshot).equals(ProfileIdentity.fingerprint(owner.original))
             ||!owner.snapshot.id.equals(replacement.id)||!owner.snapshot.subscriptionId.equals(replacement.subscriptionId))return false;
-        ArrayList<Profile> next=new ArrayList<>();for(Object value:f346b){Profile p=(Profile)value;next.add(p==owner.original?ProfileIdentity.copy(replacement):p);}
-        replacement=ProfileIdentity.copy(replacement);replacement.ping=-1;
-        for(int i=0;i<next.size();i++)if(next.get(i).id.equals(replacement.id))next.set(i,replacement);
-        try{restoreRecords(next,f(),primarySubscription());return true;}catch(org.json.JSONException error){throw new IllegalStateException(error);}
+        try{JSONObject undo=new JSONObject().put("before",owner.snapshot.toJson()).put("after",ProfileIdentity.fingerprint(replacement)).put("source",primarySubscription());
+            return writeEndpoint(owner,replacement,recordCipher.encode("endpoint_undo",undo.toString()));
+        }catch(org.json.JSONException error){throw new IllegalStateException(error);}
+    }
+    private boolean writeEndpoint(StartupLatency owner,Profile replacement,String undo)throws org.json.JSONException{
+        Profile changed=ProfileIdentity.copy(replacement);changed.ping=-1;changed.latency=null;
+        ArrayList<Profile> next=new ArrayList<>();JSONArray profiles=new JSONArray();JSONObject pings=new JSONObject();
+        for(Object value:f346b){Profile original=(Profile)value;Profile p=original==owner.original?changed:original;next.add(p);profiles.put(p.toJson());if(p.ping>0)pings.put(p.id,p.ping);}
+        android.content.SharedPreferences.Editor edit=f345a.edit().putString("profiles",recordCipher.encode("profiles",profiles.toString())).putString("pings_https_rtt_v1",pings.toString());
+        edit.putString("endpoint_undo",undo==null?"":undo);
+        commit(edit);f346b.clear();f346b.addAll(next);revision++;return true;
+    }
+    /** One encrypted before-image is committed atomically with the endpoint edit. */
+    public synchronized boolean undoEndpointEdit(){
+        recoverPendingRestore();String encrypted=f345a.getString("endpoint_undo","");if(encrypted.isEmpty())return false;
+        try{JSONObject undo=new JSONObject(recordCipher.decodeRequired("endpoint_undo",encrypted));
+            if(!primarySubscription().equals(undo.getString("source")))return false;
+            Profile before=Profile.fromJson(undo.getJSONObject("before")),current=getActiveById(before.id);
+            if(current==null||!current.subscriptionId.equals(before.subscriptionId)||!ProfileIdentity.fingerprint(current).equals(undo.getString("after")))return false;
+            return writeEndpoint(captureStartupLatency(current),before,null);
+        }catch(org.json.JSONException error){return false;}
     }
 
     /** Latency-only persistence must not change the subscription/source revision. */

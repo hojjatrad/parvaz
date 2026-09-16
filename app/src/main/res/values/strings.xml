@@ -498,7 +498,7 @@ Tap + to paste a config link or add a subscription."</string>
     <string name="cdn_verify_help">Only this profile changes, and only after authenticated HTTPS succeeds through its new route. Other sources remain unchanged.</string>
     <string name="cdn_stop_first">Stop the VPN before verifying a profile edit.</string>
     <string name="cdn_not_applied">Not applied: verification failed or the profile/session changed.</string>
-    <string name="cdn_applied_one">One verified profile updated. You can undo while this message is open.</string>
+    <string name="cdn_applied_one">One verified profile updated. Undo is saved encrypted for this source.</string>
     <string name="undo">Undo</string>
     <string name="auto_profile_tap_connect">Network rule requests a connection. Tap to authorize starting it.</string>
     <string name="trusted_wifi_permission_title">Wi-Fi name access</string>

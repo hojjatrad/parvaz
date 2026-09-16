@@ -26,13 +26,12 @@ public final class SharedInput {
     }
     public static String content(Context context,Uri uri)throws IOException {
         if(!"content".equalsIgnoreCase(uri.getScheme()))throw new IOException("Unsupported URI");
-        android.os.CancellationSignal signal=new android.os.CancellationSignal();
         java.util.concurrent.atomic.AtomicReference<Closeable> opened=new java.util.concurrent.atomic.AtomicReference<>();
         java.util.concurrent.Future<String> task;
         try{task=READERS.submit(()->{
-            try(android.content.res.AssetFileDescriptor fd=context.getContentResolver().openAssetFileDescriptor(uri,"r",signal)){
-                if(fd==null)throw new IOException("Unavailable file");opened.set(fd);signal.throwIfCanceled();
-                try(InputStream in=fd.createInputStream()){opened.set(in);return readUtf8(in);}
+            try(InputStream in=context.getContentResolver().openInputStream(uri)){
+                if(in==null)throw new IOException("Unavailable file");opened.set(in);
+                if(Thread.currentThread().isInterrupted())throw new InterruptedIOException("Input cancelled");return readUtf8(in);
             }finally{opened.set(null);}
         });}catch(java.util.concurrent.RejectedExecutionException busy){throw new IOException("Input readers busy",busy);}
         try{return task.get(20,java.util.concurrent.TimeUnit.SECONDS);}
@@ -43,7 +42,7 @@ public final class SharedInput {
             task.cancel(true);
             // A hostile provider may ignore cancellation. Both readers and closers are bounded;
             // callers still return on deadline and cannot accumulate unbounded blocked threads.
-            try{CLOSERS.execute(()->{try{signal.cancel();}catch(RuntimeException ignored){}try{Closeable c=opened.getAndSet(null);if(c!=null)c.close();}catch(IOException ignored){}});}catch(java.util.concurrent.RejectedExecutionException busy){}
+            try{CLOSERS.execute(()->{try{Closeable c=opened.getAndSet(null);if(c!=null)c.close();}catch(IOException ignored){}});}catch(java.util.concurrent.RejectedExecutionException busy){}
         }}
     }
     static String readUtf8(InputStream in)throws IOException{

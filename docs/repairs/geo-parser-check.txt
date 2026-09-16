@@ -1,0 +1,4 @@
+app/src/main/assets/geoip.dat: 5 tags; ir=true category-ir=false
+app/src/main/assets/geosite.dat: 3 tags; ir=true category-ir=true
+.cache/repair/geoip.dat: 278 tags; ir=true category-ir=false
+.cache/repair/geosite.dat: 1547 tags; ir=true category-ir=true

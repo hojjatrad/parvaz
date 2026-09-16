@@ -26,6 +26,7 @@ public class CleanIpActivity extends com.parvaz.tunnel.LockedActivity {
     private TextView resultsList;
     private MaterialButton startBtn;
     private MaterialButton applyBtn;
+    private Thread verifyWorker;
 
     private String bestCleanIp = "";
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -41,6 +42,9 @@ public class CleanIpActivity extends com.parvaz.tunnel.LockedActivity {
         resultsList = findViewById(R.id.results_list);
         startBtn = findViewById(R.id.btn_start_scan);
         applyBtn = findViewById(R.id.btn_apply_clean_ip);
+        findViewById(R.id.btn_undo_clean_ip).setOnClickListener(v->afterUnlock(()->{
+            if(com.parvaz.tunnel.core.TunnelVpnService.serviceRunning||!com.parvaz.tunnel.store.ProfileStore.f(this).undoEndpointEdit())Snackbar.make(v,R.string.cdn_not_applied,Snackbar.LENGTH_LONG).show();else Snackbar.make(v,R.string.saved,Snackbar.LENGTH_SHORT).show();
+        }));
 
         ImageButton back = findViewById(R.id.back);
         if (back != null) {
@@ -85,17 +89,19 @@ public class CleanIpActivity extends com.parvaz.tunnel.LockedActivity {
     private void verifyEdit(com.parvaz.tunnel.store.ProfileStore store,com.parvaz.tunnel.model.Profile original,com.parvaz.tunnel.model.Profile candidate){
         if(com.parvaz.tunnel.core.TunnelVpnService.serviceRunning){Snackbar.make(applyBtn,R.string.cdn_stop_first,Snackbar.LENGTH_LONG).show();return;}
         com.parvaz.tunnel.store.ProfileStore.StartupLatency owner=store.captureStartupLatency(original);applyBtn.setEnabled(false);
-        new Thread(()->{long measured=-1;try{measured=com.parvaz.tunnel.core.ProxyMeasurement.measureQueued(getApplicationContext(),candidate,"https://www.gstatic.com/generate_204");}catch(Exception ignored){}
-            final long result=measured;runOnUiThread(()->{
+        final long epoch=com.parvaz.tunnel.core.LatencyStamp.networkRevision();
+        verifyWorker=new Thread(()->{long measured=-1;try{measured=com.parvaz.tunnel.core.ProxyMeasurement.measureQueued(getApplicationContext(),candidate,"https://www.gstatic.com/generate_204");}catch(Exception ignored){}
+            final long result=measured;runOnUiThread(()->afterUnlock(()->{
                 if(isFinishing()||isDestroyed())return;applyBtn.setEnabled(true);
-                if(result<=0||com.parvaz.tunnel.core.TunnelVpnService.serviceRunning||!store.replaceEndpoint(owner,candidate)){Snackbar.make(applyBtn,R.string.cdn_not_applied,Snackbar.LENGTH_LONG).show();return;}
-                final com.parvaz.tunnel.store.ProfileStore.StartupLatency undo=store.captureStartupLatency(candidate);
+                if(result<=0||epoch!=com.parvaz.tunnel.core.LatencyStamp.networkRevision()||com.parvaz.tunnel.core.TunnelVpnService.serviceRunning||!store.replaceEndpoint(owner,candidate)){Snackbar.make(applyBtn,R.string.cdn_not_applied,Snackbar.LENGTH_LONG).show();return;}
                 Snackbar.make(applyBtn,R.string.cdn_applied_one,Snackbar.LENGTH_INDEFINITE).setAction(R.string.undo,v->{
-                    if(com.parvaz.tunnel.core.TunnelVpnService.serviceRunning||!store.replaceEndpoint(undo,original))Snackbar.make(applyBtn,R.string.cdn_not_applied,Snackbar.LENGTH_LONG).show();
+                    if(com.parvaz.tunnel.core.TunnelVpnService.serviceRunning||!store.undoEndpointEdit())Snackbar.make(applyBtn,R.string.cdn_not_applied,Snackbar.LENGTH_LONG).show();
                 }).show();
-            });
-        },"parvaz-cdn-verify").start();
+            }));
+        },"parvaz-cdn-verify");verifyWorker.start();
     }
+
+    @Override protected void onDestroy(){if(verifyWorker!=null)verifyWorker.interrupt();handler.removeCallbacksAndMessages(null);super.onDestroy();}
 
     private void startScanning() {
         startBtn.setEnabled(false);
