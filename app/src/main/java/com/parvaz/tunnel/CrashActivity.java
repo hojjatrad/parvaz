@@ -13,7 +13,7 @@ import com.parvaz.tunnel.core.CrashReporter;
 import com.parvaz.tunnel.R;
 
 /* loaded from: classes.dex */
-public class CrashActivity extends AppCompatActivity {
+public class CrashActivity extends com.parvaz.tunnel.LockedActivity {
 
     /* renamed from: z */
     public String report = "";

@@ -422,6 +422,18 @@ public final class ProfileStore {
         }
     }
 
+    /** Commit/undo one explicitly verified edit, without reviving another source. */
+    public synchronized boolean replaceEndpoint(StartupLatency owner,Profile replacement){
+        recoverPendingRestore();
+        if(owner==null||revision!=owner.revision||getActiveById(owner.snapshot.id)!=owner.original
+            ||!ProfileIdentity.fingerprint(owner.snapshot).equals(ProfileIdentity.fingerprint(owner.original))
+            ||!owner.snapshot.id.equals(replacement.id)||!owner.snapshot.subscriptionId.equals(replacement.subscriptionId))return false;
+        ArrayList<Profile> next=new ArrayList<>();for(Object value:f346b){Profile p=(Profile)value;next.add(p==owner.original?ProfileIdentity.copy(replacement):p);}
+        replacement=ProfileIdentity.copy(replacement);replacement.ping=-1;
+        for(int i=0;i<next.size();i++)if(next.get(i).id.equals(replacement.id))next.set(i,replacement);
+        try{restoreRecords(next,f(),primarySubscription());return true;}catch(org.json.JSONException error){throw new IllegalStateException(error);}
+    }
+
     /** Latency-only persistence must not change the subscription/source revision. */
     public synchronized void saveMeasurements(){
         recoverPendingRestore();
@@ -497,7 +509,7 @@ public final class ProfileStore {
         recoverPendingRestore();
         Profile byId = getById(str);
         if (byId != null) {
-            measurements.remove(str); // A newer live-session result supersedes a pending manual test.
+            if(measurements.containsKey(str))return; // A live-health sample must not impersonate a pending manual/target test.
             byId.ping = i;
         }
     }

@@ -1292,6 +1292,8 @@ public class TunnelVpnService extends VpnService {
             LogBuffer.listener("started by always-on VPN".concat(lockdown ? " (lockdown)" : ""));
         }
 
+        if(intent!=null&&!intent.getBooleanExtra("automatic_network_rule",false)&&action!=null)
+            NetworkAutomation.manualChoice(this);
         if ("com.parvaz.tunnel.STOP".equals(action)) {
             shutdown(true, false);
             return START_NOT_STICKY;

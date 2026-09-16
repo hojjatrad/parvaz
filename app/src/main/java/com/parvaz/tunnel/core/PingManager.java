@@ -16,7 +16,7 @@ public final class PingManager implements AutoCloseable {
  public interface Listener {void onResult(String id);void onFinished(boolean cancelled);}
  interface Measurer {long measure(Profile profile)throws Exception;}
  private static final ThreadPoolExecutor WORKERS=new ThreadPoolExecutor(3,3,30,TimeUnit.SECONDS,
-     new LinkedBlockingQueue<>(),r->{Thread t=new Thread(r,"Parvaz latency");t.setDaemon(true);return t;});
+     new ArrayBlockingQueue<>(256),r->{Thread t=new Thread(r,"Parvaz latency");t.setDaemon(true);return t;});
  static {WORKERS.allowCoreThreadTimeOut(true);}
  private final Handler handler=new Handler(Looper.getMainLooper());
  private final ProfileStore store;
@@ -35,7 +35,7 @@ public final class PingManager implements AutoCloseable {
  public synchronized boolean isBatchBusy(){return batch!=null;}
  public synchronized void testOne(Profile profile,Listener listener){if(!closed)submit(profile,null,listener,measurer);}
  public synchronized boolean startBatch(List<Profile> profiles,Listener listener){return startBatch(profiles,listener,measurer);}
- public synchronized boolean startBypassBatch(List<Profile> profiles,Listener listener){return startBatch(profiles,listener,p->ProxyMeasurement.measureQueued(app,p,RealBypassTester.FILTERED_PROBE_URL));}
+ public synchronized boolean startBypassBatch(List<Profile> profiles,Listener listener){return startBatch(profiles,listener,p->ProxyMeasurement.measureStrictTarget(app,p,RealBypassTester.FILTERED_PROBE_URL));}
  private boolean startBatch(List<Profile> profiles,Listener listener,Measurer selected){
   if(closed||batch!=null)return false;
   Batch owner=new Batch(listener);batch=owner;owner.remaining=profiles.size();
@@ -44,7 +44,7 @@ public final class PingManager implements AutoCloseable {
   return true;
  }
  private void submit(Profile profile,Batch owner,Listener listener,Measurer selected){
-  Job previous=jobs.get(profile.id);if(previous!=null)previous.cancel();
+  Job previous=jobs.get(profile.id);if(previous!=null){previous.cancel();purge();}
   ProfileStore.Measurement measurement=store.beginMeasurement(profile);
   Job job=new Job(profile.id,measurement,owner,listener,selected);jobs.put(profile.id,job);if(owner!=null)owner.jobs.add(job);
   try{job.future=executor.submit(job);}catch(RejectedExecutionException e){job.finish(LatencyResult.BUSY);}

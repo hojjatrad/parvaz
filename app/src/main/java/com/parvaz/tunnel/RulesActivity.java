@@ -24,7 +24,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 /* loaded from: classes.dex */
-public class RulesActivity extends AppCompatActivity {
+public class RulesActivity extends com.parvaz.tunnel.LockedActivity {
 
     /* renamed from: D */
     public static final String[] f6139e = {"domain", "ip", "port", "app"};

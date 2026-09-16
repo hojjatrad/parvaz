@@ -19,12 +19,14 @@ public final class ProxyMeasurement {
  public static long measureQueued(Context context,Profile profile,String url)throws Exception {
   return measure(context,profile,url,true);
  }
- private static long measure(Context context,Profile profile,String url,boolean wait)throws Exception {
+ public static long measureStrictTarget(Context context,Profile profile,String url)throws Exception {return measure(context,profile,url,true,true);}
+ private static long measure(Context context,Profile profile,String url,boolean wait)throws Exception {return measure(context,profile,url,wait,false);}
+ private static long measure(Context context,Profile profile,String url,boolean wait,boolean strictTarget)throws Exception {
   // The active profile is measured through its existing pinned listener. Do not
   // start a competing native controller just to test the already-live route.
   CoreManager manager=CoreManager.b();CoreManager.LiveProbe live=manager.liveProbe(profile);
   if(live!=null){
-   long measured=wait?VerifiedProbe.measureDetailed(live.port,url,true):VerifiedProbe.measure(live.port,url,true);
+   long measured=wait?VerifiedProbe.measureDetailed(live.port,url,true,strictTarget):VerifiedProbe.measure(live.port,url,true);
    return manager.ownsLiveProbe(live)?measured:VerifiedProbe.UNKNOWN;
   }
   if(!CAPACITY.enter(wait))return wait?ProbeAdmission.BUSY:VerifiedProbe.UNKNOWN;
@@ -47,7 +49,7 @@ public final class ProxyMeasurement {
    controller=Libv2ray.newCoreController(new CoreCallbackHandler(){public long startup(){return 0;}public long shutdown(){return 0;}public long onEmitStatus(long code,String message){return 0;}});
    CoreManager.b().startIsolatedProbe(controller,plan.config);
    if(!controller.getIsRunning()||(external!=null&&!external.isRunning()))return wait?VerifiedProbe.UNKNOWN:-1;
-   return wait?VerifiedProbe.measureDetailed(port,url,true):VerifiedProbe.measure(port,url,true);
+   return wait?VerifiedProbe.measureDetailed(port,url,true,strictTarget):VerifiedProbe.measure(port,url,true);
   }finally{
    // Keep capacity until the Xray instance really returns from StopLoop.
    try{if(controller!=null)controller.stopLoop();}finally{if(external!=null)external.close();CAPACITY.exit();}

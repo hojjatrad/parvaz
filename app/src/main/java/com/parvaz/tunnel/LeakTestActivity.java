@@ -22,7 +22,7 @@ import com.parvaz.tunnel.store.Prefs;
  * tunnel: the public IP before and after, whether DNS answers from inside, and
  * whether IPv6 slips past.
  */
-public class LeakTestActivity extends AppCompatActivity {
+public class LeakTestActivity extends com.parvaz.tunnel.LockedActivity {
 
     private TextView ipBefore;
     private TextView ipAfter;

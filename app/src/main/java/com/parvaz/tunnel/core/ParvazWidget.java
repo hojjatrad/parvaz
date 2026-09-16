@@ -39,7 +39,7 @@ public class ParvazWidget extends AppWidgetProvider {
         if (i3 != 1 && i3 != 5) {
             if (z) {
                 string = context.getString(StartupDiagnostics.labelResource());
-                i2 = -16725933;
+                i2 = StartupDiagnostics.confirmation()==StartupDiagnostics.Confirmation.RESPONSE_SEEN?-16725933:-26624;
             } else {
                 string = context.getString(R.string.state_disconnected);
                 i2 = -6381922;

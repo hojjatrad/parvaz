@@ -492,4 +492,15 @@ Tap + to paste a config link or add a subscription."</string>
     <string name="latency_tls_error">TLS verification failed</string>
     <string name="latency_http_error">Test endpoint rejected</string>
     <string name="latency_network_error">Network test failed</string>
+    <string name="cdn_no_candidates">No eligible TLS CDN profiles in the active source. Direct TLS and Reality profiles will not be changed.</string>
+    <string name="cdn_select_one">Select ONE CDN profile</string>
+    <string name="cdn_verify_title">Preview and verify before applying</string>
+    <string name="cdn_verify_help">Only this profile changes, and only after authenticated HTTPS succeeds through its new route. Other sources remain unchanged.</string>
+    <string name="cdn_stop_first">Stop the VPN before verifying a profile edit.</string>
+    <string name="cdn_not_applied">Not applied: verification failed or the profile/session changed.</string>
+    <string name="cdn_applied_one">One verified profile updated. You can undo while this message is open.</string>
+    <string name="undo">Undo</string>
+    <string name="auto_profile_tap_connect">Network rule requests a connection. Tap to authorize starting it.</string>
+    <string name="trusted_wifi_permission_title">Wi-Fi name access</string>
+    <string name="trusted_wifi_permission_help">Android requires location permission and Location enabled to read a Wi-Fi name. Parvaz uses the name locally, not GPS tracking. No background-location permission is requested; trusted-SSID detection may be unavailable in the background. After allowing, tap Save again.</string>
 </resources>

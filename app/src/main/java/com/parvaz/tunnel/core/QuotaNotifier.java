@@ -30,7 +30,7 @@ public final class QuotaNotifier {
     }
 
     public static void checkAndNotify(Context context, long usedBytes, long totalBytes, long expireSec) {
-        if (context == null || totalBytes <= 0) {
+        if (context == null) {
             return;
         }
 
@@ -39,7 +39,7 @@ public final class QuotaNotifier {
         NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm == null) return;
 
-        int percent = (int) Math.min(100L, (usedBytes * 100) / totalBytes);
+        int percent = QuotaState.percent(usedBytes,totalBytes);
         long remainingBytes = Math.max(0L, totalBytes - usedBytes);
         boolean fa = "fa".equals(context.getSharedPreferences("parvaz_prefs", 0).getString("lang", "fa"));
 
@@ -88,7 +88,7 @@ public final class QuotaNotifier {
         if (expireSec > 0) {
             if (expireSec > 10000000000L) expireSec /= 1000L;
             long nowSec = System.currentTimeMillis() / 1000L;
-            long daysLeft = (expireSec - nowSec) / 86400L;
+            long daysLeft = ExpiryState.daysRemaining(expireSec,nowSec);
             if (daysLeft >= 0 && daysLeft <= 2) {
                 if (!sp.getBoolean(KEY_WARNED_EXPIRE, false)) {
                     String body = fa

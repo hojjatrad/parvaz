@@ -19,7 +19,7 @@ import com.parvaz.tunnel.store.Prefs;
  * trusted home Wi-Fi, and so on. The decision itself is made by
  * {@link com.parvaz.tunnel.core.AutoProfile} when the network changes.
  */
-public class AutoProfileActivity extends AppCompatActivity {
+public class AutoProfileActivity extends com.parvaz.tunnel.LockedActivity {
 
     /** Index order must match the spinner entries below. */
     private static final String[] ACTIONS = {"none", "connect", "disconnect"};
@@ -65,11 +65,18 @@ public class AutoProfileActivity extends AppCompatActivity {
         findViewById(R.id.save).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if(!normaliseSsids(trustedInput.getText().toString()).isEmpty()
+                    &&androidx.core.content.ContextCompat.checkSelfPermission(AutoProfileActivity.this,android.Manifest.permission.ACCESS_FINE_LOCATION)!=android.content.pm.PackageManager.PERMISSION_GRANTED){
+                    new com.google.android.material.dialog.MaterialAlertDialogBuilder(AutoProfileActivity.this).setTitle(R.string.trusted_wifi_permission_title).setMessage(R.string.trusted_wifi_permission_help)
+                      .setPositiveButton(R.string.ok,(d,w)->androidx.core.app.ActivityCompat.requestPermissions(AutoProfileActivity.this,new String[]{android.Manifest.permission.ACCESS_COARSE_LOCATION,android.Manifest.permission.ACCESS_FINE_LOCATION},905))
+                      .setNegativeButton(R.string.cancel,null).show();return;
+                }
                 prefs.f343a.edit()
                         .putString("auto_wifi", ACTIONS[clamp(wifiSpinner.getSelectedItemPosition())])
                         .putString("auto_cell", ACTIONS[clamp(cellSpinner.getSelectedItemPosition())])
                         .putString("trusted_wifi", normaliseSsids(trustedInput.getText().toString()))
                         .apply();
+                com.parvaz.tunnel.core.NetworkAutomation.settingsChanged(getApplicationContext());
                 Snackbar.make(v, R.string.saved, -1).show();
                 v.postDelayed(new Runnable() {
                     @Override

@@ -474,4 +474,15 @@
     <string name="latency_tls_error">خطای تأیید TLS</string>
     <string name="latency_http_error">پاسخ مقصد تست نامعتبر</string>
     <string name="latency_network_error">خطای شبکه در تست</string>
+    <string name="cdn_no_candidates">در منبع فعال کانفیگ TLS سازگار با CDN پیدا نشد؛ TLS مستقیم و Reality تغییر نمی‌کنند.</string>
+    <string name="cdn_select_one">یک کانفیگ CDN را انتخاب کنید</string>
+    <string name="cdn_verify_title">پیش‌نمایش و تأیید پیش از تغییر</string>
+    <string name="cdn_verify_help">فقط همین کانفیگ، پس از پاسخ معتبر HTTPS از مسیر جدید تغییر می‌کند. سایر منابع دست‌نخورده می‌مانند.</string>
+    <string name="cdn_stop_first">پیش از بررسی و تغییر کانفیگ، VPN را متوقف کنید.</string>
+    <string name="cdn_not_applied">اعمال نشد: تأیید ناموفق بود یا کانفیگ/نشست تغییر کرد.</string>
+    <string name="cdn_applied_one">یک کانفیگ تأییدشده تغییر کرد؛ تا بازبودن این پیام امکان بازگردانی وجود دارد.</string>
+    <string name="undo">بازگردانی</string>
+    <string name="auto_profile_tap_connect">قاعدهٔ شبکه درخواست اتصال دارد؛ برای شروع مجاز لمس کنید.</string>
+    <string name="trusted_wifi_permission_title">دسترسی به نام Wi-Fi</string>
+    <string name="trusted_wifi_permission_help">اندروید برای خواندن نام Wi-Fi به مجوز مکان و روشن‌بودن Location نیاز دارد. نام فقط محلی استفاده می‌شود، نه برای ردیابی GPS. دسترسی مکان پس‌زمینه درخواست نمی‌شود؛ تشخیص نام مورداعتماد ممکن است در پس‌زمینه در دسترس نباشد. پس از اجازه دوباره ذخیره را بزنید.</string>
 </resources>

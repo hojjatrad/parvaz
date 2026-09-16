@@ -87,7 +87,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /* loaded from: classes.dex */
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends com.parvaz.tunnel.LockedActivity {
     private boolean recoveryBlocked;
 
     /* renamed from: q0 */
@@ -635,6 +635,7 @@ public class MainActivity extends AppCompatActivity {
         /* renamed from: a */
         public final void onActivityResult(ActivityResult activityResult) {
             MainActivity mainActivity = MainActivity.this;
+            if(!mainActivity.isAccessGranted()){mainActivity.afterUnlock(()->onActivityResult(activityResult));return;}
             mainActivity.getClass();
             if (activityResult.getResultCode() == -1) {
                 mainActivity.startVpn("com.parvaz.tunnel.START");
@@ -1099,6 +1100,7 @@ public class MainActivity extends AppCompatActivity {
           .setNegativeButton(R.string.cancel,null).show();
     }
     private void importFullText(String text){
+        if(!isAccessGranted()){afterUnlock(()->importFullText(text));return;}
         if(importing||manualRefreshing||readingSharedInput){Snackbar.make(connectButton,R.string.import_busy,Snackbar.LENGTH_SHORT).show();return;}
         importing=true;
         new Thread(()->{try{
@@ -1113,6 +1115,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean readingSharedInput;
     private androidx.activity.result.ActivityResultLauncher<String[]> sharedDocumentPicker,fullDocumentPicker;
     public final void handleIntent(Intent intent) {
+        if(!isAccessGranted()){afterUnlock(()->handleIntent(intent));return;}
         if(intent==null||intent.getData()==null&&!Intent.ACTION_SEND.equals(intent.getAction()))return;
         if(readingSharedInput||importing||manualRefreshing){Snackbar.make(findViewById(android.R.id.content),R.string.import_busy,Snackbar.LENGTH_SHORT).show();return;}
         final Intent input=new Intent(intent);intent.setData(null);if(Intent.ACTION_SEND.equals(intent.getAction()))intent.setAction(null);intent.removeExtra(Intent.EXTRA_TEXT);intent.removeExtra(Intent.EXTRA_STREAM);intent.setClipData(null);
@@ -1132,6 +1135,7 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean importing;
     public final void importText(String text) {
+        if(!isAccessGranted()){afterUnlock(()->importText(text));return;}
         if(importing||manualRefreshing||readingSharedInput){Snackbar.make(findViewById(android.R.id.content),R.string.import_busy,0).show();return;}
         if(text==null||text.trim().isEmpty()){Snackbar.make(connectButton,R.string.clipboard_empty,0).show();return;}
         importing=true;refresh.setRefreshing(true);
@@ -1363,25 +1367,7 @@ public class MainActivity extends AppCompatActivity {
      * earlier on the same network.
      */
     public final void applyAutoProfile() {
-        if (SafeMode.sTrippedThisRun) {
-            return;
-        }
-        int action;
-        try {
-            action = com.parvaz.tunnel.core.AutoProfile.decide(this);
-        } catch (Throwable t) {
-            android.util.Log.w("Parvaz/MainActivity", "auto profile failed", t);
-            return;
-        }
-        if (action == com.parvaz.tunnel.core.AutoProfile.ACTION_CONNECT) {
-            if (!TunnelVpnService.serviceRunning && this.state != 1) {
-                this.connectButton.post(new D());
-            }
-        } else if (action == com.parvaz.tunnel.core.AutoProfile.ACTION_DISCONNECT) {
-            if (TunnelVpnService.serviceRunning) {
-                startVpn("com.parvaz.tunnel.STOP");
-            }
-        }
+        com.parvaz.tunnel.core.NetworkAutomation.evaluate(getApplicationContext());
     }
 
     /* renamed from: G */
@@ -1494,7 +1480,7 @@ public class MainActivity extends AppCompatActivity {
                 this.quotaConsumedText.setText((fa ? "مصرف‌شده: " : "Used: ") + fmtBytes(usedBytes));
             }
             if (this.quotaExpireDateText != null) {
-                this.quotaExpireDateText.setText(fromServer?R.string.service_unlimited_duration:R.string.quota_no_metadata);
+                renderExpiry(expireSec,fromServer,fa);
             }
             this.quotaPercentText.setText("0%");
             this.quotaBar.setProgress(0);
@@ -1502,6 +1488,7 @@ public class MainActivity extends AppCompatActivity {
             if (this.quotaWarningText != null) {
                 this.quotaWarningText.setVisibility(View.GONE);
             }
+            QuotaNotifier.checkAndNotify(this,usedBytes,totalBytes,expireSec);
             return;
         }
 
@@ -1526,7 +1513,7 @@ public class MainActivity extends AppCompatActivity {
         if (expireSec > 0) {
             if (expireSec > 10000000000L) expireSec /= 1000L;
             long nowSec = System.currentTimeMillis() / 1000L;
-            diffDays = (expireSec - nowSec) / 86400L;
+            diffDays = com.parvaz.tunnel.core.ExpiryState.daysRemaining(expireSec,nowSec);
             if (this.quotaExpireDateText != null) {
                 if (diffDays >= 0) {
                     this.quotaExpireDateText.setText(diffDays + " " + (fa ? "روز تا تاریخ انقضا" : "days left"));
@@ -1563,6 +1550,14 @@ public class MainActivity extends AppCompatActivity {
         QuotaNotifier.checkAndNotify(this, usedBytes, totalBytes, expireSec);
     }
 
+    private void renderExpiry(long expires,boolean known,boolean fa){
+        if(!known){quotaExpireDateText.setText(R.string.quota_no_metadata);return;}
+        expires=com.parvaz.tunnel.core.ExpiryState.seconds(expires);
+        if(expires<=0){quotaExpireDateText.setText(R.string.service_unlimited_duration);return;}
+        long days=com.parvaz.tunnel.core.ExpiryState.daysRemaining(expires,System.currentTimeMillis()/1000);
+        if(days<0)quotaExpireDateText.setText(R.string.service_expired);
+        else quotaExpireDateText.setText(days+(fa?" روز تا تاریخ انقضا":" days left"));
+    }
     public final void showQuotaDetailsDialog() {
         Profile currentProfile=b0.getActiveById(L.f343a.getString("selected_profile",""));
         Subscription subscription=com.parvaz.tunnel.core.QuotaState.source(currentProfile,b0.f(),b0.e());
@@ -2374,12 +2369,16 @@ public class MainActivity extends AppCompatActivity {
         fullDocumentPicker=registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),uri->{
             if(uri==null)return;
             if(importing||manualRefreshing||readingSharedInput){Snackbar.make(connectButton,R.string.import_busy,Snackbar.LENGTH_SHORT).show();return;}
-            readingSharedInput=true;new Thread(()->{
+            afterUnlock(()->{readingSharedInput=true;new Thread(()->{
                 String text="";try{text=com.parvaz.tunnel.core.SharedInput.content(getApplicationContext(),uri);}catch(Exception ignored){}final String input=text;
                 runOnUiThread(()->{readingSharedInput=false;if(!isFinishing()&&!isDestroyed())importFullText(input);});
-            },"parvaz-full-file").start();});
+            },"parvaz-full-file").start();});});
         handleIntent(getIntent());
         this.connectButton.postDelayed(new A(), 4000L);
+        afterUnlock(()->showStartupNotices());
+    }
+    private void showStartupNotices(){
+        File latest;boolean z2=true;
         try {
             if (!SafeMode.sTrippedThisRun && !getApplicationContext().getSharedPreferences("parvaz_safemode", 0).getBoolean("safe_active", false)) {
                 z2 = false;
@@ -2444,6 +2443,11 @@ public class MainActivity extends AppCompatActivity {
         int i;
         Executor executorCompat$HandlerExecutor;
         super.onResume();
+        if(!isAccessGranted())return;
+        resumeUnlocked();
+    }
+    @Override protected void onAccessGranted(){resumeUnlocked();}
+    private void resumeUnlocked(){
         if(recoveryBlocked)return;
         try{ProfileStore.recoverBeforeUse(this);}catch(RuntimeException unavailable){
             recoveryBlocked=true;startActivity(new Intent(this,BackupRecoveryActivity.class));finish();return;
@@ -2468,27 +2472,9 @@ public class MainActivity extends AppCompatActivity {
         } else if (this.shakeDetector != null) {
             this.shakeDetector.stop();
         }
-        if (this.L.f343a.getBoolean("app_lock", false) && !this.unlocked) {
-            try {
-                executorCompat$HandlerExecutor = ContextCompat.getMainExecutor(this);
-                BiometricPrompt biometricPrompt =
-                        new BiometricPrompt(this, executorCompat$HandlerExecutor, new C0020b());
-                BiometricPrompt.PromptInfo promptInfo = new BiometricPrompt.PromptInfo.Builder()
-                        .setTitle(getString(R.string.app_lock_prompt))
-                        .setSubtitle(getString(R.string.app_lock_subtitle))
-                        .setAllowedAuthenticators(33023)
-                        .build();
-                biometricPrompt.authenticate(promptInfo);
-            } catch (Throwable unused) {
-                this.unlocked = true;
-                findViewById(R.id.lock_shade).setVisibility(8);
-                maybeAutoConnect();
-            }
-            findViewById(R.id.lock_shade).setVisibility(0);
-        } else {
-            findViewById(R.id.lock_shade).setVisibility(8);
-            maybeAutoConnect();
-        }
+        this.unlocked=isAccessGranted();
+        findViewById(R.id.lock_shade).setVisibility(View.GONE);
+        maybeAutoConnect();
         ContextCompat.registerReceiver(this, this.p0,
                 new IntentFilter("com.parvaz.tunnel.STATE"), ContextCompat.RECEIVER_NOT_EXPORTED);
         i = TunnelVpnService.currentState;

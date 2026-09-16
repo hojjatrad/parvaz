@@ -45,7 +45,7 @@ public final class LogBuffer {
         synchronized (f6245c) {
             time = f6245c.format(new Date());
         }
-        String str2 = time + "  " + str;
+        String str2 = time + "  " + SafeLog.message(str);
         ArrayDeque<String> arrayDeque = f6244b;
         synchronized (arrayDeque) {
             arrayDeque.addLast(str2);

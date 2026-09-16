@@ -27,7 +27,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /* loaded from: classes.dex */
-public class AppPickerActivity extends AppCompatActivity {
+public class AppPickerActivity extends com.parvaz.tunnel.LockedActivity {
 
     /* renamed from: A */
     public TextView f6069b;

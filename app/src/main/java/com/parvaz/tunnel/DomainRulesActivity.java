@@ -16,7 +16,7 @@ import com.parvaz.tunnel.store.Prefs;
  * blackhole. The existing rules screen is per-rule and structured; this is the
  * bulk-paste companion, which is how people actually maintain these lists.
  */
-public class DomainRulesActivity extends AppCompatActivity {
+public class DomainRulesActivity extends com.parvaz.tunnel.LockedActivity {
 
     /** Iranian services that misbehave when reached from a foreign exit. */
     private static final String PRESET_IR =

@@ -65,7 +65,7 @@ public final class Diagnostics {
         } catch (Throwable t) {
             sb.append("\n[report generation failed: ").append(t).append("]\n");
         }
-        return sb.toString();
+        return SafeLog.message(sb.toString());
     }
 
     private static void appendApp(Context context, StringBuilder sb) {
@@ -222,7 +222,7 @@ public final class Diagnostics {
             String[] split = lines.split("\n");
             int from = Math.max(0, split.length - LOG_TAIL_LINES);
             for (int i = from; i < split.length; i++) {
-                sb.append(split[i]).append('\n');
+                sb.append(SafeLog.message(split[i])).append('\n');
             }
         } catch (Throwable t) {
             sb.append("log read failed: ").append(t).append('\n');

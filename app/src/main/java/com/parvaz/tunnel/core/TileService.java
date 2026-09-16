@@ -20,7 +20,7 @@ public class TileService extends android.service.quicksettings.TileService {
         }
         boolean z = TunnelVpnService.serviceRunning;
         if (z) {
-            i = 2;
+            i = StartupDiagnostics.confirmation()==StartupDiagnostics.Confirmation.RESPONSE_SEEN?2:1;
         } else {
             i = 1;
         }

@@ -16,7 +16,7 @@ import com.parvaz.tunnel.R;
 import java.util.ArrayDeque;
 
 /* loaded from: classes.dex */
-public class LogActivity extends AppCompatActivity {
+public class LogActivity extends com.parvaz.tunnel.LockedActivity {
 
     /* renamed from: A */
     public TextView f6091b;

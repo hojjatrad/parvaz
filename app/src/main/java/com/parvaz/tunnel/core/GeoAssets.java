@@ -1,195 +1,53 @@
 package com.parvaz.tunnel.core;
-
-import android.content.Context;
-import android.content.SharedPreferences;
-import android.util.Log;
-
-import java.io.Closeable;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-
-/**
- * Hybrid geo-data strategy (idea 2.1).
- *
- * <p>The APK bundles the small Iran-tuned <em>-lite</em> geoip/geosite files so routing
- * is correct on the very first launch with no network round trip. Later — and at most
- * once a week — the full-size files are fetched in the background and swapped in. The
- * full set covers far more domains (notably the long tail of Iranian CDNs and ad
- * networks) but is ~25 MB, too much to ship inside the APK.
- *
- * <p>Downloads land in a temporary file and are only renamed over the live one after
- * the whole body arrives and passes a size check, so a dropped connection can never
- * leave the core with a truncated .dat.
- */
+import android.content.*;import java.io.*;import java.net.*;import java.security.*;import java.util.*;import java.util.concurrent.atomic.AtomicBoolean;import org.json.*;
+/** Two verified files form one generation. Running processes keep an immutable
+ * directory; newly downloaded rules activate only on the next process startup. */
 public final class GeoAssets {
-
-    private static final String TAG = "ParvazGeo";
-
-    private static final String PREFS = "parvaz_geo";
-    private static final String KEY_LAST_CHECK = "last_check";
-    private static final String KEY_FULL_VERSION = "full_installed";
-
-    /** Upstream releases weekly; no point checking more often. */
-    private static final long CHECK_INTERVAL_MS = 7L * 24 * 60 * 60 * 1000;
-
-    /** Anything smaller than this is an error page, not a geo database. */
-    private static final long MIN_FULL_SIZE = 1024 * 1024;
-
-    private static final String[] MIRRORS = {
-            "https://github.com/chocolate4u/Iran-v2ray-rules/releases/latest/download/",
-            "https://cdn.jsdelivr.net/gh/chocolate4u/Iran-v2ray-rules@release/",
-    };
-
-    private static volatile boolean sRunning = false;
-
-    private GeoAssets() {
-    }
-
-    /**
-     * Copies the bundled lite files into place if the core has none yet. Must run
-     * before {@code Libv2ray.initCoreEnv}. Cheap: it no-ops once the files exist.
-     */
-    public static void installBundled(Context context) {
-        File dir = context.getFilesDir();
-        CoreManager.copyAssetIfNeeded(context, "geoip.dat", new File(dir, "geoip.dat"));
-        CoreManager.copyAssetIfNeeded(context, "geosite.dat", new File(dir, "geosite.dat"));
-    }
-
-    /**
-     * Starts a background upgrade to the full geo files when one is due. Safe to call
-     * on every launch: returns immediately if a download is already running or the
-     * weekly interval has not elapsed.
-     */
-    public static void maybeUpgrade(Context context) {
-        final Context app = context.getApplicationContext();
-        SharedPreferences sp = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-
-        if (System.currentTimeMillis() - sp.getLong(KEY_LAST_CHECK, 0L) < CHECK_INTERVAL_MS) {
-            return;
-        }
-        if (sRunning) {
-            return;
-        }
-        sRunning = true;
-
-        Thread worker = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    boolean ok = download(app, "geoip.dat") && download(app, "geosite.dat");
-                    SharedPreferences prefs =
-                            app.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-                    SharedPreferences.Editor editor = prefs.edit();
-                    editor.putLong(KEY_LAST_CHECK, System.currentTimeMillis());
-                    if (ok) {
-                        editor.putBoolean(KEY_FULL_VERSION, true);
-                        // Routing decides which geosite:/geoip: rules are safe to emit
-                        // from the tag index; it must re-read the new files.
-                        GeoIndex.invalidate();
-                        LogBuffer.listener("geo data updated to the full Iran ruleset");
-                    }
-                    editor.apply();
-                } catch (Throwable t) {
-                    Log.w(TAG, "geo upgrade failed", t);
-                } finally {
-                    sRunning = false;
-                }
-            }
-        }, "parvaz-geo");
-        worker.setPriority(Thread.MIN_PRIORITY);
-        worker.start();
-    }
-
-    /** True once the full-size files have replaced the bundled lite ones. */
-    public static boolean hasFullData(Context context) {
-        return context.getApplicationContext()
-                .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                .getBoolean(KEY_FULL_VERSION, false);
-    }
-
-    /**
-     * Fetches one .dat file, trying each mirror in turn. Returns true only when a
-     * plausibly-sized file was written and swapped into place.
-     */
-    private static boolean download(Context context, String name) {
-        File dir = context.getFilesDir();
-        File target = new File(dir, name);
-        File temp = new File(dir, name + ".tmp");
-
-        for (int i = 0; i < MIRRORS.length; i++) {
-            HttpURLConnection conn = null;
-            InputStream in = null;
-            FileOutputStream out = null;
-            try {
-                conn = (HttpURLConnection) new URL(MIRRORS[i] + name).openConnection();
-                conn.setConnectTimeout(15000);
-                conn.setReadTimeout(60000);
-                conn.setInstanceFollowRedirects(true);
-                conn.setRequestProperty("User-Agent", "Parvaz");
-
-                if (conn.getResponseCode() != 200) {
-                    continue;
-                }
-
-                in = conn.getInputStream();
-                out = new FileOutputStream(temp);
-                byte[] buf = new byte[65536];
-                long total = 0;
-                while (true) {
-                    int read = in.read(buf);
-                    if (read <= 0) {
-                        break;
-                    }
-                    out.write(buf, 0, read);
-                    total += read;
-                }
-                out.flush();
-                out.close();
-                out = null;
-
-                long minSize = "geoip.dat".equals(name) ? (20 * 1024) : (500 * 1024);
-                if (total < minSize) {
-                    temp.delete();     // almost certainly an HTML error page
-                    continue;
-                }
-
-                if (target.exists() && !target.delete()) {
-                    temp.delete();
-                    return false;
-                }
-                if (temp.renameTo(target)) {
-                    Log.i(TAG, "installed " + name + " (" + total + " bytes)");
-                    return true;
-                }
-                temp.delete();
-            } catch (Throwable t) {
-                Log.w(TAG, "mirror " + i + " failed for " + name + ": " + t.getMessage());
-            } finally {
-                closeQuietly(out);
-                closeQuietly(in);
-                if (conn != null) {
-                    try {
-                        conn.disconnect();
-                    } catch (Throwable ignored) {
-                        android.util.Log.w("Parvaz/GeoAssets", "Throwable ignored", ignored);
-                    }
-                }
-            }
-        }
-        temp.delete();
-        return false;
-    }
-
-    private static void closeQuietly(Closeable c) {
-        if (c != null) {
-            try {
-                c.close();
-            } catch (Throwable ignored) {
-                android.util.Log.w("Parvaz/GeoAssets", "Throwable ignored", ignored);
-            }
-        }
-    }
+ private static final String PREFS="parvaz_geo",API="https://api.github.com/repos/chocolate4u/Iran-v2ray-rules/releases/latest";
+ private static final long WEEK=7L*86400000,RETRY=3600000;
+ private static final AtomicBoolean BUSY=new AtomicBoolean();private static File pinned;
+ private GeoAssets(){}
+ public static synchronized File directory(Context c){
+  if(pinned!=null)return pinned;File base=c.getFilesDir();String selected=c.getSharedPreferences(PREFS,0).getString("generation","");
+  if(selected.matches("geo-gen-[a-f0-9-]{36}")){File candidate=new File(base,selected);try{verifyGeneration(candidate);pinned=candidate;return pinned;}catch(Exception invalid){/* Keep bundled files, not corrupt staged data. */}}
+  pinned=base;return pinned;
+ }
+ public static void installBundled(Context c){CoreManager.copyAssetIfNeeded(c,"geoip.dat",new File(c.getFilesDir(),"geoip.dat"));CoreManager.copyAssetIfNeeded(c,"geosite.dat",new File(c.getFilesDir(),"geosite.dat"));directory(c);}
+ public static boolean hasFullData(Context c){return !directory(c).equals(c.getFilesDir());}
+ public static void maybeUpgrade(Context context){
+  Context c=context.getApplicationContext();SharedPreferences p=c.getSharedPreferences(PREFS,0);long now=System.currentTimeMillis();
+  if(now-p.getLong("last_success",0)<WEEK||now-p.getLong("last_attempt",0)<RETRY||!BUSY.compareAndSet(false,true))return;
+  new Thread(()->{File stage=null;try{
+   p.edit().putLong("last_attempt",System.currentTimeMillis()).apply();AppNetwork.Route route=AppNetwork.capture();long deadline=System.nanoTime()+180000000000L;
+   ByteArrayOutputStream metadata=new ByteArrayOutputStream();fetch(route,API,metadata,1024*1024,deadline);JSONObject release=new JSONObject(metadata.toString("UTF-8"));
+   if(release.optBoolean("draft")||release.optBoolean("prerelease"))throw new IOException("Unstable Geo release");
+   Map<String,JSONObject> assets=new HashMap<>();JSONArray list=release.getJSONArray("assets");for(int i=0;i<list.length();i++){JSONObject a=list.getJSONObject(i);String name=a.optString("name");if(name.equals("geoip.dat")||name.equals("geosite.dat")){if(assets.put(name,a)!=null)throw new IOException("Duplicate asset");}}
+   if(assets.size()!=2)throw new IOException("Incomplete Geo release");stage=new File(c.getFilesDir(),"geo-stage-"+UUID.randomUUID());if(!stage.mkdir())throw new IOException("Geo stage");JSONObject seal=new JSONObject();
+   for(String name:new String[]{"geoip.dat","geosite.dat"}){
+    JSONObject a=assets.get(name);String digest=a.optString("digest"),url=a.getString("browser_download_url");long size=a.getLong("size");
+    if(!digest.matches("sha256:[a-fA-F0-9]{64}")||size<2||size>GeoData.MAX_BYTES||!url.startsWith("https://github.com/chocolate4u/Iran-v2ray-rules/releases/download/")||!url.endsWith("/"+name))throw new IOException("Unpinned Geo asset");
+    File file=new File(stage,name);try(FileOutputStream out=new FileOutputStream(file)){fetch(route,url,out,size,deadline);out.getFD().sync();}
+    if(file.length()!=size||!sha(file).equalsIgnoreCase(digest.substring(7)))throw new IOException("Geo digest mismatch");seal.put(name,digest.substring(7).toLowerCase(Locale.ROOT));
+   }
+   validatePair(stage);try(FileOutputStream out=new FileOutputStream(new File(stage,"seal.json"))){out.write(seal.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));out.getFD().sync();}
+   File generation=new File(c.getFilesDir(),"geo-gen-"+UUID.randomUUID());if(!stage.renameTo(generation))throw new IOException("Geo promotion");stage=generation;
+   // One atomic preference publication; never delete currently usable rule files.
+   if(!p.edit().putString("generation",generation.getName()).putLong("last_success",System.currentTimeMillis()).commit())throw new IOException("Geo commit");stage=null;
+   LogBuffer.listener("Verified geo rules downloaded; activation at next process start");
+  }catch(Exception error){LogBuffer.listener("Geo update deferred; existing rules retained");}finally{if(stage!=null)erase(stage);BUSY.set(false);}},"parvaz-geo-update").start();
+ }
+ static void validatePair(File dir)throws IOException{if(!GeoData.tags(new File(dir,"geoip.dat"),true).contains("ir")||!GeoData.tags(new File(dir,"geosite.dat"),false).contains("category-ir"))throw new IOException("Required Geo tags missing");}
+ static void verifyGeneration(File dir)throws Exception{File seal=new File(dir,"seal.json");if(!seal.isFile()||seal.length()>512)throw new IOException("Geo seal");byte[] bytes=new byte[(int)seal.length()];try(DataInputStream in=new DataInputStream(new FileInputStream(seal))){in.readFully(bytes);}JSONObject json=new JSONObject(new String(bytes,java.nio.charset.StandardCharsets.UTF_8));for(String name:new String[]{"geoip.dat","geosite.dat"})if(!sha(new File(dir,name)).equals(json.getString(name)))throw new IOException("Geo altered");validatePair(dir);}
+ static String sha(File f)throws Exception{if(!f.isFile()||f.length()>GeoData.MAX_BYTES)throw new IOException("Geo size");MessageDigest d=MessageDigest.getInstance("SHA-256");try(InputStream in=new FileInputStream(f)){byte[] b=new byte[65536];int n;while((n=in.read(b))!=-1)d.update(b,0,n);}StringBuilder h=new StringBuilder();for(byte b:d.digest())h.append(String.format(Locale.ROOT,"%02x",b&255));return h.toString();}
+ private static void fetch(AppNetwork.Route route,String input,OutputStream out,long max,long deadline)throws Exception{
+  URL url=new URL(input);for(int redirects=0;redirects<=5;redirects++){
+   if(!url.getProtocol().equals("https")||url.getUserInfo()!=null)throw new IOException("Geo HTTPS required");HttpURLConnection c=route.open(url);
+   try{c.setInstanceFollowRedirects(false);c.setConnectTimeout(remaining(deadline,10000));c.setReadTimeout(remaining(deadline,15000));c.setRequestProperty("User-Agent","Parvaz");int status=c.getResponseCode();
+    if(status>=300&&status<400){String next=c.getHeaderField("Location");if(next==null)throw new IOException("Geo redirect");url=new URL(url,next);continue;}
+    if(status!=200||c.getContentLengthLong()>max)throw new IOException("Geo response");long count=0;try(InputStream in=c.getInputStream()){byte[] b=new byte[65536];int n;while(true){c.setReadTimeout(remaining(deadline,15000));n=in.read(b);if(n<0)break;if(n>max-count)throw new IOException("Geo limit");out.write(b,0,n);count+=n;}}return;
+   }finally{c.disconnect();}
+  }throw new IOException("Geo redirects");
+ }
+ private static int remaining(long deadline,int cap)throws IOException{if(Thread.currentThread().isInterrupted())throw new InterruptedIOException();long ms=(deadline-System.nanoTime())/1000000;if(ms<=0)throw new java.net.SocketTimeoutException();return (int)Math.max(1,Math.min(ms,cap));}
+ private static void erase(File dir){File[] files=dir.listFiles();if(files!=null)for(File f:files)if(f.isFile())f.delete();dir.delete();}
 }

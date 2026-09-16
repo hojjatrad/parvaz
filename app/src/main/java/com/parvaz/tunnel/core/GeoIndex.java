@@ -30,8 +30,8 @@ import java.util.Set;
  *
  * <p>The tag lists are parsed straight out of the .dat files. Both are protobuf: a
  * sequence of length-delimited entries whose first field is the country/list code in
- * upper case. Rather than link a protobuf runtime for two field reads, this scans for
- * the ASCII tag strings, which is tolerant of format drift and cheap. Results are cached
+ * upper case. A bounded structural parser validates entries instead of guessing from
+ * ASCII tag strings. Results are cached
  * per file (path + size + mtime) so repeated config builds cost nothing.
  */
 public final class GeoIndex {
@@ -52,7 +52,7 @@ public final class GeoIndex {
 
     /** Lower-case tags available in {@code geosite.dat}, e.g. "category-ads-all". */
     public static Set<String> geositeTags(Context context) {
-        File f = new File(context.getApplicationContext().getFilesDir(), "geosite.dat");
+        File f = new File(GeoAssets.directory(context.getApplicationContext()), "geosite.dat");
         synchronized (LOCK) {
             String stamp = stampOf(f);
             if (!stamp.equals(sGeositeStamp)) {
@@ -65,7 +65,7 @@ public final class GeoIndex {
 
     /** Lower-case tags available in {@code geoip.dat}, e.g. "ir", "private". */
     public static Set<String> geoipTags(Context context) {
-        File f = new File(context.getApplicationContext().getFilesDir(), "geoip.dat");
+        File f = new File(GeoAssets.directory(context.getApplicationContext()), "geoip.dat");
         synchronized (LOCK) {
             String stamp = stampOf(f);
             if (!stamp.equals(sGeoipStamp)) {
@@ -132,56 +132,7 @@ public final class GeoIndex {
      * rejected because the true name will not be in the set.
      */
     private static Set<String> scan(File file) {
-        Set<String> found = new HashSet<>();
-        if (!file.isFile() || file.length() == 0) {
-            Log.w(TAG, "geo file missing or empty: " + file);
-            return found;
-        }
-
-        InputStream in = null;
-        try {
-            in = new FileInputStream(file);
-            byte[] buf = new byte[64 * 1024];
-            StringBuilder token = new StringBuilder(64);
-            // A tag can straddle a buffer boundary, so the builder persists across reads.
-            int read;
-            while ((read = in.read(buf)) > 0) {
-                for (int i = 0; i < read; i++) {
-                    int c = buf[i] & 0xFF;
-                    boolean part = (c >= 'A' && c <= 'Z')
-                            || (c >= '0' && c <= '9')
-                            || c == '-';
-                    if (part) {
-                        if (token.length() < 64) {
-                            token.append((char) c);
-                        }
-                    } else {
-                        harvest(token, found);
-                    }
-                }
-            }
-            harvest(token, found);
-        } catch (Throwable t) {
-            Log.w(TAG, "failed to scan " + file, t);
-        } finally {
-            if (in != null) {
-                try {
-                    in.close();
-                } catch (Throwable ignored) {
-                    // Nothing useful to do.
-                }
-            }
-        }
-
-        Log.i(TAG, "geo scan " + file.getName() + " -> " + found.size() + " tags");
-        return found;
-    }
-
-    private static void harvest(StringBuilder token, Set<String> found) {
-        // Two characters is the shortest real code ("IR", "US", "CN").
-        if (token.length() >= 2) {
-            found.add(token.toString().toLowerCase(Locale.US));
-        }
-        token.setLength(0);
+        try{return GeoData.tags(file,file.getName().equals("geoip.dat"));}
+        catch(java.io.IOException invalid){return Collections.emptySet();}
     }
 }

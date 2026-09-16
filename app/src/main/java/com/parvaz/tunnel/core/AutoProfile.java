@@ -72,7 +72,7 @@ public final class AutoProfile {
         }
         for (String line : list.split("\n")) {
             String ssid = line.trim();
-            if (!ssid.isEmpty() && ssid.equalsIgnoreCase(current)) {
+            if (!ssid.isEmpty() && ssid.equals(current)) {
                 return true;
             }
         }

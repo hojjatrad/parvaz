@@ -21,7 +21,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 /* loaded from: classes.dex */
-public class UsageActivity extends AppCompatActivity {
+public class UsageActivity extends com.parvaz.tunnel.LockedActivity {
 
     /* renamed from: A */
     public TextView f6207b;

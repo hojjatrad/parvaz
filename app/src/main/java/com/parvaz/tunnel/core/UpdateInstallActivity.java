@@ -12,7 +12,7 @@ import com.parvaz.tunnel.R;
 import java.io.File;
 
 /** Private, process-recreatable handoff. Permission denial never triggers another download. */
-public final class UpdateInstallActivity extends AppCompatActivity {
+public final class UpdateInstallActivity extends com.parvaz.tunnel.LockedActivity {
     private TextView message;
     private Button install;
     private boolean started,waiting,busy;
@@ -33,6 +33,11 @@ public final class UpdateInstallActivity extends AppCompatActivity {
     }
     @Override public void onResume() {
         super.onResume();
+        if(!isAccessGranted())return;
+        resumeInstall();
+    }
+    @Override protected void onAccessGranted(){resumeInstall();}
+    private void resumeInstall(){
         if(!started){started=true;attempt();}
         else if(waiting){waiting=false;if(allowed())attempt();else message.setText(R.string.update_install_permission);}
     }

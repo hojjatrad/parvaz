@@ -105,13 +105,13 @@ public final class CrashReporter {
         printWriter.println();
         printWriter.println("--- stack trace ---");
         if (th != null) {
-            th.printStackTrace(printWriter);
+            printWriter.println(SafeLog.stack(th));
         }
         printWriter.println();
         printWriter.println("--- recent log ---");
         printWriter.println(LogBuffer.lines());
         printWriter.flush();
-        return stringWriter.toString();
+        return SafeLog.message(stringWriter.toString());
     }
 
     /* renamed from: b */
@@ -145,7 +145,7 @@ public final class CrashReporter {
             FileInputStream fileInputStream = new FileInputStream(file);
             int read = fileInputStream.read(bArr);
             fileInputStream.close();
-            return new String(bArr, 0, Math.max(read, 0), StandardCharsets.UTF_8);
+            return SafeLog.message(new String(bArr, 0, Math.max(read, 0), StandardCharsets.UTF_8));
         } catch (Throwable unused) {
             return "";
         }

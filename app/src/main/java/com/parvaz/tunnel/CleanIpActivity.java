@@ -18,7 +18,7 @@ import java.util.List;
 /**
  * UI for Cloudflare Clean IP Scanner.
  */
-public class CleanIpActivity extends AppCompatActivity {
+public class CleanIpActivity extends com.parvaz.tunnel.LockedActivity {
 
     private TextView statusText;
     private ProgressBar progressBar;
@@ -63,11 +63,38 @@ public class CleanIpActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 if (!bestCleanIp.isEmpty()) {
-                    int changed = CleanIpScanner.applyCleanIpToCloudflareProfiles(CleanIpActivity.this, bestCleanIp);
-                    Snackbar.make(v, getString(R.string.clean_ip_applied, bestCleanIp, changed), -1).show();
+                    selectProfile(bestCleanIp);
                 }
             }
         });
+    }
+
+    private void selectProfile(String ip){
+        com.parvaz.tunnel.store.ProfileStore store=com.parvaz.tunnel.store.ProfileStore.f(this);
+        java.util.ArrayList<com.parvaz.tunnel.model.Profile> eligible=new java.util.ArrayList<>();
+        for(com.parvaz.tunnel.model.Profile p:store.activeProfiles())if(CleanIpScanner.eligible(p))eligible.add(com.parvaz.tunnel.store.ProfileIdentity.copy(p));
+        if(eligible.isEmpty()){Snackbar.make(applyBtn,R.string.cdn_no_candidates,Snackbar.LENGTH_LONG).show();return;}
+        String[] names=new String[eligible.size()];for(int i=0;i<names.length;i++)names[i]=eligible.get(i).remark;
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this).setTitle(R.string.cdn_select_one).setItems(names,(dialog,index)->{
+            com.parvaz.tunnel.model.Profile original=eligible.get(index),candidate=CleanIpScanner.candidate(original,ip);
+            new com.google.android.material.dialog.MaterialAlertDialogBuilder(this).setTitle(R.string.cdn_verify_title)
+                .setMessage(original.address+" → "+candidate.address+"\nSNI: "+candidate.sni+"\n"+getString(R.string.cdn_verify_help))
+                .setPositiveButton(R.string.ok,(d,w)->verifyEdit(store,original,candidate)).setNegativeButton(R.string.cancel,null).show();
+        }).setNegativeButton(R.string.cancel,null).show();
+    }
+    private void verifyEdit(com.parvaz.tunnel.store.ProfileStore store,com.parvaz.tunnel.model.Profile original,com.parvaz.tunnel.model.Profile candidate){
+        if(com.parvaz.tunnel.core.TunnelVpnService.serviceRunning){Snackbar.make(applyBtn,R.string.cdn_stop_first,Snackbar.LENGTH_LONG).show();return;}
+        com.parvaz.tunnel.store.ProfileStore.StartupLatency owner=store.captureStartupLatency(original);applyBtn.setEnabled(false);
+        new Thread(()->{long measured=-1;try{measured=com.parvaz.tunnel.core.ProxyMeasurement.measureQueued(getApplicationContext(),candidate,"https://www.gstatic.com/generate_204");}catch(Exception ignored){}
+            final long result=measured;runOnUiThread(()->{
+                if(isFinishing()||isDestroyed())return;applyBtn.setEnabled(true);
+                if(result<=0||com.parvaz.tunnel.core.TunnelVpnService.serviceRunning||!store.replaceEndpoint(owner,candidate)){Snackbar.make(applyBtn,R.string.cdn_not_applied,Snackbar.LENGTH_LONG).show();return;}
+                final com.parvaz.tunnel.store.ProfileStore.StartupLatency undo=store.captureStartupLatency(candidate);
+                Snackbar.make(applyBtn,R.string.cdn_applied_one,Snackbar.LENGTH_INDEFINITE).setAction(R.string.undo,v->{
+                    if(com.parvaz.tunnel.core.TunnelVpnService.serviceRunning||!store.replaceEndpoint(undo,original))Snackbar.make(applyBtn,R.string.cdn_not_applied,Snackbar.LENGTH_LONG).show();
+                }).show();
+            });
+        },"parvaz-cdn-verify").start();
     }
 
     private void startScanning() {

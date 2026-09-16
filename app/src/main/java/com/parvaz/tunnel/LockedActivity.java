@@ -1,0 +1,29 @@
+package com.parvaz.tunnel;
+import android.os.Bundle;import android.view.View;import android.view.WindowManager;
+import androidx.appcompat.app.AppCompatActivity;import androidx.biometric.BiometricPrompt;import androidx.core.content.ContextCompat;
+import com.parvaz.tunnel.core.AppLock;
+/** Shared fail-closed gate for all sensitive app screens and incoming operations. */
+public abstract class LockedActivity extends AppCompatActivity {
+ private boolean authenticating,resumed;private final java.util.ArrayDeque<Runnable> pending=new java.util.ArrayDeque<>();
+ public final boolean isAccessGranted(){return AppLock.allowed(this);}
+ public final void afterUnlock(Runnable task){if(isAccessGranted())task.run();else if(pending.size()<8)pending.addLast(task);}
+ @Override protected void onCreate(Bundle b){super.onCreate(b);AppLock.install(getApplication());if(AppLock.enabled(this))getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);conceal();}
+ private void conceal(){if(!isAccessGranted())getWindow().getDecorView().setVisibility(View.INVISIBLE);}
+ @Override protected void onResume(){super.onResume();resumed=true;if(isAccessGranted()){getWindow().getDecorView().setVisibility(View.VISIBLE);drain();}else{conceal();authenticate();}}
+ private void authenticate(){
+  if(authenticating||isFinishing())return;authenticating=true;
+  try{new BiometricPrompt(this,ContextCompat.getMainExecutor(this),new BiometricPrompt.AuthenticationCallback(){
+   @Override public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult result){
+    authenticating=false;if(isFinishing()||isDestroyed())return;AppLock.grant();getWindow().getDecorView().setVisibility(View.VISIBLE);drain();if(resumed)onAccessGranted();
+   }
+   @Override public void onAuthenticationError(int code,CharSequence text){deny();}
+  }).authenticate(new BiometricPrompt.PromptInfo.Builder().setTitle(getString(R.string.app_lock_prompt)).setSubtitle(getString(R.string.app_lock_subtitle)).setAllowedAuthenticators(33023).build());}
+  catch(RuntimeException unavailable){deny();}
+ }
+ private void deny(){authenticating=false;pending.clear();AppLock.lock();conceal();finish();}
+ private void drain(){while(isAccessGranted()&&!pending.isEmpty()&&!isFinishing())pending.removeFirst().run();}
+ protected void onAccessGranted(){}
+ @Override protected void onPause(){resumed=false;super.onPause();}
+ @Override protected void onStop(){if(AppLock.enabled(this))getWindow().getDecorView().setVisibility(View.INVISIBLE);super.onStop();}
+ @Override protected void onDestroy(){pending.clear();super.onDestroy();}
+}

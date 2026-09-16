@@ -130,26 +130,20 @@ public final class CleanIpScanner {
         }
     }
 
-    /** Applies the clean IP to all Cloudflare-fronted configs (WS/gRPC) while preserving SNI. */
-    public static int applyCleanIpToCloudflareProfiles(Context context, String cleanIp) {
-        if (cleanIp == null || cleanIp.isEmpty()) return 0;
-        ProfileStore store = ProfileStore.f(context);
-        ArrayList<Profile> all = store.e();
-        int changed = 0;
-        for (Profile p : all) {
-            // If profile uses WS or gRPC or has SNI/Host, it's suitable for Clean IP
-            if ("ws".equals(p.network) || "grpc".equals(p.network) || "httpupgrade".equals(p.network) || !p.sni.isEmpty() || !p.host.isEmpty()) {
-                if (p.sni.isEmpty()) {
-                    p.sni = p.address;
-                }
-                if (p.host.isEmpty()) {
-                    p.host = p.sni;
-                }
-                p.address = cleanIp;
-                changed++;
-            }
-        }
-        store.h();
-        return changed;
+    /** No broad mutation: a TLS/CDN candidate must be explicitly selected and probed. */
+    public static boolean eligible(Profile p){
+        return p!=null&&java.util.Arrays.asList("vless","vmess","trojan").contains(p.protocol)
+            &&java.util.Arrays.asList("ws","grpc","httpupgrade").contains(p.network)
+            &&"tls".equals(p.security)&&!p.allowInsecure;
     }
+    public static Profile candidate(Profile original,String ip){
+        if(!eligible(original)||!ip.matches("(?:[0-9]{1,3}\\.){3}[0-9]{1,3}"))throw new IllegalArgumentException("Not a verified CDN candidate");
+        for(String part:ip.split("\\."))if(Integer.parseInt(part)>255)throw new IllegalArgumentException("IP");
+        Profile p=com.parvaz.tunnel.store.ProfileIdentity.copy(original);
+        if(p.sni.isEmpty())p.sni=p.address;
+        if(p.host.isEmpty())p.host=p.address;
+        p.address=ip;p.ping=-1;return p;
+    }
+    /** Legacy broad API deliberately fails closed; callers must select/probe/commit one row. */
+    @Deprecated public static int applyCleanIpToCloudflareProfiles(Context c,String ip){return 0;}
 }

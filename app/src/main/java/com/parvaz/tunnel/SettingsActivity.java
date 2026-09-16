@@ -44,7 +44,7 @@ import java.util.Objects;
 import libv2ray.Libv2ray;
 
 /* loaded from: classes.dex */
-public class SettingsActivity extends AppCompatActivity {
+public class SettingsActivity extends com.parvaz.tunnel.LockedActivity {
 
     /* renamed from: D */
     public static final String[] f6156e = {"global", "block_ads", "iran_direct"};
@@ -334,7 +334,7 @@ public class SettingsActivity extends AppCompatActivity {
         @Override // androidx.activity.result.ActivityResultCallback
         /* renamed from: a */
         public final void onActivityResult(Uri uri) {
-            saveBackupFile(uri);
+            afterUnlock(()->saveBackupFile(uri));
         }
     }
 
@@ -347,6 +347,7 @@ public class SettingsActivity extends AppCompatActivity {
         @Override // androidx.activity.result.ActivityResultCallback
         /* renamed from: a */
         public final void onActivityResult(Uri uri) {
+            if(!isAccessGranted()){afterUnlock(()->onActivityResult(uri));return;}
             Uri uri2 = uri;
             SettingsActivity settingsActivity = SettingsActivity.this;
             settingsActivity.getClass();

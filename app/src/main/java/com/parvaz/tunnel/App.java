@@ -40,6 +40,8 @@ public class App extends Application {
     @Override // android.app.Application
     public final void onCreate() {
         super.onCreate();
+        com.parvaz.tunnel.core.AppLock.install(this);
+        if(android.os.Build.VERSION.SDK_INT>=28&&android.app.Application.getProcessName().endsWith(":crash"))return;
         initializeAfterRecovery();
     }
 
@@ -63,7 +65,7 @@ public class App extends Application {
         try {
             File filesDir = getFilesDir();
             GeoAssets.installBundled(this);
-            Libv2ray.initCoreEnv(filesDir.getAbsolutePath(), "");
+            Libv2ray.initCoreEnv(GeoAssets.directory(this).getAbsolutePath(), "");
             // Bundled files are the small -lite set; fetch the full ones in background.
             GeoAssets.maybeUpgrade(this);
         } catch (Throwable th) {
@@ -79,5 +81,6 @@ public class App extends Application {
             android.util.Log.w("Parvaz/App", "Throwable ignored", unused2);
         }
         SafeMode.completeProcess(this);
+        com.parvaz.tunnel.core.NetworkAutomation.install(this);
     }
 }
