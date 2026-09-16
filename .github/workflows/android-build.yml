@@ -36,6 +36,10 @@ jobs:
         run: |
           sdkmanager 'platforms;android-34' 'build-tools;34.0.0'
           bash tools/release/fetch_core.sh
+      - name: Inventory actual Java runtime and scan public dependency coordinates
+        run: |
+          ./gradlew --no-daemon --max-workers=2 :app:writeRuntimeInventory
+          python3 tools/security/dependency_audit.py
       - name: Compile debug, run Android unit tests and check release R8 (no release secrets)
         shell: bash
         run: |
@@ -82,5 +86,6 @@ jobs:
             app/build/reports/tests/
             app/build/test-results/
             .cache/android-build.log
+            .cache/supply-chain/
           include-hidden-files: true
           retention-days: 3

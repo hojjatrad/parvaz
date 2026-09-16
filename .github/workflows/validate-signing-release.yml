@@ -86,6 +86,18 @@ jobs:
           sdkmanager 'ndk;27.2.12479018'
           python3 tools/native/build.py
           python3 tools/native/source_bundle.py
+      - name: Inventory and audit resolved Java and native Go dependencies
+        run: |
+          ./gradlew --no-daemon --max-workers=2 :app:writeRuntimeInventory
+          python3 tools/security/dependency_audit.py --native
+      - name: Preserve supply-chain review evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: supply-chain-review
+          path: .cache/supply-chain/
+          include-hidden-files: true
+          retention-days: 5
       - name: Build and seal unsigned APKs for the isolated-signing path
         env:
           PARVAZ_UNSIGNED_CANDIDATE: 'true'
