@@ -1,0 +1,49 @@
+{
+  "pins": [
+    {
+      "action": "actions/checkout",
+      "tag": "v4",
+      "sha": "11d5960a326750d5838078e36cf38b85af677262"
+    },
+    {
+      "action": "actions/download-artifact",
+      "tag": "v4",
+      "sha": "d3f86a106a0bac45b974a628896c90dbdf5c8093"
+    },
+    {
+      "action": "actions/setup-go",
+      "tag": "v6",
+      "sha": "924ae3a1cded613372ab5595356fb5720e22ba16"
+    },
+    {
+      "action": "actions/setup-java",
+      "tag": "v4",
+      "sha": "cf277c60eb25467037889841efdb72551f06f6c3"
+    },
+    {
+      "action": "actions/setup-java",
+      "tag": "v5",
+      "sha": "b6effb05e454b25005698d916606bdc6ffcbf961"
+    },
+    {
+      "action": "actions/upload-artifact",
+      "tag": "v4",
+      "sha": "ea165f8d65b6e75b540449e92b4886f43607fa02"
+    },
+    {
+      "action": "android-actions/setup-android",
+      "tag": "v3",
+      "sha": "9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407"
+    },
+    {
+      "action": "gradle/actions/setup-gradle",
+      "tag": "v4",
+      "sha": "ed408507eac070d1f99cc633dbcf757c94c7933a"
+    },
+    {
+      "action": "reactivecircus/android-emulator-runner",
+      "tag": "v2",
+      "sha": "a421e43855164a8197daf9d8d40fe71c6996bb0d"
+    }
+  ]
+}
