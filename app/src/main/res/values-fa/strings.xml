@@ -193,7 +193,7 @@
     <string name="diag_run">تشخیص مشکل اتصال</string>
     <string name="frag_tune">تنظیم خودکار قطعه‌قطعه‌سازی</string>
     <string name="frag_tuning">آزمایش ترکیب %1$d از %2$d…</string>
-    <string name="frag_tuned">بهترین تنظیم برای این شبکه: %1$s</string>
+    <string name="frag_tuned">پیشنهاد تأییدشده: %1$s؛ فقط با لمس اعمال ذخیره می‌شود.</string>
     <string name="frag_tune_failed">هیچ تنظیمی بهتر نبود؛ چیزی تغییر نکرد</string>
     <string name="frag_tune_hint">چند اندازهٔ قطعه را روی شبکهٔ فعلی آزمایش می‌کند و سریع‌ترین را نگه می‌دارد</string>
     <string name="connecting_racing">در حال آزمایش %1$d سرور برتر…</string>
@@ -485,4 +485,5 @@
     <string name="auto_profile_tap_connect">قاعدهٔ شبکه درخواست اتصال دارد؛ برای شروع مجاز لمس کنید.</string>
     <string name="trusted_wifi_permission_title">دسترسی به نام Wi-Fi</string>
     <string name="trusted_wifi_permission_help">اندروید برای خواندن نام Wi-Fi به مجوز مکان و روشن‌بودن Location نیاز دارد. نام فقط محلی استفاده می‌شود، نه برای ردیابی GPS. دسترسی مکان پس‌زمینه درخواست نمی‌شود؛ تشخیص نام مورداعتماد ممکن است در پس‌زمینه در دسترس نباشد. پس از اجازه دوباره ذخیره را بزنید.</string>
+    <string name="apply">اعمال</string>
 </resources>

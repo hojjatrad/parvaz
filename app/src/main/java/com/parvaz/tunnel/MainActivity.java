@@ -1113,6 +1113,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
     }
 
     private boolean readingSharedInput;
+    private Thread sharedInputWorker;
     private androidx.activity.result.ActivityResultLauncher<String[]> sharedDocumentPicker,fullDocumentPicker;
     public final void handleIntent(Intent intent) {
         if(!isAccessGranted()){afterUnlock(()->handleIntent(intent));return;}
@@ -1120,13 +1121,13 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
         if(readingSharedInput||importing||manualRefreshing){Snackbar.make(findViewById(android.R.id.content),R.string.import_busy,Snackbar.LENGTH_SHORT).show();return;}
         final Intent input=new Intent(intent);intent.setData(null);if(Intent.ACTION_SEND.equals(intent.getAction()))intent.setAction(null);intent.removeExtra(Intent.EXTRA_TEXT);intent.removeExtra(Intent.EXTRA_STREAM);intent.setClipData(null);
         readingSharedInput=true;
-        Runnable approved=()->new Thread(()->{
+        Runnable approved=()->{sharedInputWorker=new Thread(()->{
             String text="";try{text=com.parvaz.tunnel.core.SharedInput.read(getApplicationContext(),input);}catch(Exception ignored){}
             final String value=text;
             runOnUiThread(()->{readingSharedInput=false;if(isFinishing()||isDestroyed())return;
                 if(value.isEmpty())Snackbar.make(findViewById(android.R.id.content),R.string.shared_input_failed,Snackbar.LENGTH_SHORT).show();else importText(value);
             });
-        },"parvaz-share-file").start();
+        },"parvaz-share-file");sharedInputWorker.start();};
         new MaterialAlertDialogBuilder(this).setTitle(R.string.shared_import_title).setMessage(R.string.shared_import_confirm)
             .setPositiveButton(android.R.string.ok,(dialog,which)->approved.run())
             .setNegativeButton(android.R.string.cancel,(dialog,which)->readingSharedInput=false)
@@ -2369,10 +2370,10 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
         fullDocumentPicker=registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),uri->{
             if(uri==null)return;
             if(importing||manualRefreshing||readingSharedInput){Snackbar.make(connectButton,R.string.import_busy,Snackbar.LENGTH_SHORT).show();return;}
-            afterUnlock(()->{readingSharedInput=true;new Thread(()->{
+            afterUnlock(()->{readingSharedInput=true;sharedInputWorker=new Thread(()->{
                 String text="";try{text=com.parvaz.tunnel.core.SharedInput.content(getApplicationContext(),uri);}catch(Exception ignored){}final String input=text;
                 runOnUiThread(()->{readingSharedInput=false;if(!isFinishing()&&!isDestroyed())importFullText(input);});
-            },"parvaz-full-file").start();});});
+            },"parvaz-full-file");sharedInputWorker.start();});});
         handleIntent(getIntent());
         this.connectButton.postDelayed(new A(), 4000L);
         afterUnlock(()->showStartupNotices());
@@ -2477,7 +2478,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
         maybeAutoConnect();
         ContextCompat.registerReceiver(this, this.p0,
                 new IntentFilter("com.parvaz.tunnel.STATE"), ContextCompat.RECEIVER_NOT_EXPORTED);
-        i = TunnelVpnService.currentState;
+        int i = TunnelVpnService.currentState;
         this.state = i;
         if (!TunnelVpnService.serviceRunning && this.state != 1 && this.state != 5) {
             this.state = 0;
@@ -2488,6 +2489,6 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
         quotaRefreshHandler.post(quotaRefreshTick);
         quotaRefreshHandler.postDelayed(automaticUpdateCheck,10000L);
     }
-    @Override protected void onDestroy(){if(K!=null)K.close();super.onDestroy();}
+    @Override protected void onDestroy(){if(sharedInputWorker!=null)sharedInputWorker.interrupt();if(K!=null)K.close();super.onDestroy();}
 
 }

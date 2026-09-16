@@ -52,6 +52,7 @@ public final class FragmentTuner {
         public String interval = "";
         public long delayMs = -1;
         public int tried = 0;
+        private java.util.Map<String,?> base;private long epoch;private com.parvaz.tunnel.store.ProfileStore.StartupLatency owner;
     }
 
     /** Progress callback so the UI can show which combination is being tested. */
@@ -73,14 +74,8 @@ public final class FragmentTuner {
         Prefs prefs = new Prefs(app);
         SharedPreferences sp = prefs.f343a;
 
-        // Remember the user's settings so a failed run changes nothing.
-        boolean origEnabled = sp.getBoolean("fragment_enabled", false);
-        String origPackets = sp.getString("fragment_packets", "tlshello");
-        String origLength = sp.getString("fragment_length", "100-200");
-        String origInterval = sp.getString("fragment_interval", "10-20");
-
-        String pingUrl = sp.getString("ping_url", "https://www.gstatic.com/generate_204");
-
+        result.base=sp.getAll();result.epoch=NetworkEpoch.current();result.owner=com.parvaz.tunnel.store.ProfileStore.f(app).captureStartupLatency(profile);
+        String pingUrl=sp.getString("ping_url","https://www.gstatic.com/generate_204");
         long best = Long.MAX_VALUE;
         int bestIndex = -1;
 
@@ -92,14 +87,9 @@ public final class FragmentTuner {
                             candidate[1] + " / " + candidate[2] + " ms");
                 }
 
-                sp.edit()
-                        .putBoolean("fragment_enabled", true)
-                        .putString("fragment_packets", candidate[0])
-                        .putString("fragment_length", candidate[1])
-                        .putString("fragment_interval", candidate[2])
-                        .commit();
-
-                long delay = measure(profile, prefs, pingUrl);
+                if(Thread.currentThread().isInterrupted()||result.epoch!=NetworkEpoch.current())return result;
+                java.util.Map<String,Object> overrides=new java.util.HashMap<>();overrides.put("fragment_enabled",true);overrides.put("fragment_packets",candidate[0]);overrides.put("fragment_length",candidate[1]);overrides.put("fragment_interval",candidate[2]);
+                long delay=measure(profile,new Prefs(app,new com.parvaz.tunnel.store.SnapshotPreferences(result.base,overrides)),pingUrl);
                 result.tried++;
 
                 if (delay > 0 && delay < ACCEPT_MS && delay < best) {
@@ -119,26 +109,18 @@ public final class FragmentTuner {
             result.interval = winner[2];
             result.delayMs = best;
 
-            sp.edit()
-                    .putBoolean("fragment_enabled", true)
-                    .putString("fragment_packets", winner[0])
-                    .putString("fragment_length", winner[1])
-                    .putString("fragment_interval", winner[2])
-                    .commit();
-            remember(app, winner, best);
-            LogBuffer.listener("fragment tuned for this network: "
-                    + winner[1] + " bytes / " + winner[2] + " ms (" + best + " ms)");
-        } else {
-            // Nothing beat the timeout: restore exactly what was there before.
-            sp.edit()
-                    .putBoolean("fragment_enabled", origEnabled)
-                    .putString("fragment_packets", origPackets)
-                    .putString("fragment_length", origLength)
-                    .putString("fragment_interval", origInterval)
-                    .commit();
-            LogBuffer.listener("fragment tuning found no improvement, settings unchanged");
         }
         return result;
+    }
+
+    /** Apply only an explicitly confirmed winner if settings, source, profile and network remain unchanged. */
+    public static boolean applyWinner(Context context,Result result){
+        com.parvaz.tunnel.store.ProfileStore store=com.parvaz.tunnel.store.ProfileStore.f(context);
+        synchronized(store){SharedPreferences sp=new Prefs(context).f343a;
+            if(!result.found||result.epoch!=NetworkEpoch.current()||!store.ownsStartupSnapshot(result.owner)||!sp.getAll().equals(result.base))return false;
+            if(!sp.edit().putBoolean("fragment_enabled",true).putString("fragment_packets",result.packets).putString("fragment_length",result.length).putString("fragment_interval",result.interval).commit())return false;
+            remember(context,new String[]{result.packets,result.length,result.interval},result.delayMs);return true;
+        }
     }
 
     /**
@@ -203,8 +185,7 @@ public final class FragmentTuner {
     /** Measures handshake delay through {@code profile} with the settings now in prefs. */
     private static long measure(Profile profile, Prefs prefs, String url) {
         try {
-            String config = XrayConfigBuilder.b(profile, prefs, null, false, false);
-            return Libv2ray.measureOutboundDelay(config, url);
+            return ProxyMeasurement.measureWithPreferences(prefs.appContext,profile,url,prefs);
         } catch (Throwable ignored) {
             return -1;
         }

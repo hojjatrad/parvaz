@@ -212,7 +212,7 @@ Tap + to paste a config link or add a subscription."</string>
     <string name="diag_run">Diagnose connection problem</string>
     <string name="frag_tune">Auto-tune fragmenting</string>
     <string name="frag_tuning">Testing combination %1$d of %2$d…</string>
-    <string name="frag_tuned">Best setting for this network: %1$s</string>
+    <string name="frag_tuned">Verified suggestion: %1$s. Saved only when you tap Apply.</string>
     <string name="frag_tune_failed">No setting performed better; nothing changed</string>
     <string name="frag_tune_hint">Tests several fragment sizes on the current network and keeps the fastest</string>
     <string name="connecting_racing">Trying the %1$d best servers…</string>
@@ -503,4 +503,5 @@ Tap + to paste a config link or add a subscription."</string>
     <string name="auto_profile_tap_connect">Network rule requests a connection. Tap to authorize starting it.</string>
     <string name="trusted_wifi_permission_title">Wi-Fi name access</string>
     <string name="trusted_wifi_permission_help">Android requires location permission and Location enabled to read a Wi-Fi name. Parvaz uses the name locally, not GPS tracking. No background-location permission is requested; trusted-SSID detection may be unavailable in the background. After allowing, tap Save again.</string>
+    <string name="apply">Apply</string>
 </resources>

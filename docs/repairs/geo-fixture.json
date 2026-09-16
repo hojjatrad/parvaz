@@ -1,0 +1,17 @@
+{
+  "release": "202609150934",
+  "assets": [
+    {
+      "name": "geoip.dat",
+      "size": 16900622,
+      "digest": "sha256:33ec713f847de22c0950ecd8c7bdbae5e7127f339ca8d86f99e8fb94721fdf3f",
+      "browser_download_url": "https://github.com/Chocolate4U/Iran-v2ray-rules/releases/download/202609150934/geoip.dat"
+    },
+    {
+      "name": "geosite.dat",
+      "size": 7641736,
+      "digest": "sha256:cbc3a5af691493dec4768b9e723a1a1315892322c284f1468b0aa4bbb1885d9b",
+      "browser_download_url": "https://github.com/Chocolate4U/Iran-v2ray-rules/releases/download/202609150934/geosite.dat"
+    }
+  ]
+}

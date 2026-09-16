@@ -268,7 +268,8 @@ public final class UpdateFlow {
                         new MaterialAlertDialogBuilder(activity)
                                 .setTitle(R.string.frag_tune)
                                 .setMessage(message)
-                                .setPositiveButton(R.string.ok, null)
+                                .setPositiveButton(result.found?R.string.apply:R.string.ok, (d,w)->{if(result.found&&!FragmentTuner.applyWinner(activity,result))toast(activity,activity.getString(R.string.cdn_not_applied));})
+                                .setNegativeButton(R.string.cancel,null)
                                 .show();
                     }
                 });

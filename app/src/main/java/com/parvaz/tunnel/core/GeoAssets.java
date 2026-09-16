@@ -7,13 +7,26 @@ public final class GeoAssets {
  private static final long WEEK=7L*86400000,RETRY=3600000;
  private static final AtomicBoolean BUSY=new AtomicBoolean();private static File pinned;
  private GeoAssets(){}
+ private static File bundled(Context c){return new File(c.getFilesDir(),"geo-bundled-"+com.parvaz.tunnel.BuildConfig.VERSION_CODE);}
  public static synchronized File directory(Context c){
-  if(pinned!=null)return pinned;File base=c.getFilesDir();String selected=c.getSharedPreferences(PREFS,0).getString("generation","");
-  if(selected.matches("geo-gen-[a-f0-9-]{36}")){File candidate=new File(base,selected);try{verifyGeneration(candidate);pinned=candidate;return pinned;}catch(Exception invalid){/* Keep bundled files, not corrupt staged data. */}}
-  pinned=base;return pinned;
+  if(pinned!=null)return pinned;SharedPreferences p=c.getSharedPreferences(PREFS,0);
+  for(String key:new String[]{"generation","previous_generation"}){String selected=p.getString(key,"");
+   if(selected.matches("geo-gen-[a-f0-9-]{36}")){File candidate=new File(c.getFilesDir(),selected);try{verifyGeneration(candidate);pinned=candidate;break;}catch(Exception invalid){}}
+  }
+  if(pinned==null)pinned=bundled(c);
+  File[] dirs=c.getFilesDir().listFiles();if(dirs!=null)for(File dir:dirs){String n=dir.getName();
+   if((n.startsWith("geo-gen-")||n.startsWith("geo-stage-")||n.startsWith("geo-bundled-"))&&!dir.equals(pinned)&&!dir.equals(bundled(c))&&!n.equals(p.getString("previous_generation","")))erase(dir);
+  }
+  return pinned;
  }
- public static void installBundled(Context c){CoreManager.copyAssetIfNeeded(c,"geoip.dat",new File(c.getFilesDir(),"geoip.dat"));CoreManager.copyAssetIfNeeded(c,"geosite.dat",new File(c.getFilesDir(),"geosite.dat"));directory(c);}
- public static boolean hasFullData(Context c){return !directory(c).equals(c.getFilesDir());}
+ public static void installBundled(Context c){
+  File dir=bundled(c);if(!dir.isDirectory()&&!dir.mkdirs())throw new IllegalStateException("Geo bundle directory");
+  for(String name:new String[]{"geoip.dat","geosite.dat"}){File file=new File(dir,name);
+   try{GeoData.tags(file,name.equals("geoip.dat"));}catch(IOException invalid){if(file.exists()&&!file.delete())throw new IllegalStateException("Geo bundle recovery");CoreManager.copyAssetIfNeeded(c,name,file);}
+   try{GeoData.tags(file,name.equals("geoip.dat"));}catch(IOException invalid){throw new IllegalStateException("Geo bundle invalid",invalid);}
+  }directory(c);
+ }
+ public static boolean hasFullData(Context c){return directory(c).getName().startsWith("geo-gen-");}
  public static void maybeUpgrade(Context context){
   Context c=context.getApplicationContext();SharedPreferences p=c.getSharedPreferences(PREFS,0);long now=System.currentTimeMillis();
   if(now-p.getLong("last_success",0)<WEEK||now-p.getLong("last_attempt",0)<RETRY||!BUSY.compareAndSet(false,true))return;
@@ -32,7 +45,7 @@ public final class GeoAssets {
    validatePair(stage);try(FileOutputStream out=new FileOutputStream(new File(stage,"seal.json"))){out.write(seal.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));out.getFD().sync();}
    File generation=new File(c.getFilesDir(),"geo-gen-"+UUID.randomUUID());if(!stage.renameTo(generation))throw new IOException("Geo promotion");stage=generation;
    // One atomic preference publication; never delete currently usable rule files.
-   if(!p.edit().putString("generation",generation.getName()).putLong("last_success",System.currentTimeMillis()).commit())throw new IOException("Geo commit");stage=null;
+   if(!p.edit().putString("previous_generation",p.getString("generation","")).putString("generation",generation.getName()).putLong("last_success",System.currentTimeMillis()).commit())throw new IOException("Geo commit");stage=null;
    LogBuffer.listener("Verified geo rules downloaded; activation at next process start");
   }catch(Exception error){LogBuffer.listener("Geo update deferred; existing rules retained");}finally{if(stage!=null)erase(stage);BUSY.set(false);}},"parvaz-geo-update").start();
  }

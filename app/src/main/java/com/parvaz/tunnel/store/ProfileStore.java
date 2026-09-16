@@ -422,6 +422,11 @@ public final class ProfileStore {
         }
     }
 
+    public synchronized boolean ownsStartupSnapshot(StartupLatency owner){
+        recoverPendingRestore();return owner!=null&&revision==owner.revision&&getActiveById(owner.snapshot.id)==owner.original
+            &&ProfileIdentity.fingerprint(owner.snapshot).equals(ProfileIdentity.fingerprint(owner.original));
+    }
+
     /** Commit/undo one explicitly verified edit, without reviving another source. */
     public synchronized boolean replaceEndpoint(StartupLatency owner,Profile replacement){
         recoverPendingRestore();

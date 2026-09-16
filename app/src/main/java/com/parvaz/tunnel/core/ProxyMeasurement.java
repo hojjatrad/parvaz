@@ -21,18 +21,20 @@ public final class ProxyMeasurement {
  }
  public static long measureStrictTarget(Context context,Profile profile,String url)throws Exception {return measure(context,profile,url,true,true);}
  private static long measure(Context context,Profile profile,String url,boolean wait)throws Exception {return measure(context,profile,url,wait,false);}
- private static long measure(Context context,Profile profile,String url,boolean wait,boolean strictTarget)throws Exception {
+ public static long measureWithPreferences(Context context,Profile profile,String url,Prefs snapshot)throws Exception{return measure(context,profile,url,true,false,snapshot);}
+ private static long measure(Context context,Profile profile,String url,boolean wait,boolean strictTarget)throws Exception{return measure(context,profile,url,wait,strictTarget,null);}
+ private static long measure(Context context,Profile profile,String url,boolean wait,boolean strictTarget,Prefs snapshot)throws Exception {
   // The active profile is measured through its existing pinned listener. Do not
   // start a competing native controller just to test the already-live route.
   CoreManager manager=CoreManager.b();CoreManager.LiveProbe live=manager.liveProbe(profile);
-  if(live!=null){
+  if(live!=null&&snapshot==null){
    long measured=wait?VerifiedProbe.measureDetailed(live.port,url,true,strictTarget):VerifiedProbe.measure(live.port,url,true);
    return manager.ownsLiveProbe(live)?measured:VerifiedProbe.UNKNOWN;
   }
   if(!CAPACITY.enter(wait))return wait?ProbeAdmission.BUSY:VerifiedProbe.UNKNOWN;
   ExternalCore external=null;CoreController controller=null;
   try{
-   Prefs prefs=new Prefs(context);String config;boolean nativeProfile=EngineConfig.external(profile.protocol);
+   Prefs prefs=snapshot==null?new Prefs(context):snapshot;String config;boolean nativeProfile=EngineConfig.external(profile.protocol);
    String chainId=prefs.f343a.getString("chain_profile","");Profile chain=chainId==null||chainId.isEmpty()||chainId.equals(profile.id)?null:ProfileStore.f(context).getById(chainId);
    if(chain!=null&&(nativeProfile||FullConfig.isFull(profile.protocol)||EngineConfig.external(chain.protocol)))return VerifiedProbe.UNKNOWN;
    if(nativeProfile){

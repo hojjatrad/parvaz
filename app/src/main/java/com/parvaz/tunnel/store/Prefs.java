@@ -31,6 +31,8 @@ public final class Prefs {
         this.f343a = this.appContext.getSharedPreferences("parvaz_prefs", 0);
     }
 
+    public Prefs(Context context,SnapshotPreferences snapshot){this.appContext=context.getApplicationContext();this.f343a=snapshot;}
+
     /* renamed from: a */
     public final void addDailyUsage(long j, long j2) {
         long j3;
