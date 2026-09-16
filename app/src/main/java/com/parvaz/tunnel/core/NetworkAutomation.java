@@ -34,7 +34,7 @@ public final class NetworkAutomation {
  public static synchronized void evaluate(Context c){
   String key=key(c);if(!key.equals(observed)){observed=key;if(!key.isEmpty()&&!key.equals(manual))manual="";NetworkEpoch.changed();}
   if(key.isEmpty()||key.equals(handled)||key.equals(manual)||SafeMode.sTrippedThisRun)return;
-  int action=AutoProfile.decide(c);if(action==AutoProfile.ACTION_NONE)return;handled=key;
+  int action=AutoProfile.decide(c,key.endsWith(":wifi")?NetContext.TRANSPORT_WIFI:key.endsWith(":mobile")?NetContext.TRANSPORT_MOBILE:0);if(action==AutoProfile.ACTION_NONE)return;handled=key;
   if(action==AutoProfile.ACTION_DISCONNECT){if(TunnelVpnService.serviceRunning)c.startService(new Intent(c,TunnelVpnService.class).setAction("com.parvaz.tunnel.STOP").putExtra("automatic_network_rule",true));return;}
   if(TunnelVpnService.serviceRunning||TunnelVpnService.currentState==1||TunnelVpnService.currentState==5)return;
   if(AppLock.foreground()&&AppLock.allowed(c)&&VpnService.prepare(c)==null){

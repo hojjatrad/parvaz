@@ -33,7 +33,6 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.biometric.BiometricPrompt;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -547,24 +546,6 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
     /* JADX WARN: Can't change package for inner class: com.parvaz.tunnel.MainActivity.b to com.parvaz.tunnel.MainActivity$2 */
     /* renamed from: com.parvaz.tunnel.MainActivity$b, reason: case insensitive filesystem */
     /* loaded from: classes.dex */
-    public class C0020b extends BiometricPrompt.AuthenticationCallback {
-        public C0020b() {
-        }
-
-        @Override // androidx.biometric.BiometricPrompt.AuthenticationCallback
-        public final void onAuthenticationError(int errorCode, CharSequence errString) {
-            MainActivity.this.finishAndRemoveTask();
-        }
-
-        @Override // androidx.biometric.BiometricPrompt.AuthenticationCallback
-        public final void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult result) {
-            MainActivity mainActivity = MainActivity.this;
-            mainActivity.unlocked = true;
-            mainActivity.findViewById(R.id.lock_shade).setVisibility(8);
-            mainActivity.maybeAutoConnect();
-        }
-    }
-
     /* JADX WARN: Can't change package for inner class: com.parvaz.tunnel.MainActivity.c to com.parvaz.tunnel.MainActivity$A */
     /* renamed from: com.parvaz.tunnel.MainActivity$c, reason: case insensitive filesystem */
     /* loaded from: classes.dex */

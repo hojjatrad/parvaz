@@ -367,7 +367,7 @@ Tap + to paste a config link or add a subscription."</string>
     <string name="clean_ip_desc">Finds fastest and unblocked Cloudflare IP addresses for your operator and applies them to CDN configs.</string>
     <string name="clean_ip_ready">Ready to scan clean IP addresses</string>
     <string name="clean_ip_start">Start Clean IP Scan</string>
-    <string name="clean_ip_apply">Apply Best Clean IP to Cloudflare Configs</string>
+    <string name="clean_ip_apply">Select a CDN profile to verify</string>
     <string name="clean_ip_scanning">Scanning Cloudflare IP ranges…</string>
     <string name="clean_ip_progress">Scanning %1$d of %2$d…</string>
     <string name="clean_ip_found_n">Found %d working clean IPs!</string>

@@ -348,7 +348,7 @@
     <string name="clean_ip_desc">سریع‌ترین و تمیزترین آی‌پی‌های کلادفلر را برای اپراتور شما پیدا کرده و روی کانفیگ‌های CDN اعمال می‌کند.</string>
     <string name="clean_ip_ready">آماده شروع اسکن آی‌پی‌های تمیز</string>
     <string name="clean_ip_start">شروع اسکن آی‌پی تمیز</string>
-    <string name="clean_ip_apply">اعمال بهترین آی‌پی روی کانفیگ‌های کلادفلر</string>
+    <string name="clean_ip_apply">انتخاب کانفیگ CDN برای بررسی</string>
     <string name="clean_ip_scanning">در حال اسکن رنج‌های آی‌پی کلادفلر…</string>
     <string name="clean_ip_progress">در حال بررسی %1$d از %2$d…</string>
     <string name="clean_ip_found_n">%d آی‌پی تمیز و فعال پیدا شد!</string>

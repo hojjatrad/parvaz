@@ -23,14 +23,14 @@ public final class AutoProfile {
     }
 
     /** Resolves the action for whatever network the device is on right now. */
-    public static int decide(Context context) {
+    public static int decide(Context context) {return context==null?ACTION_NONE:decide(context,NetContext.transport(context));}
+    static int decide(Context context,int transport) {
         if (context == null) {
             return ACTION_NONE;
         }
         SharedPreferences sp =
                 context.getApplicationContext().getSharedPreferences("parvaz_prefs", Context.MODE_PRIVATE);
 
-        int transport = NetContext.transport(context);
         if (transport == NetContext.TRANSPORT_WIFI) {
             // A trusted network wins over the generic Wi-Fi setting.
             if (isTrustedWifi(context, sp)) {

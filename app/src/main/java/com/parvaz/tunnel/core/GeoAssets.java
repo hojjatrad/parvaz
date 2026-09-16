@@ -7,7 +7,8 @@ public final class GeoAssets {
  private static final long WEEK=7L*86400000,RETRY=3600000;
  private static final AtomicBoolean BUSY=new AtomicBoolean();private static File pinned;
  private GeoAssets(){}
- private static File bundled(Context c){return new File(c.getFilesDir(),"geo-bundled-"+com.parvaz.tunnel.BuildConfig.VERSION_CODE);}
+ private static int packageVersion(Context c){try{return c.getPackageManager().getPackageInfo(c.getPackageName(),0).versionCode;}catch(android.content.pm.PackageManager.NameNotFoundException impossible){throw new IllegalStateException(impossible);}}
+ private static File bundled(Context c){return new File(c.getFilesDir(),"geo-bundled-"+packageVersion(c));}
  public static synchronized File directory(Context c){
   if(pinned!=null)return pinned;SharedPreferences p=c.getSharedPreferences(PREFS,0);
   for(String key:new String[]{"generation","previous_generation"}){String selected=p.getString(key,"");
