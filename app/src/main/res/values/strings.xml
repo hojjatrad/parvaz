@@ -340,14 +340,14 @@ Tap + to paste a config link or add a subscription."</string>
     <string name="domain_preset_ads">Block ads</string>
     <string name="domain_preset_apply">Applied</string>
     <string name="auto_profile">Auto profile</string>
-    <string name="auto_profile_summary">Pick behaviour per network type</string>
+    <string name="auto_profile_summary">Rules run while the app process is alive. Android background connection may require tapping a notification.</string>
     <string name="auto_profile_wifi">On Wi-Fi</string>
     <string name="auto_profile_cell">On mobile data</string>
     <string name="auto_profile_ask">Do nothing</string>
     <string name="auto_profile_connect">Connect automatically</string>
     <string name="auto_profile_disconnect">Stay disconnected</string>
     <string name="auto_profile_home_wifi">Trusted Wi-Fi networks</string>
-    <string name="auto_profile_home_hint">One SSID per line; the tunnel stays off on these</string>
+    <string name="auto_profile_home_hint">One SSID per line. Names can be spoofed and are not identity proof. Unknown names or denied location never count as trusted.</string>
     <string name="widget_switch_server">Switch server</string>
     <string name="shortcut_switch">Switch server</string>
     <string name="shortcut_switch_short">Switch</string>

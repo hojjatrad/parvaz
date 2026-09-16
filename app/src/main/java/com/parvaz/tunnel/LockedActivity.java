@@ -16,7 +16,7 @@ public abstract class LockedActivity extends AppCompatActivity {
   if(authenticating||isFinishing())return;authenticating=true;
   try{startAuthentication(new BiometricPrompt.AuthenticationCallback(){
    @Override public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult result){
-    authenticating=false;if(isFinishing()||isDestroyed())return;AppLock.grant();getWindow().getDecorView().setVisibility(View.VISIBLE);drain();if(resumed)onAccessGranted();
+    authenticating=false;if(isFinishing()||isDestroyed())return;if(!AppLock.foreground()){AppLock.lock();conceal();return;}AppLock.grant();if(resumed){getWindow().getDecorView().setVisibility(View.VISIBLE);drain();onAccessGranted();}
    }
    @Override public void onAuthenticationError(int code,CharSequence text){deny();}
   });}

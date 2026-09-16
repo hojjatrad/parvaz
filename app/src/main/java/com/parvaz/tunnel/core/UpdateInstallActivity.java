@@ -44,6 +44,7 @@ public final class UpdateInstallActivity extends com.parvaz.tunnel.LockedActivit
     @Override public void onSaveInstanceState(Bundle state){state.putBoolean("started",started);state.putBoolean("waiting",waiting);super.onSaveInstanceState(state);}
     private boolean allowed(){return Build.VERSION.SDK_INT<26||getPackageManager().canRequestPackageInstalls();}
     private void attempt() {
+        if(!isAccessGranted()){afterUnlock(this::attempt);return;}
         if(busy)return;
         if(!allowed()) {
             message.setText(R.string.update_install_permission);waiting=true;
@@ -71,6 +72,7 @@ public final class UpdateInstallActivity extends com.parvaz.tunnel.LockedActivit
         return intent;
     }
     private void handoff(File file) {
+        if(!isAccessGranted()){afterUnlock(this::attempt);return;}
         try {
             Uri uri=FileProvider.getUriForFile(this,getPackageName()+".fileprovider",file);
             Intent intent=packageIntent(uri);

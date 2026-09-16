@@ -43,7 +43,23 @@ jobs:
           grep -q 'Release signing secrets are missing' .cache/expected-signing-denial.log
           PARVAZ_UNSIGNED_CANDIDATE=true ./gradlew --no-daemon :app:requireReleaseSigning
       - name: Check lint against reviewed legacy baseline
-        run: ./gradlew --no-daemon --max-workers=2 :app:lintDebug :app:lintRelease
+        shell: bash
+        run: |
+          set +e
+          ./gradlew --no-daemon --max-workers=2 :app:lintDebug :app:lintRelease > .cache/lint-repair.log 2>&1
+          result=$?
+          tail -60 .cache/lint-repair.log
+          python3 - <<'PYLINT'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          for report in Path('app/build/reports').glob('lint-results-*.xml'):
+              for issue in ET.parse(report).getroot().findall('issue'):
+                  if issue.get('severity') not in ('Error','Fatal'):continue
+                  loc=issue.find('location')
+                  text=issue.get('id','')+': '+issue.get('message','')+'; '+(str(loc.attrib) if loc is not None else '')
+                  print('::error title=Lint repair diagnostics::'+text.replace('%','%25').replace('\n','%0A').replace('\r','%0D'))
+          PYLINT
+          exit "$result"
       - name: Run Android unit tests
         run: |
           if ! ./gradlew --no-daemon --max-workers=2 :app:testDebugUnitTest > .cache/android-unit.log 2>&1; then

@@ -321,14 +321,14 @@
     <string name="domain_preset_ads">مسدودکردن تبلیغات</string>
     <string name="domain_preset_apply">اعمال شد</string>
     <string name="auto_profile">پروفایل خودکار</string>
-    <string name="auto_profile_summary">رفتار برنامه را برای هر نوع شبکه تعیین کنید</string>
+    <string name="auto_profile_summary">قواعد تا زنده‌بودن فرایند برنامه اجرا می‌شوند. شروع اتصال در پس‌زمینه ممکن است به لمس اعلان نیاز داشته باشد.</string>
     <string name="auto_profile_wifi">روی وای‌فای</string>
     <string name="auto_profile_cell">روی داده همراه</string>
     <string name="auto_profile_ask">کاری نکن</string>
     <string name="auto_profile_connect">خودکار وصل شو</string>
     <string name="auto_profile_disconnect">وصل نشو</string>
     <string name="auto_profile_home_wifi">وای‌فای‌های مورد اعتماد</string>
-    <string name="auto_profile_home_hint">هر خط یک نام شبکه؛ روی این‌ها تونل خاموش می‌ماند</string>
+    <string name="auto_profile_home_hint">هر نام Wi-Fi در یک خط؛ نام قابل جعل است و هویت شبکه را ثابت نمی‌کند. نام ناشناخته یا رد مجوز مکان، مورداعتماد محسوب نمی‌شود.</string>
     <string name="widget_switch_server">تعویض سرور</string>
     <string name="shortcut_switch">تعویض سرور</string>
     <string name="shortcut_switch_short">تعویض</string>

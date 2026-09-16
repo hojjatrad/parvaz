@@ -203,7 +203,6 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
     public boolean favOnly = false;
 
     /* renamed from: n0 */
-    public boolean unlocked = false;
 
     /* renamed from: o0 */
     public int currentTab = 0;
@@ -1315,6 +1314,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
 
     /* renamed from: F */
     public final void maybeAutoConnect() {
+        if(!isAccessGranted())return;
         Intent intent;
         // The launcher long-press shortcut cannot carry extras, so it arrives as a
         // custom action instead; both mean "connect immediately".
@@ -1789,6 +1789,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
 
     /* renamed from: O */
     public final void startVpn(String str) {
+        if(!isAccessGranted()){afterUnlock(()->startVpn(str));return;}
         // Snapshot the untunnelled address before the VPN grabs the default
         // route; afterwards even a "direct" lookup would come back tunnelled,
         // and the leak test needs a real before/after pair.
@@ -1880,6 +1881,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
     }
 
     public final void toggle() {
+        if(!isAccessGranted()){afterUnlock(this::toggle);return;}
         haptic(this.connectButton);
         int i = this.state;
         if (i != 2 && i != 1 && i != 5) {
@@ -1922,7 +1924,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
     private boolean manualRefreshing=false;
     private final Handler quotaRefreshHandler=new Handler(Looper.getMainLooper());
     private final Runnable automaticUpdateCheck=()->{
-        if(!isFinishing()&&!isDestroyed()&&(!L.f343a.getBoolean("app_lock",false)||unlocked))
+        if(!isFinishing()&&!isDestroyed()&&isAccessGranted())
             com.parvaz.tunnel.core.UpdateFlow.checkForUpdate(this,true);
     };
     private final Runnable quotaRefreshTick=new Runnable(){public void run(){
@@ -2454,7 +2456,6 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
         } else if (this.shakeDetector != null) {
             this.shakeDetector.stop();
         }
-        this.unlocked=isAccessGranted();
         findViewById(R.id.lock_shade).setVisibility(View.GONE);
         maybeAutoConnect();
         ContextCompat.registerReceiver(this, this.p0,
