@@ -25,7 +25,7 @@
     "GO-2026-6441",
     "GO-2026-6443"
   ],
-  "symbol_matches": [
+  "emitted_symbol_findings": [
     "GO-2026-4762",
     "GO-2026-5774",
     "GO-2026-5775",
@@ -40,5 +40,6 @@
     "GO-2026-6355",
     "GO-2026-6441",
     "GO-2026-6443"
-  ]
+  ],
+  "interpretation": "Stripped -s -w ELF: govulncheck v1.8.0 may enumerate advisory symbols using its conservative module-level fallback. Emitted function fields are NOT proof that those functions are linked or reachable. Source/build-scope reachability review is still required."
 }
