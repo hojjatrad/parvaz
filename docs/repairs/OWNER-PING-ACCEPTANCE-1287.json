@@ -1,0 +1,25 @@
+{
+  "date": "2026-09-16",
+  "owner_report": "اوکی شد الان نسخه اصلی را درست کن و در گیت هاب قرار بده",
+  "accepted_scope": "Owner confirms the reported ping issue is fixed after the 1.28.7 TEST delivery. Requests a normal GitHub release.",
+  "preview_context": {
+    "version": "1.28.7",
+    "version_code": 41,
+    "source_commit": "d14268ce236a85299d6958cae84698ecec09a3b7",
+    "tag": "test/v1.28.7-r1"
+  },
+  "not_asserted": [
+    "independent device instrumentation",
+    "all protocols and physical network conditions tested",
+    "complete encrypted backup/migration and lock acceptance",
+    "actual app-update-button upgrade of the final APK",
+    "resolution or waiver of open dependency advisories"
+  ],
+  "final_candidate": {
+    "version": "1.28.8",
+    "version_code": 42,
+    "visible_test_label": false,
+    "permanent_signer_generation": 3
+  },
+  "publication_policy": "Existing stable security, signed-upgrade, exact-byte and release-order gates unchanged."
+}
