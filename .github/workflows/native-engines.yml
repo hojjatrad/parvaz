@@ -49,7 +49,7 @@ jobs:
           arch: x86_64
           target: default
           disable-animations: true
-          script: ./gradlew -p tools/android-probe -PnativeProbe --no-daemon --max-workers=2 connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.parvaz.probe.NativeEngineTest
+          script: bash tools/audit-repair/native_probe.sh 29
       - name: Preserve Android 10 native probe results
         run: cp -a tools/android-probe/build/outputs/androidTest-results .cache/native-results-29
       - uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
@@ -58,7 +58,7 @@ jobs:
           arch: x86_64
           target: default
           disable-animations: true
-          script: ./gradlew -p tools/android-probe -PnativeProbe --no-daemon --max-workers=2 connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.parvaz.probe.NativeEngineTest
+          script: bash tools/audit-repair/native_probe.sh 34
       - name: Expose native probe results
         if: always()
         run: |

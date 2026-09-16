@@ -7,6 +7,7 @@ public final class NetworkAutomation {
  private NetworkAutomation(){}
  public static synchronized void install(Context context){
   if(installed)return;Context c=context.getApplicationContext();ConnectivityManager cm=(ConnectivityManager)c.getSystemService(Context.CONNECTIVITY_SERVICE);if(cm==null)return;
+  observed=key(c); // Establish the initial scope without invalidating probes after a delayed first callback.
   try{ConnectivityManager.NetworkCallback callback=new ConnectivityManager.NetworkCallback(){
    public void onAvailable(Network n){schedule(c);}
    public void onCapabilitiesChanged(Network n,NetworkCapabilities caps){schedule(c);}

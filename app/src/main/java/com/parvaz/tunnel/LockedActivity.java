@@ -22,7 +22,7 @@ public abstract class LockedActivity extends AppCompatActivity {
   });}
   catch(RuntimeException unavailable){deny();}
  }
- protected void startAuthentication(BiometricPrompt.AuthenticationCallback callback){new BiometricPrompt(this,ContextCompat.getMainExecutor(this),callback).authenticate(new BiometricPrompt.PromptInfo.Builder().setTitle(getString(R.string.app_lock_prompt)).setSubtitle(getString(R.string.app_lock_subtitle)).setAllowedAuthenticators(33023).build());}
+ protected void startAuthentication(BiometricPrompt.AuthenticationCallback callback){new BiometricPrompt(this,ContextCompat.getMainExecutor(this),callback).authenticate(new BiometricPrompt.PromptInfo.Builder().setTitle(getString(R.string.app_lock_prompt)).setSubtitle(getString(R.string.app_lock_subtitle)).setAllowedAuthenticators(androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_WEAK|androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL).build());}
  private void deny(){authenticating=false;pending.clear();AppLock.lock();conceal();finish();}
  private void drain(){while(isAccessGranted()&&!pending.isEmpty()&&!isFinishing())pending.removeFirst().run();}
  protected void onAccessGranted(){}
