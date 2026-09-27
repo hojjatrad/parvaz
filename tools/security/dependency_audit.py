@@ -113,7 +113,7 @@ def excludes_verified_compiled_packages(component,advisory):
  # Neither host builds, stripped-scanner function names, nor source go.mod qualify.
  if component.get('ecosystem')!='Go':return False
  sources=[s for s in component.get('sources',[]) if 'binary' in s]
- if not sources or any(s.get('package_coverage_verified') is not True or not s.get('package_proof_sha256') or s.get('fork_target') for s in sources):return False
+ if not sources or any(s.get('package_coverage_verified') is not True or s.get('goos')!='android' or not isinstance(s.get('package_proof_sha256'),str) or not re.fullmatch(r'[0-9a-f]{64}',s['package_proof_sha256']) or not isinstance(s.get('sha256'),str) or not re.fullmatch(r'[0-9a-f]{64}',s['sha256']) or s.get('fork_target') for s in sources):return False
  if any(not isinstance(s.get('compiled_packages'),list) or any(not isinstance(p,str) or not p for p in s['compiled_packages']) for s in sources):return False
  compiled=set(p for s in sources for p in s['compiled_packages'])
  affected=[a for a in advisory.get('affected',[]) if a.get('package',{}).get('ecosystem')=='Go' and a['package'].get('name')==component['name']]
