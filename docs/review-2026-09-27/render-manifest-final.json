@@ -1,0 +1,29 @@
+{
+  "source_commit": "f302558729443b37ea93de92dd087d11a9631f97",
+  "run_id": "36309763445",
+  "scope": "SYNTHETIC_ROBOLECTRIC_RENDER_ONLY; static home and bound server row, not installed APK, physical device, TalkBack or full application navigation proof",
+  "files": {
+    "home-fa-320-large-dark.png": {
+      "sha256": "41780ac6305b02836afc4a04484c97a31083c1d7ab982fc6d976c27e88f35643",
+      "width": 320,
+      "height": 800
+    },
+    "server-fa-320-large-light.png": {
+      "sha256": "642968ccd42cf3bc1a1655df4efae39b130b8d7f0e46fd73adeec340e35c7303",
+      "width": 292,
+      "height": 251
+    },
+    "server-fa-320-large-dark.png": {
+      "sha256": "82330a55c7d293c868cdc55a5904fa56d3567ba6224430d768a05b355bc2c0c0",
+      "width": 292,
+      "height": 251
+    },
+    "home-fa-320-large-light.png": {
+      "sha256": "3f600fee9867795dc671a35400eeaff1add01111bbdc43929c5313cbccaac258",
+      "width": 320,
+      "height": 800
+    }
+  },
+  "immutable_evidence_commit": "941d6ab43ca4de6bb73e1cfc3449c3a7d568ce1c",
+  "immutable_base_url": "https://raw.githubusercontent.com/hojjatrad/parvaz/941d6ab43ca4de6bb73e1cfc3449c3a7d568ce1c/"
+}

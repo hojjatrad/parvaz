@@ -1,0 +1,17 @@
+{
+  "measurement": {
+    "used_bytes": 97470464,
+    "free_bytes": 21110804480,
+    "limit_mib": 120,
+    "status": "OK"
+  },
+  "protected": [
+    "source and unique worktrees",
+    "user uploads",
+    "signing keys and owner backups",
+    "configuration, tests, documentation and lockfiles",
+    "unknown files"
+  ],
+  "policy": "No daemon or filesystem quota. Explicit cleanup only for reproducible, allowlisted, untracked audit outputs under an exclusive lock. Heavy Android/APK/native builds stay in CI.",
+  "cleanup_log": "../workspace-cleanup.jsonl"
+}
