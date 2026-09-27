@@ -1,0 +1,27 @@
+{
+  "source_commit": "deb71c29fd07a27d5a555c2649e5dbdbbdc83408",
+  "run_id": "36308850313",
+  "scope": "SYNTHETIC_ROBOLECTRIC_RENDER_ONLY; static home and bound server row, not installed APK, physical device, TalkBack or full application navigation proof",
+  "files": {
+    "home-fa-320-large-dark.png": {
+      "sha256": "7eed2fba58917648bf33f060123c254e5db2bea8870712d57f5e7e0ed23647b8",
+      "width": 320,
+      "height": 800
+    },
+    "server-fa-320-large-light.png": {
+      "sha256": "5e0529667805e2ed443fbfd83bef307b227e338d14402602949b37b323f46aa5",
+      "width": 292,
+      "height": 251
+    },
+    "server-fa-320-large-dark.png": {
+      "sha256": "48f9a322b0bf0f2895b7f3a148c2a36a53ad96e30f203dc98e76b64e015ab808",
+      "width": 292,
+      "height": 251
+    },
+    "home-fa-320-large-light.png": {
+      "sha256": "1affb22efc61045f8398c62c418865e1b87ac1b6181ac1adef96d9cefa08a362",
+      "width": 320,
+      "height": 800
+    }
+  }
+}
