@@ -42,3 +42,82 @@ jobs:
               hits=[i for i,l in enumerate(lines) if re.search(patterns,l,re.I)]
               for i in hits[:2]:notice('ARM_RUNTIME_CONTEXT',p.as_posix()+'\n'+'\n'.join(lines[max(0,i-4):i+10])[:3500])
           PY
+  inspect-repaired-builds:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: patched-android-build-evidence
+          path: android-evidence
+          run-id: 36317318046
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: xray-source-rebuild-review
+          path: xray-evidence
+          run-id: 36317427176
+          github-token: ${{ github.token }}
+      - name: Read compiler and binary package coverage; not a release verdict
+        run: |
+          python3 - <<'PY'
+          import json,pathlib
+          def objects(text):
+              d=json.JSONDecoder();i=0
+              while i<len(text):
+                  while i<len(text) and text[i].isspace():i+=1
+                  if i==len(text):break
+                  value,i=d.raw_decode(text,i);yield value
+          result={'release_status':'BLOCKED','scope':'Separate native build experiments; not a combined APK, full SCA, Java API compatibility test, installation or updater approval','android_build_run':36317318046,'xray_rebuild_run':36317427176,'android_builds':[],'xray':json.loads(pathlib.Path('xray-evidence/summary.json').read_text())}
+          for p in sorted(pathlib.Path('android-evidence').glob('*.json')):
+              r=json.loads(p.read_text());result['android_builds'].append(r)
+              packages=r['package_inventory']['packages']
+              print('::notice title=PATCHED_ANDROID_EVIDENCE::'+json.dumps({'engine':r['engine'],'abi':r['abi'],'sha256':r['sha256'],'package_count':len(packages),'openpgp_packages':[x for x in packages if x.startswith('golang.org/x/crypto/openpgp')],'resolved_floors':r['dependency_patch']['resolved_floors']}))
+          for p in sorted(pathlib.Path('xray-evidence').glob('*-extract.jsons')):
+              records=list(objects(p.read_text()))
+              if len(records)!=2 or records[0]!={'name':'govulncheck-extract','version':'0.1.0'}:raise ValueError('Unknown extractor schema')
+              body=records[1];symbols=body.get('pkgSymbols',[])
+              if not symbols:raise ValueError('Missing actual recovered symbol coverage')
+              packages=sorted({x.get('Pkg',x.get('pkg','')) for x in symbols})
+              if '' in packages:raise ValueError('Unknown symbol package schema')
+              result['xray'].setdefault('recovered_packages',{})[p.name]=packages
+              print('::notice title=REBUILT_XRAY_PACKAGES::'+json.dumps({'file':p.name,'symbols':len(symbols),'packages':len(packages),'openpgp_packages':[x for x in packages if x.startswith('golang.org/x/crypto/openpgp')]}))
+          if len(result['android_builds'])!=4:raise ValueError('Expected four actual Android engine builds')
+          pathlib.Path('summary.json').write_text(json.dumps(result,indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: native-repair-summary
+          path: summary.json
+          retention-days: 7
+  preserve-repair-evidence:
+    needs: inspect-repaired-builds
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with: {name: native-repair-summary, path: evidence}
+      - name: Keep public build metadata separately from release branches
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import pathlib,json,subprocess,os,base64
+          path=pathlib.Path('evidence/summary.json')
+          if path.stat().st_size>4*1024*1024:raise ValueError('Oversized evidence')
+          data=path.read_bytes();report=json.loads(data)
+          if report['release_status']!='BLOCKED':raise ValueError('No release authority in this workflow')
+          base='repos/'+os.environ['GITHUB_REPOSITORY']+'/git/'
+          def api(path,data):return json.loads(subprocess.check_output(['gh','api',base+path,'--method','POST','--input','-'],input=json.dumps(data).encode()))
+          blob=api('blobs',{'content':base64.b64encode(data).decode(),'encoding':'base64'})['sha']
+          tree=api('trees',{'tree':[{'path':'summary.json','mode':'100644','type':'blob','sha':blob}]})['sha']
+          ref='refs/heads/qa/native-security-repair-evidence'
+          old=subprocess.run(['gh','api',base+'ref/heads/qa/native-security-repair-evidence'],capture_output=True,text=True)
+          parents=[json.loads(old.stdout)['object']['sha']] if old.returncode==0 else []
+          commit=api('commits',{'message':'Patched Android builds and Xray source rebuild evidence; release remains BLOCKED','tree':tree,'parents':parents})['sha']
+          if parents:subprocess.run(['gh','api',base+'refs/heads/qa/native-security-repair-evidence','--method','PATCH','--input','-'],input=json.dumps({'sha':commit}).encode(),check=True)
+          else:api('refs',{'ref':ref,'sha':commit})
+          print('::notice title=NATIVE_REPAIR_EVIDENCE_COMMIT::'+commit)
+          PY
