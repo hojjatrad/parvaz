@@ -21,6 +21,20 @@ with zipfile.ZipFile(apk) as z:
    try:records=list(objects(proc.stdout))
    except Exception:records=[]
    summary={'binary':label,'abi':abi,'sha256':digest,'scanner_exit':proc.returncode,'config':[r['config'] for r in records if 'config' in r],'progress':[r['progress'] for r in records if 'progress' in r],'findings':[r['finding'] for r in records if 'finding' in r],'stderr':proc.stderr[-2000:]}
+   groups={}
+   for finding in summary['findings']:
+    entry=groups.setdefault(finding.get('osv','?'),{'module_records':0,'package_records':0,'symbol_records':0,'symbols':[]})
+    frames=finding.get('trace',[])
+    symbols=[f.get('package','')+'.'+f.get('function','') for f in frames if f.get('function')]
+    key='symbol_records' if symbols else ('package_records' if any(f.get('package') for f in frames) else 'module_records')
+    entry[key]+=1
+    for symbol in symbols:
+     if symbol not in entry['symbols']:entry['symbols'].append(symbol)
+   summary['finding_groups']=groups
+   if abi=='arm64-v8a':
+    for advisory,group in groups.items():
+     info=json.dumps({'binary':label,'advisory':advisory,**group})[:2800]
+     print('::notice title=NATIVE_FINDING_SCOPE::'+info.replace('%','%25').replace('\n','%0A'))
    summaries.append(summary);binary.unlink() # only this generated, hash-verified CI extraction
    text=json.dumps({'binary':label,'exit':proc.returncode,'config':summary['config'],'finding_count':len(summary['findings']),'stderr':proc.stderr[-1000:]})
    print('::notice title=NATIVE_SYMBOL_SCAN::'+text.replace('%','%25').replace('\n','%0A'))
