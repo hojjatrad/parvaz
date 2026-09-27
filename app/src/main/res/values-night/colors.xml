@@ -5,4 +5,9 @@
     <color name="surface">#ff151b2b</color>
     <color name="text_primary">#fff3f4f6</color>
     <color name="text_secondary">#ff9ca3af</color>
+    <color name="brand_text">#B5C1FF</color>
+    <color name="latency_good">#81D8B0</color>
+    <color name="latency_moderate">#FFD180</color>
+    <color name="latency_poor">#FFB4AB</color>
+    <color name="favorite_selected">#FFD180</color>
 </resources>

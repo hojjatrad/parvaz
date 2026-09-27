@@ -1418,7 +1418,9 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
     /* renamed from: I */
     public final void renderFavFilter() {
         this.favFilter.setText(this.favOnly ? "★" : "☆");
-        this.favFilter.setTextColor(this.favOnly ? -415707 : 1720223880);
+        this.favFilter.setTextColor(getColor(this.favOnly ? R.color.favorite_selected : R.color.text_secondary));
+        this.favFilter.setSelected(this.favOnly);
+        this.favFilter.setContentDescription(getString(this.favOnly ? R.string.filter_all_servers : R.string.filter_favorites));
     }
 
     private void updateReadinessLabel(){
@@ -2310,6 +2312,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
         renderSourceGroup();
         this.searchInput = (EditText) findViewById(R.id.search_input);
         this.favFilter = (TextView) findViewById(R.id.btn_fav_filter);
+        com.parvaz.tunnel.ui.ActionAccessibility.button(this.favFilter);
         this.ipText = (TextView) findViewById(R.id.ip_text);
         this.sparkline = (com.parvaz.tunnel.ui.SparklineView) findViewById(R.id.sparkline);
         this.speedTestButton = (TextView) findViewById(R.id.btn_speed_test);

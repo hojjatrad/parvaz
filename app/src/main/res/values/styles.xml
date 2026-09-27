@@ -60,7 +60,14 @@
         <item name="android:layout_width">fill_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginTop">16.0dip</item>
-        <item name="android:minHeight">40.0dip</item>
+        <item name="android:minHeight">@dimen/touch_target_min</item>
         <item name="android:fontFamily">@font/vazirmatn</item>
     </style>
-    </resources>
+        <style name="ActionText" parent="AppTextView">
+        <item name="android:minHeight">@dimen/touch_target_min</item>
+        <item name="android:minWidth">@dimen/touch_target_min</item>
+        <item name="android:focusable">true</item>
+        <item name="android:clickable">true</item>
+        <item name="android:foreground">?attr/selectableItemBackground</item>
+    </style>
+</resources>

@@ -7,4 +7,9 @@
     <color name="surface">#ffffffff</color>
     <color name="text_primary">#ff111827</color>
     <color name="text_secondary">#ff6b7280</color>
-    </resources>
+        <color name="brand_text">#3046CF</color>
+    <color name="latency_good">#006C4C</color>
+    <color name="latency_moderate">#855000</color>
+    <color name="latency_poor">#B3261E</color>
+    <color name="favorite_selected">#855000</color>
+</resources>

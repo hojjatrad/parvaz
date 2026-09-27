@@ -73,6 +73,8 @@ public final class ServerAdapter extends RecyclerView.Adapter<ServerAdapter.b> {
             this.f375z = (TextView) view.findViewById(R.id.flag);
             this.f374y = (TextView) view.findViewById(R.id.fav);
             this.f373x = (ImageView) view.findViewById(R.id.check);
+            ActionAccessibility.button(this.f374y);
+            ActionAccessibility.button(this.f370B);
         }
     }
 
@@ -165,16 +167,16 @@ public final class ServerAdapter extends RecyclerView.Adapter<ServerAdapter.b> {
             androidx.core.view.ViewCompat.setTooltipText(pingText,details);
             int color;
             if (ping < 300) {
-                color = -13730510;     // green
+                color = this.f366e.getColor(R.color.latency_good);
             } else if (ping < 800) {
-                color = -415707;       // amber
+                color = this.f366e.getColor(R.color.latency_moderate);
             } else {
-                color = -1754827;      // red
+                color = this.f366e.getColor(R.color.latency_poor);
             }
-            pingText.setTextColor(fresh?color:-6381922);
+            pingText.setTextColor(fresh?color:this.f366e.getColor(R.color.text_secondary));
         } else if (ping == -2) {
             pingText.setText(this.f366e.getString(R.string.latency_failed));
-            pingText.setTextColor(-1754827);
+            pingText.setTextColor(this.f366e.getColor(R.color.latency_poor));
         } else {
             int label=ping==-3?R.string.latency_testing:ping==-4?R.string.latency_unconfirmed:
                 ping==-5?R.string.latency_busy:ping==-6?R.string.latency_cancelled:
@@ -183,7 +185,7 @@ public final class ServerAdapter extends RecyclerView.Adapter<ServerAdapter.b> {
                 ping==-11?R.string.latency_start_error:ping==-12?R.string.latency_route_unverified:
                 ping==-13?R.string.latency_network_changed:R.string.latency_untested;
             pingText.setText(this.f366e.getString(label));
-            pingText.setTextColor(-6381922);
+            pingText.setTextColor(this.f366e.getColor(R.color.text_secondary));
         }
 
         pingText.setContentDescription(pingText.getText()+". "+this.f366e.getString(R.string.latency_rtt_hint));
@@ -192,7 +194,9 @@ public final class ServerAdapter extends RecyclerView.Adapter<ServerAdapter.b> {
         boolean favorite = this.visibleFavorites.contains(profile.id);
         TextView star = holder.f374y;
         star.setText(favorite ? "\u2605" : "\u2606");
-        star.setTextColor(favorite ? -415707 : 1720223880);
+        star.setTextColor(this.f366e.getColor(favorite ? R.color.favorite_selected : R.color.text_secondary));
+        star.setSelected(favorite);
+        star.setContentDescription(this.f366e.getString(favorite ? R.string.favorite_remove : R.string.favorite_add));
         star.setOnClickListener(new ServerAdapter_1(this, profile));
 
         View row = holder.itemView;

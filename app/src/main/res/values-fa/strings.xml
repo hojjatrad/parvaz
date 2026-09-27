@@ -490,4 +490,9 @@
     <string name="latency_start_error">راه‌اندازی آزمون ناموفق</string>
     <string name="latency_route_unverified">مسیر آزمون قابل تأیید نیست</string>
     <string name="latency_network_changed">شبکه عوض شد؛ تکرار تست</string>
+    <string name="server_selected">سرور انتخاب‌شده</string>
+    <string name="favorite_add">افزودن سرور به علاقه‌مندی‌ها</string>
+    <string name="favorite_remove">حذف سرور از علاقه‌مندی‌ها</string>
+    <string name="filter_favorites">نمایش سرورهای مورد علاقه</string>
+    <string name="filter_all_servers">نمایش همهٔ سرورها</string>
 </resources>

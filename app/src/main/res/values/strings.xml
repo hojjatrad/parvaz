@@ -508,4 +508,9 @@ Tap + to paste a config link or add a subscription."</string>
     <string name="latency_start_error">Test engine could not start</string>
     <string name="latency_route_unverified">Test route cannot be verified</string>
     <string name="latency_network_changed">Network changed; test again</string>
+    <string name="server_selected">Selected server</string>
+    <string name="favorite_add">Add server to favorites</string>
+    <string name="favorite_remove">Remove server from favorites</string>
+    <string name="filter_favorites">Show favorite servers</string>
+    <string name="filter_all_servers">Show all servers</string>
 </resources>

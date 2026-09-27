@@ -30,7 +30,7 @@ public class AccessibleServerRowTest {
   return new ContextThemeWrapper(app.createConfigurationContext(config),R.style.AppTheme);
  }
  private ServerAdapter.b row(Context context,int width,int ping,boolean favorite){
-  Profile p=new Profile();p.id="synthetic-row";p.protocol="vless";p.address="2001:db8::1";p.port=443;p.remark="سرور آزمایشی با نام طولانی / Test server";p.ping=ping;if(ping>0)p.latency=LatencyStamp.manual("fixture");
+  Profile p=new Profile();p.id="synthetic-row";p.protocol="vless";p.address="2001:db8::1";p.port=443;p.uuid="11111111-1111-4111-8111-111111111111";p.remark="سرور آزمایشی با نام طولانی / Test server";p.ping=ping;if(ping>0)p.latency=LatencyStamp.manual("fixture");
   ServerAdapter adapter=new ServerAdapter(context,null);adapter.g.clear();adapter.g.add(p);adapter.f368h=p.id;if(favorite)adapter.visibleFavorites.add(p.id);
   ServerAdapter.b holder=adapter.onCreateViewHolder(new FrameLayout(context),0);adapter.onBindViewHolder(holder,0);
   View view=holder.itemView;view.setLayoutDirection(context.getResources().getConfiguration().getLayoutDirection());int px=Math.round((width-28)*context.getResources().getDisplayMetrics().density);
@@ -60,4 +60,24 @@ public class AccessibleServerRowTest {
    assertTrue("favorite contrast",ColorUtils.calculateContrast(h.f374y.getCurrentTextColor(),surface)>=3.0);
   }
  }
+ private View home(Context c,int width){
+  View root=LayoutInflater.from(c).inflate(R.layout.activity_main,new FrameLayout(c),false);root.setLayoutDirection(c.getResources().getConfiguration().getLayoutDirection());
+  ((TextView)root.findViewById(R.id.status_text)).setText(c.getString(R.string.latency_route_unverified));
+  ((TextView)root.findViewById(R.id.speed_text)).setText("↓ 123.45 MB/s    ↑ 678.90 MB/s");
+  int px=Math.round(width*c.getResources().getDisplayMetrics().density);root.measure(View.MeasureSpec.makeMeasureSpec(px,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(800,View.MeasureSpec.EXACTLY));root.layout(0,0,px,800);return root;
+ }
+ @Test public void homeStatisticsAndStatusFitSmallLargeFontAndTabletWindows(){
+  for(String lang:new String[]{"fa","en"})for(int width:new int[]{320,600,840}){
+   Context c=context(lang,false,2f,width);View root=home(c,width);
+   for(int id:new int[]{R.id.status_text,R.id.stats_row,R.id.speed_text,R.id.btn_speed_test,R.id.btn_best_server,R.id.ip_text}){
+    View v=root.findViewById(id);android.graphics.Rect rect=new android.graphics.Rect();v.getDrawingRect(rect);((android.view.ViewGroup)root).offsetDescendantRectToMyCoords(v,rect);
+    assertTrue("left overflow id="+id,rect.left>=0);assertTrue("right overflow id="+id,rect.right<=root.getWidth());assertTrue(v.getWidth()>0);
+   }
+  }
+ }
+ @Test public void primaryHomeActionsMeetMinimumTouchHeight(){
+  Context c=context("fa",false,1f,320);View root=home(c,320);float dp=c.getResources().getDisplayMetrics().density;
+  for(int id:new int[]{R.id.btn_settings,R.id.btn_speed_test,R.id.btn_best_server,R.id.ip_text,R.id.btn_goto_servers})assertTrue("touch target id="+id,root.findViewById(id).getHeight()>=48*dp);
+ }
+
 }
