@@ -56,7 +56,7 @@ jobs:
         with:
           name: xray-source-rebuild-review
           path: xray-evidence
-          run-id: 36317427176
+          run-id: 36318208046
           github-token: ${{ github.token }}
       - name: Read compiler and binary package coverage; not a release verdict
         run: |
@@ -68,7 +68,7 @@ jobs:
                   while i<len(text) and text[i].isspace():i+=1
                   if i==len(text):break
                   value,i=d.raw_decode(text,i);yield value
-          result={'release_status':'BLOCKED','scope':'Separate native build experiments; not a combined APK, full SCA, Java API compatibility test, installation or updater approval','android_build_run':36317318046,'xray_rebuild_run':36317427176,'android_builds':[],'xray':json.loads(pathlib.Path('xray-evidence/summary.json').read_text())}
+          result={'release_status':'BLOCKED','scope':'Separate native build experiments with verified Xray Java API/class equality; not a combined APK, full SCA, installation or updater approval','android_build_run':36317318046,'xray_rebuild_run':36318208046,'android_builds':[],'xray':json.loads(pathlib.Path('xray-evidence/summary.json').read_text())}
           for p in sorted(pathlib.Path('android-evidence').glob('*.json')):
               r=json.loads(p.read_text());result['android_builds'].append(r)
               packages=r['package_inventory']['packages']
@@ -84,6 +84,11 @@ jobs:
               result['xray'].setdefault('unqualified_symbol_records',{})[p.name]={'count':len(unqualified),'sample':unqualified[:12],'limitation':'Go extractor permits omitted pkg; these records are retained as a limitation, not assumed to establish package absence.'}
               result['xray'].setdefault('recovered_packages',{})[p.name]=packages
               print('::notice title=REBUILT_XRAY_PACKAGES::'+json.dumps({'file':p.name,'symbols':len(symbols),'packages':len(packages),'unqualified_symbols':len(unqualified),'openpgp_packages':[x for x in packages if x.startswith('golang.org/x/crypto/openpgp')]}))
+          for b in result['xray']['binaries']:
+              inv=b['compiler_inventory'];packages=inv['packages']
+              if not packages or 'github.com/2dust/AndroidLibXrayLite' not in packages or 'golang.org/x/mobile/bind/seq' not in packages:raise ValueError('Incomplete generated JNI graph')
+              print('::notice title=XRAY_COMPILER_GRAPH::'+json.dumps({'abi':b['abi'],'sha256':b['sha256'],'package_count':len(packages),'openpgp_packages':[p for p in packages if p.startswith('golang.org/x/crypto/openpgp')]}))
+          if result['xray'].get('public_java_api_equal') is not True or result['xray'].get('all_java_class_bytes_equal') is not True:raise ValueError('Missing compatibility evidence')
           if len(result['android_builds'])!=4:raise ValueError('Expected four actual Android engine builds')
           pathlib.Path('summary.json').write_text(json.dumps(result,indent=2)+'\n')
           PY
