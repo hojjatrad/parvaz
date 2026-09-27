@@ -2,7 +2,7 @@ name: Targeted native dependency repair and immutable ARM launch controls
 on:
   push:
     branches: ['security/native-dependency-repair']
-    paths: ['tools/native/**', 'tools/upgrade-test/launch_control.py', '.github/workflows/native-security-repair.yml']
+    paths: ['tools/native/**', 'tools/upgrade-test/*launch_control*', '.github/workflows/native-security-repair.yml']
 concurrency:
   group: native-security-repair-${{ github.ref }}
   cancel-in-progress: true
@@ -70,7 +70,7 @@ jobs:
           target: google_apis
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
-          script: python3 tools/upgrade-test/launch_control.py
+          script: bash tools/upgrade-test/run_launch_control.sh
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:

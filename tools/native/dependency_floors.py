@@ -26,9 +26,16 @@ def read_modules(source,env):
  return result
 
 def apply(source,env,floors):
- before=read_modules(source,env);changes=upgrades(before,floors)
- if changes:subprocess.run(['go','get',*changes],cwd=source,env=env,check=True)
- after=read_modules(source,env)
+ before=read_modules(source,env);after=before;changes=[]
+ # A floor is a minimum, not an exact simultaneous constraint. Let Go's MVS
+ # raise dependent modules, then recalculate before requesting another upgrade.
+ for _ in range(len(floors)+1):
+  pending=upgrades(after,floors)
+  if not pending:break
+  requested=pending[0]
+  subprocess.run(['go','get',requested],cwd=source,env=env,check=True)
+  changes.append(requested);after=read_modules(source,env)
+ else:raise ValueError('Security floor resolution failed to converge')
  if upgrades(after,floors):raise ValueError('Security floors were not satisfied')
  for path,old in before.items():
   if path in after and old.get('Version') and after[path].get('Version') and not old.get('Replace'):
