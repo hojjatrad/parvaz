@@ -8,7 +8,7 @@ permissions:
 jobs:
   boot:
     runs-on: ubuntu-24.04
-    timeout-minutes: 28
+    timeout-minutes: 15
     env:
       QT_QPA_PLATFORM: xcb
       ANDROID_AVD_HOME: ${{ github.workspace }}/.cache/parvaz-arm64-avd
@@ -41,7 +41,7 @@ jobs:
           # Upstream selects virt on AArch64 hosts, but ranchu on x86 hosts.
           # API30 audio requires PCI; no-audio only mutes the backend, not HDA.
           # Select the official ARM64 virt machine explicitly; no image/APK modification.
-          setsid xvfb-run -a -s "-screen 0 1280x1024x24" "$QEMU" -avd parvaz_arm64 -port 5554 -no-window -no-metrics -no-audio -no-snapshot -no-boot-anim -gpu swiftshader -accel off -qemu -machine type=virt >evidence/emulator.log 2>&1 &
+          setsid xvfb-run -a -s "-screen 0 1280x1024x24" "$QEMU" -avd parvaz_arm64 -port 5554 -show-kernel -no-window -no-metrics -no-audio -no-snapshot -no-boot-anim -gpu swiftshader -accel off -qemu -machine type=virt >evidence/emulator.log 2>&1 &
           export QEMU_PID=$!
           trap 'kill -- "-$QEMU_PID" 2>/dev/null || true' EXIT
           python3 - <<'PY'
@@ -49,12 +49,19 @@ jobs:
           def adb(*args):
               try:return subprocess.run(['adb','-s','emulator-5554',*args],capture_output=True,text=True,timeout=10).stdout.strip()
               except subprocess.TimeoutExpired:return ''
-          deadline=time.monotonic()+1200;booted=False
+          deadline=time.monotonic()+480;booted=False
           while time.monotonic()<deadline:
               try:os.kill(int(os.environ['QEMU_PID']),0)
               except ProcessLookupError:break
               if adb('shell','getprop','sys.boot_completed')=='1':booted=True;break
               time.sleep(5)
+          devices=subprocess.run(['adb','devices','-l'],capture_output=True,text=True,timeout=15)
+          pathlib.Path('evidence/adb-devices.txt').write_text(devices.stdout+devices.stderr)
+          partial=subprocess.run(['adb','-s','emulator-5554','shell','getprop'],capture_output=True,text=True,timeout=15)
+          pathlib.Path('evidence/partial-getprop.txt').write_text(partial.stdout+partial.stderr)
+          kernel=pathlib.Path('evidence/emulator.log').read_text(errors='replace')
+          hits=[line for line in kernel.splitlines() if any(k in line.lower() for k in ['panic','failed to mount','first_stage','waiting for','fatal','error:','booting linux','command line:'])]
+          print('::notice title=ARM64_KERNEL_DIAGNOSTIC::'+('\n'.join(hits[-25:])+'\nADB: '+devices.stdout+partial.stderr)[-6500:].replace('%','%25').replace('\n','%0A'))
           summary={'scope':'Boot capability only; no APK installation or release approval','booted':booted,'architecture':adb('shell','uname','-m') if booted else None,'selinux':adb('shell','getenforce') if booted else None,'native_bridge':adb('shell','getprop','ro.dalvik.vm.native.bridge') if booted else None}
           pathlib.Path('evidence/summary.json').write_text(json.dumps(summary,indent=2)+'\n')
           print('::notice title=FULL_ARM64_BOOT::'+json.dumps(summary))
