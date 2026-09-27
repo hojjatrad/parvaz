@@ -57,6 +57,7 @@ public class AccessibleServerRowTest {
   for(boolean night:new boolean[]{false,true})for(int ping:new int[]{120,450,900,-2,-11}){
    Context c=context("fa",night,1,360);ServerAdapter.b h=row(c,360,ping,true);int surface=c.getColor(R.color.surface);
    assertTrue("latency contrast night="+night+" value="+ping,ColorUtils.calculateContrast(h.f370B.getCurrentTextColor(),surface)>=4.5);
+   assertTrue("protocol badge contrast",ColorUtils.calculateContrast(h.f371v.getCurrentTextColor(),surface)>=4.5);
    assertTrue("favorite contrast",ColorUtils.calculateContrast(h.f374y.getCurrentTextColor(),surface)>=3.0);
   }
  }

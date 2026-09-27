@@ -1,0 +1,44 @@
+{
+  "run_id": 36308389783,
+  "source_commit": "c8084b2491d2b2e1704b1deb34c36978615b3080",
+  "conclusion": "failure",
+  "url": "https://github.com/hojjatrad/parvaz/actions/runs/36308389783",
+  "annotations": [
+    {
+      "title": "UNIT_TEST_TOTALS",
+      "message": "{'tests': 571, 'failures': 8, 'errors': 0, 'skipped': 0} selected={'com.parvaz.tunnel.V115RegressionTest': {'tests': 15, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.AuditRepairTest': {'tests': 48, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.BoundedProbeRaceTest': {'tests': 9, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.DnsReconnectPolicyRegressionTest': {'tests': 10, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.HealthPolicyTest': {'tests': 8, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.HttpsLatencyTest': {'tests': 20, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.LastConnectedTest': {'tests': 42, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.LatencyResultTest': {'tests': 6, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.ManualLatencyTest': {'tests': 30, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.NetworkMonitorRegressionTest': {'tests': 36, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.ProbeOwnershipRegressionTest': {'tests': 12, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.ReadinessConfigTest': {'tests': 20, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.ReadinessMonitorTest': {'tests': 11, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.ReconnectOwnershipTest': {'tests': 6, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.ResolverIdentityTest': {'tests': 5, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.ResumableDownloadTest': {'tests': 12, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.SerialConnectionQueueTest': {'tests': 8, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.StartupDiagnosticsTest': {'tests': 13, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.StartupLatencyDisplayTest': {'tests': 30, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.StartupWarmupTest': {'tests': 12, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.core.TrafficSamplingTest': {'tests': 5, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.store.BackupPreservationTest': {'tests': 22, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.store.RestoreCrashRecoveryTest': {'tests': 12, 'failures': 0, 'errors': 0, 'skipped': 0}, 'com.parvaz.tunnel.store.RestoreJournalTest': {'tests': 14, 'failures': 0, 'errors': 0, 'skipped': 0}}"
+    },
+    {
+      "title": "Public regression fixture",
+      "message": "com.parvaz.tunnel.ui.AccessibleServerRowTest.selectedServerIsNotAnnouncedAsAuthenticatedConnection\njava.lang.AssertionError: Values should be different. Actual: متصل\n\tat org.junit.Assert.fail(Assert.java:89)"
+    },
+    {
+      "title": "Public regression fixture",
+      "message": "com.parvaz.tunnel.ui.AccessibleServerRowTest.selectedServerIsNotAnnouncedAsAuthenticatedConnection[29]\njava.lang.AssertionError: Values should be different. Actual: متصل\n\tat org.junit.Assert.fail(Assert.java:89)"
+    },
+    {
+      "title": "Public regression fixture",
+      "message": "com.parvaz.tunnel.ui.AccessibleServerRowTest.latencyAndFavoriteHaveReadableDayAndNightContrast\njava.lang.AssertionError: favorite contrast\n\tat org.junit.Assert.fail(Assert.java:89)"
+    },
+    {
+      "title": "Public regression fixture",
+      "message": "com.parvaz.tunnel.ui.AccessibleServerRowTest.latencyAndFavoriteHaveReadableDayAndNightContrast[29]\njava.lang.AssertionError: favorite contrast\n\tat org.junit.Assert.fail(Assert.java:89)"
+    },
+    {
+      "title": "Public regression fixture",
+      "message": "com.parvaz.tunnel.ui.AccessibleServerRowTest.longStatusDoesNotConsumeServerIdentityAtSmallOrWideWidths\njava.lang.AssertionError: fa width=320 font=1.0 name collapsed\n\tat org.junit.Assert.fail(Assert.java:89)"
+    },
+    {
+      "title": "Public regression fixture",
+      "message": "com.parvaz.tunnel.ui.AccessibleServerRowTest.longStatusDoesNotConsumeServerIdentityAtSmallOrWideWidths[29]\njava.lang.AssertionError: fa width=320 font=1.0 name collapsed\n\tat org.junit.Assert.fail(Assert.java:89)"
+    },
+    {
+      "title": "Public regression fixture",
+      "message": "com.parvaz.tunnel.ui.AccessibleServerRowTest.rowActionsHaveTouchTargetsFocusAndActionNames\njava.lang.AssertionError: 48dp target height\n\tat org.junit.Assert.fail(Assert.java:89)"
+    },
+    {
+      "title": "Public regression fixture",
+      "message": "com.parvaz.tunnel.ui.AccessibleServerRowTest.rowActionsHaveTouchTargetsFocusAndActionNames[29]\njava.lang.AssertionError: 48dp target height\n\tat org.junit.Assert.fail(Assert.java:89)"
+    }
+  ]
+}

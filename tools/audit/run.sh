@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # No Android SDK/native libraries; no actual subscription/server is contacted.
 set -euo pipefail
+# Serialize the known output directory with the workspace cleanup guard.
+mkdir -p .cache
+exec 9>.cache/audit.lock
+flock -n 9 || { echo 'Audit cache busy; another test/cleanup owns it'; exit 2; }
 cd "$(dirname "$0")/../.."
 mkdir -p .cache/audit/classes
 if [[ ! -f .cache/audit/json.jar ]]; then

@@ -129,16 +129,15 @@ public final class ServerAdapter extends RecyclerView.Adapter<ServerAdapter.b> {
         holder.f369A.setText(profile.remark.isEmpty()
                 ? profile.displayAddress() : profile.remark);
         holder.u.setText(profile.displayAddress());
-        // Hysteria2/TUIC parse and store fine but the bundled core cannot dial
-        // them. Say so on the row instead of letting the user tap and fail.
+        // Consult current engine support, not a hard-coded protocol blacklist.
         boolean dialable = com.parvaz.tunnel.core.ProtocolSupport.isSupported(profile);
         if (dialable) {
             holder.f371v.setText(profile.badge());
-            holder.f371v.setTextColor(-6381922);
+            holder.f371v.setTextColor(this.f366e.getColor(R.color.brand_text));
         } else {
             holder.f371v.setText(profile.badge() + " \u2022 "
                     + this.f366e.getString(R.string.unsupported_badge));
-            holder.f371v.setTextColor(-1754827);   // red
+            holder.f371v.setTextColor(this.f366e.getColor(R.color.latency_poor));
         }
 
         String flag;

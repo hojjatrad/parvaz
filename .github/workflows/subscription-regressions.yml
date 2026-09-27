@@ -27,6 +27,12 @@ jobs:
           mkdir -p test-results
           bash tools/audit/run.sh | tee test-results/subscription-tests.txt
           python3 tools/audit-repair/run_probe_policy.py | tee test-results/probe-policy.txt
+      - name: Test release guards, security tooling, disposable-device boundary and safe cleanup
+        run: |
+          python3 -m unittest discover -s tools/release -p 'test_*.py'
+          python3 -m unittest discover -s tools/security -p 'test_*.py'
+          python3 -m unittest discover -s tools/upgrade-test -p 'test_*.py'
+          python3 -m unittest discover -s tools/workspace -p 'test_*.py'
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:

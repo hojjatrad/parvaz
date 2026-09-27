@@ -1,0 +1,17 @@
+Original helper on commit1229029. Fake ADB only; no physical device or emulator was changed.
+FAIL: test_abi_must_be_an_exact_token (test_prepare_emulator.EmulatorBoundaryTest.test_abi_must_be_an_exact_token)
+AssertionError: An unapproved device mutation was attempted
+FAIL: test_approved_emulator_uses_same_target_for_every_mutation (test_prepare_emulator.EmulatorBoundaryTest.test_approved_emulator_uses_same_target_for_every_mutation)
+AssertionError: False is not true : Every mutation must stay bound to the verified emulator
+FAIL: test_missing_explicit_permission_is_rejected_before_adb (test_prepare_emulator.EmulatorBoundaryTest.test_missing_explicit_permission_is_rejected_before_adb)
+AssertionError: An unapproved device mutation was attempted
+FAIL: test_physical_device_is_rejected_before_any_changes (test_prepare_emulator.EmulatorBoundaryTest.test_physical_device_is_rejected_before_any_changes)
+AssertionError: An unapproved device mutation was attempted
+FAIL: test_qemu_property_must_confirm_emulator (test_prepare_emulator.EmulatorBoundaryTest.test_qemu_property_must_confirm_emulator)
+AssertionError: An unapproved device mutation was attempted
+FAIL: test_unknown_device_is_rejected (test_prepare_emulator.EmulatorBoundaryTest.test_unknown_device_is_rejected)
+AssertionError: An unapproved device mutation was attempted
+FAIL: test_unreviewed_android_version_is_rejected (test_prepare_emulator.EmulatorBoundaryTest.test_unreviewed_android_version_is_rejected)
+AssertionError: An unapproved device mutation was attempted
+Ran 7 tests in 0.019s
+FAILED (failures=7)
