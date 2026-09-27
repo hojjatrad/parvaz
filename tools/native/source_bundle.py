@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 """Corresponding-source bundle: tracked app/build scripts, modified engine trees, vendored modules.
 No workspace credentials, signing keys, caches outside the two explicit source trees, or APKs."""
-import io,json,subprocess,tarfile,re,hashlib,urllib.request
+import argparse,io,json,subprocess,tarfile,re,hashlib,urllib.request
 from vendor_xray import vendor
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[2];version=re.search(r'versionName\s+"([^"]+)"',(ROOT/'app/build.gradle').read_text())[1]
 output=ROOT/'release-artifacts'/('Parvaz-'+version+'-source.tar.gz');output.parent.mkdir(exist_ok=True)
-xray=vendor()
+parser=argparse.ArgumentParser();parser.add_argument('--candidate-xray',action='store_true');args=parser.parse_args()
+if args.candidate_xray:
+ from xray_candidate import verify
+ xray=verify(ROOT)['source']
+else:xray=vendor()
 java_sources=ROOT/'.cache/java-latency-sources';java_sources.mkdir(parents=True,exist_ok=True)
 for dep in json.loads((ROOT/'tools/release/latency-java-lock.json').read_text())['dependencies']:
  file=java_sources/(dep['name']+'-'+dep['version']+'-sources.jar')
@@ -39,5 +43,9 @@ with tarfile.open(output,'w:gz') as archive,tarfile.open(fileobj=io.BytesIO(trac
   if not (source/'vendor/modules.txt').is_file():raise SystemExit('Vendored corresponding source missing')
   archive.add(source,arcname='engines/'+core['name'])
  archive.add(xray,arcname='engines/xray-wrapper')
+ if args.candidate_xray:
+  for name in ['summary.json','source-tree-manifest.json']:
+   archive.add(ROOT/'.cache/xray-security-review'/name,arcname='build-evidence/xray/'+name)
+  verify(ROOT) # fail before declaring the archive valid if source changed during packing
  archive.add(java_sources,arcname='java-latency-dependencies')
 print('::notice title=SOURCE_BUNDLE_OK::'+output.name+' bytes='+str(output.stat().st_size))

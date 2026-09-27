@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "scope": "Combined candidate only; not release approval",
+  "base_aar_sha256": "9ecf4c921568d8f4cb8550d3bafe08ff6f1d1984f45a6ad183dcdf52ee9302de",
+  "aar_sha256": "1fdafb227e595a9e61eb1a4eff7fa2595a1863255f50824e48a8e01a46b45767",
+  "source_provenance": {
+    "source_lock": {
+      "repository": "2dust/AndroidLibXrayLite",
+      "tag": "v26.9.9",
+      "commit": "d0c6c4ae1b09c912070c8288bd0dbcc2e492ac29",
+      "url": "https://codeload.github.com/2dust/AndroidLibXrayLite/tar.gz/d0c6c4ae1b09c912070c8288bd0dbcc2e492ac29",
+      "sha256": "29d48db71e6e3ab08fe8d62f791a7f77c090d1a0dad623585da43f88a0069323"
+    },
+    "go_version": "go1.27.1",
+    "ndk": "29.0.14206865",
+    "mobile": "v0.0.0-20260908204917-8b95e45f8d3e",
+    "source_tree_manifest_sha256": "9c86eb7732ecec5916563a288382cdcb254392ea7ff4885849d3bb2734ad0a39",
+    "source_tree_file_count": 3898,
+    "go_mod_sha256": "cf8c92235aba200d6867fe0cb8b6fe7ea9c4400b575789978b3a9e7ac972c47b",
+    "go_sum_sha256": "d9785f2804328a34e134a4396b8ef8c5fea1bbbb3ab28b0f4751d784ca96336e",
+    "vendor_modules_sha256": "9820388701e1fc5609fe21376c47630c880461dfcbffed5a989bbd2d6284f37e",
+    "scope": "Exact review-build source tree inventory, not production source-bundle adoption or approval"
+  },
+  "jni_sha256": {
+    "arm64-v8a": "64cd3fc58c7129f0ff1ce26e15c80642bd9dc4594e9c3ab57126c23087978e3a",
+    "armeabi-v7a": "62ffaf3038838d2589ea4501d32e46284c5adecef15afc02b7d9f8e72048fa2a"
+  },
+  "public_evidence_commit": "5121a7797597f8349b8e329dfa039acd015b04ee",
+  "generated_go_mod_sha256": {
+    "arm64-v8a": "d10425b6f241573e50e4b89953245e5cc819597b67a9d13e2f148586003742d3",
+    "armeabi-v7a": "d10425b6f241573e50e4b89953245e5cc819597b67a9d13e2f148586003742d3"
+  }
+}

@@ -20,7 +20,7 @@ def parse(text,local_root=None):
    if pending is None or len(fields)<3:raise ValueError('Incomplete binary replacement')
    if fields[2]=='(devel)':
     if not local_root or pending['name']!=local_root['name'] or pending['version']!='v0.0.0-00010101000000-000000000000':raise ValueError('Unversioned binary dependency requires review')
-    pending.update(version=local_root['version'],resolution='pinned official AAR root/source relationship; not reproducible-build proof',source_commit=local_root['commit'])
+    pending.update(version=local_root['version'],resolution=local_root.get('resolution','pinned official AAR root/source relationship; not reproducible-build proof'),source_commit=local_root['commit'])
    else:
     pending['upstream_baseline']={'name':pending['name'],'version':pending['version']}
     pending.update(name=fields[1],version=fields[2])
@@ -37,7 +37,13 @@ def parse(text,local_root=None):
  if main:result['main_module']=main
  return result
 
-def scan(root):
+def scan(root,xray_candidate=False):
+ candidate=None
+ if xray_candidate:
+  import sys
+  sys.path.insert(0,str(root/'tools/native'))
+  from xray_candidate import verify
+  candidate=verify(root)
  rows=[];locks=json.loads((root/'tools/native/engines-lock.json').read_text())
  def inspect(path,label,abi,local_root=None,engine=None):
   raw=subprocess.check_output(['go','version','-m',str(path)],text=True,stderr=subprocess.STDOUT)
@@ -55,6 +61,10 @@ def scan(root):
     proof=json.loads(proof_path.read_text())
     row['compiled_packages']=proof_module.verify(proof,engine,abi,row['sha256'],row['go_version'])
     row['package_proof_sha256']=hashlib.sha256(proof_path.read_bytes()).hexdigest()
+  if not engine and candidate:
+   proof=candidate['binaries'][abi]
+   if row['sha256']!=proof['sha256'] or row.get('goos')!='android' or row.get('goarch')!={'arm64-v8a':'arm64','armeabi-v7a':'arm'}[abi] or 'go'+row['go_version']!=candidate['lock']['source_provenance']['go_version']:raise ValueError('Embedded JNI metadata disagrees with candidate provenance')
+   row['compiled_packages']=proof['compiler_inventory']['packages'];row['package_proof_sha256']=candidate['proof_sha256']
   rows.append(row)
  for abi in ['arm64-v8a','armeabi-v7a']:
   for name in ['libsingbox.so','libmihomo.so']:
@@ -65,8 +75,9 @@ def scan(root):
  cache=root/'.cache';cache.mkdir(exist_ok=True)
  core=json.loads((root/'tools/release/core-lock.json').read_text());source=json.loads((root/'tools/native/xray-source-lock.json').read_text())
  with (root/'app/libs/libv2ray.aar').open('rb') as stream:aar_sha=hashlib.file_digest(stream,'sha256').hexdigest()
- if aar_sha!=core['sha256'] or core['repository']!=source['repository'] or core['tag']!=source['tag']:raise ValueError('Official AAR/source identity mismatch')
+ if aar_sha!=(candidate['lock']['aar_sha256'] if candidate else core['sha256']) or core['repository']!=source['repository'] or core['tag']!=source['tag']:raise ValueError('Official AAR/source identity mismatch')
  local_root={'name':'github.com/'+source['repository'],'version':source['tag'],'commit':source['commit']}
+ if candidate:local_root['resolution']='Pinned reproducible candidate AAR with exact patched source manifest; not upstream unmodified binary'
  with tempfile.TemporaryDirectory(prefix='go-elf-review-',dir=cache) as temp,zipfile.ZipFile(root/'app/libs/libv2ray.aar') as aar:
   for abi in ['arm64-v8a','armeabi-v7a']:
    name='jni/'+abi+'/libgojni.so';info=aar.getinfo(name)

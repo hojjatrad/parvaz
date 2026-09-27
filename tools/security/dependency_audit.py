@@ -20,7 +20,7 @@ def objects(text):
   if i==len(text):break
   value,end=decoder.raw_decode(text,i);yield value;i=end
 
-def components(native):
+def components(native,xray_candidate=False):
  data=json.loads((OUT/'java-runtime.json').read_text());result={}
  def add(ecosystem,name,version,extra=None):
   if not version:raise ValueError('Missing dependency version: '+name)
@@ -31,7 +31,7 @@ def components(native):
  if native:
   import importlib.util
   spec=importlib.util.spec_from_file_location('binary_inventory',pathlib.Path(__file__).with_name('binary_inventory.py'));binary_inventory=importlib.util.module_from_spec(spec);spec.loader.exec_module(binary_inventory)
-  binaries=binary_inventory.scan(ROOT)
+  binaries=binary_inventory.scan(ROOT,xray_candidate)
   (OUT/'binary-runtime.json').write_text(json.dumps(binaries,indent=2)+'\n')
   for binary in binaries:
    evidence={'binary':binary['binary'],'abi':binary['abi'],'sha256':binary['sha256'],'goos':binary.get('goos')}
@@ -46,7 +46,7 @@ def components(native):
   for lock in locks:
    source=sources/lock['name']
    if not (source/'vendor/modules.txt').is_file():raise ValueError('Missing vendored graph '+lock['name'])
-   env=dict(os.environ,GOTOOLCHAIN='auto',GOFLAGS='-mod=mod')
+   env=dict(os.environ,GOTOOLCHAIN='auto',GOFLAGS='-mod=readonly')
    raw=subprocess.check_output(['go','list','-m','-json','all'],cwd=source,env=env,text=True)
    (OUT/(lock['name']+'-modules.jsons')).write_text(raw)
    for module in objects(raw):
@@ -126,8 +126,8 @@ def excludes_verified_compiled_packages(component,advisory):
    if not isinstance(path,str) or not path or '*' in path or any(c.isspace() for c in path) or path in compiled:return False
  return True
 
-def run(native):
- OUT.mkdir(parents=True,exist_ok=True);items=components(native);now=datetime.datetime.now(datetime.timezone.utc).isoformat()
+def run(native,xray_candidate=False):
+ OUT.mkdir(parents=True,exist_ok=True);items=components(native,xray_candidate);now=datetime.datetime.now(datetime.timezone.utc).isoformat()
  comp=[]
  for c in items:
   comp.append({'type':'library','name':c['name'],'version':c['version'],'purl':purl(c),'bom-ref':purl(c),'properties':[{'name':'parvaz:inventory-evidence','value':json.dumps(c['sources'],sort_keys=True)}]})
@@ -156,12 +156,13 @@ def run(native):
   excluded=active and all(x!='REVIEW_REQUIRED' for x in row['advisory_dispositions'].values())
   row['disposition']='WITHDRAWN' if not active else ('NOT_IN_ANY_SHIPPED_BINARY_MODULE_TABLE' if not_built else (('NOT_APPLICABLE_TO_VERIFIED_BINARY_OS' if all(x in ('WITHDRAWN','NOT_APPLICABLE_TO_VERIFIED_BINARY_OS') for x in row['advisory_dispositions'].values()) else 'NOT_APPLICABLE_TO_VERIFIED_BINARY_SCOPE') if excluded else 'REVIEW_REQUIRED'))
   if row['disposition']=='REVIEW_REQUIRED':actionable.append(row)
- report={'timestamp':now,'source_commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),'native_graphs_included':native,'components_queried':len(items),'binary_runtime_verified':native,'status':'REVIEW_REQUIRED' if actionable else ('NO_APPLICABLE_MATCHES_IN_BUILT_RUNTIME' if findings else 'NO_KNOWN_MATCHES_IN_SCANNED_SCOPE'),'findings':findings,'advisories':details}
+ report={'timestamp':now,'source_commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),'xray_candidate':xray_candidate,'native_graphs_included':native,'components_queried':len(items),'binary_runtime_verified':native,'status':'REVIEW_REQUIRED' if actionable else ('NO_APPLICABLE_MATCHES_IN_BUILT_RUNTIME' if findings else 'NO_KNOWN_MATCHES_IN_SCANNED_SCOPE'),'findings':findings,'advisories':details}
  (OUT/'vulnerability-review.json').write_text(json.dumps(report,indent=2)+'\n')
  print('::notice title=DEPENDENCY_REVIEW::'+report['status']+' components='+str(len(items))+' native_graphs='+str(native))
  for row in actionable:
   print('::error title=Dependency requires triage::'+row['component']['name']+' '+row['component']['version']+' '+','.join(v['id'] for v in row['vulnerabilities']))
  return 2 if actionable else 0
 if __name__=='__main__':
- parser=argparse.ArgumentParser();parser.add_argument('--native',action='store_true');args=parser.parse_args()
- raise SystemExit(run(args.native))
+ parser=argparse.ArgumentParser();parser.add_argument('--native',action='store_true');parser.add_argument('--candidate-xray',action='store_true');args=parser.parse_args()
+ if args.candidate_xray and not args.native:parser.error('--candidate-xray requires full --native inventory')
+ raise SystemExit(run(args.native,args.candidate_xray))

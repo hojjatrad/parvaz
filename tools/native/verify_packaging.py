@@ -8,7 +8,10 @@ for row in inventory:
  name='lib/'+row['abi']+'/'+row['binary'].split('/')[-1]
  if name in expected:raise SystemExit('Duplicate native scan identity')
  expected[name]=row['sha256']
-for apk in Path('app/build/outputs/apk/release').glob('*.apk'):
+apks=list(Path('app/build/outputs/apk/release').glob('*.apk'))
+required={'app-arm64-v8a-release-unsigned.apk','app-armeabi-v7a-release-unsigned.apk','app-universal-release-unsigned.apk'}
+if not required.issubset({p.name for p in apks}):raise SystemExit('All three candidate APKs must exist before packaged-byte verification')
+for apk in apks:
  abis=['arm64-v8a'] if 'arm64-v8a' in apk.name else ['armeabi-v7a'] if 'armeabi-v7a' in apk.name else ['arm64-v8a','armeabi-v7a']
  with zipfile.ZipFile(apk) as z:
   for abi in abis:
