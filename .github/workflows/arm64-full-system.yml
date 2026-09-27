@@ -1,0 +1,58 @@
+name: Stock full-system ARM64 Android boot probe — no APK publication
+on:
+  push:
+    branches: ['ci/arm64-full-system']
+    paths: ['.github/workflows/arm64-full-system.yml']
+permissions:
+  contents: read
+jobs:
+  boot:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 28
+    steps:
+      - name: Install official ARM64 system image and host renderer dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y libpulse0 libnss3 libx11-6 libxcb1 libgl1 libasound2t64
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'emulator' 'platform-tools' 'system-images;android-30;google_apis;arm64-v8a'
+          echo no | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd -n parvaz_arm64 -k 'system-images;android-30;google_apis;arm64-v8a' --device pixel_2 --force
+          echo 'hw.ramSize=4096' >> "$HOME/.android/avd/parvaz_arm64.avd/config.ini"
+          echo 'hw.cpu.ncore=2' >> "$HOME/.android/avd/parvaz_arm64.avd/config.ini"
+      - name: Start the actual bundled ARM64 backend with a real AVD and software acceleration
+        run: |
+          mkdir -p evidence
+          export PATH="$ANDROID_HOME/platform-tools:$PATH"
+          export LD_LIBRARY_PATH="$ANDROID_HOME/emulator/lib64:$ANDROID_HOME/emulator/lib64/qt/lib:${LD_LIBRARY_PATH:-}"
+          QEMU="$ANDROID_HOME/emulator/qemu/linux-x86_64/qemu-system-aarch64"
+          cp "$ANDROID_HOME/system-images/android-30/google_apis/arm64-v8a/source.properties" evidence/image.properties
+          sha256sum "$QEMU" > evidence/emulator-backend.sha256
+          adb start-server
+          "$QEMU" -avd parvaz_arm64 -port 5554 -no-window -no-audio -no-snapshot -no-boot-anim -gpu swiftshader -accel off >evidence/emulator.log 2>&1 &
+          export QEMU_PID=$!
+          trap 'kill "$QEMU_PID" 2>/dev/null || true' EXIT
+          python3 - <<'PY'
+          import os,pathlib,subprocess,time,json
+          def adb(*args):
+              try:return subprocess.run(['adb','-s','emulator-5554',*args],capture_output=True,text=True,timeout=10).stdout.strip()
+              except subprocess.TimeoutExpired:return ''
+          deadline=time.monotonic()+1200;booted=False
+          while time.monotonic()<deadline:
+              try:os.kill(int(os.environ['QEMU_PID']),0)
+              except ProcessLookupError:break
+              if adb('shell','getprop','sys.boot_completed')=='1':booted=True;break
+              time.sleep(5)
+          summary={'scope':'Boot capability only; no APK installation or release approval','booted':booted,'architecture':adb('shell','uname','-m') if booted else None,'selinux':adb('shell','getenforce') if booted else None,'native_bridge':adb('shell','getprop','ro.dalvik.vm.native.bridge') if booted else None}
+          pathlib.Path('evidence/summary.json').write_text(json.dumps(summary,indent=2)+'\n')
+          print('::notice title=FULL_ARM64_BOOT::'+json.dumps(summary))
+          if booted:pathlib.Path('evidence/getprop.txt').write_text(adb('shell','getprop'))
+          else:
+              text=pathlib.Path('evidence/emulator.log').read_text(errors='replace')[-3500:]
+              print('::error title=FULL_ARM64_BOOT_LOG::'+text.replace('%','%25').replace('\n','%0A'))
+          if not booted or summary['architecture']!='aarch64' or summary['selinux']!='Enforcing' or summary['native_bridge'] not in ('','0'):raise SystemExit(2)
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: full-arm64-boot-evidence
+          path: evidence/
+          retention-days: 7
