@@ -19,4 +19,7 @@ class BinaryInventoryTest(unittest.TestCase):
  def test_unversioned_or_incomplete_replacement_blocks(self):
   for text in ['engine.so: go1.26.7\n dep x (devel)','engine.so: go1.26.7\n => x v1.0.0']:
    with self.assertRaises(ValueError):inventory.parse(text)
+ def test_actual_architecture_is_preserved_not_inferred_from_filename(self):
+  row=inventory.parse('engine.so: go1.27.1\n dep example.org/lib v1.0.0\n build GOOS=android\n build GOARCH=arm64\n')
+  self.assertEqual((row['goos'],row['goarch']),('android','arm64'))
 if __name__=='__main__':unittest.main()

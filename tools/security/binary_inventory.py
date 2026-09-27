@@ -1,12 +1,12 @@
 """Actual Go build metadata from every shipped ARM ELF, not source go.mod guesses."""
-import hashlib,json,pathlib,re,subprocess,tempfile,zipfile
+import hashlib,importlib.util,json,pathlib,re,subprocess,tempfile,zipfile
 
 def parse(text,local_root=None):
  lines=text.splitlines()
  if not lines:raise ValueError('Empty Go binary build metadata')
  match=re.search(r':\s+(go\d+\.\d+(?:\.\d+)?)(?:\s|$)',lines[0])
  if not match:raise ValueError('Unrecognized Go compiler metadata')
- modules=[];pending=None;main=None;goos=None
+ modules=[];pending=None;main=None;goos=None;goarch=None
  for line in lines[1:]:
   fields=line.strip().split()
   if not fields:continue
@@ -26,11 +26,14 @@ def parse(text,local_root=None):
     pending.update(name=fields[1],version=fields[2])
   elif fields[0]=='build' and len(fields)==2 and fields[1].startswith('GOOS='):
    goos=fields[1].split('=',1)[1];pending=None
+  elif fields[0]=='build' and len(fields)==2 and fields[1].startswith('GOARCH='):
+   goarch=fields[1].split('=',1)[1];pending=None
   else:pending=None
  if not modules:raise ValueError('Missing binary dependency table; cannot infer non-applicability')
  if any(not r['version'].startswith('v') for r in modules):raise ValueError('Unversioned binary dependency requires review')
  result={'go_version':match[1].removeprefix('go'),'modules':modules}
  if goos:result['goos']=goos
+ if goarch:result['goarch']=goarch
  if main:result['main_module']=main
  return result
 
@@ -44,6 +47,14 @@ def scan(root):
    if main.get('name','').lower()!='github.com/'+engine['repository'].lower():raise ValueError('Native root module does not match pinned source')
    row['modules'].append({'name':main['name'],'version':engine['tag'],'source_commit':engine['commit'],'resolution':'locally built pinned root plus documented app patches'})
   with path.open('rb') as stream:row['sha256']=hashlib.file_digest(stream,'sha256').hexdigest()
+  if engine:
+   proof_path=root/'.cache/native/security-review'/(engine['name']+'-'+abi+'.json')
+   if proof_path.is_file():
+    if row.get('goos')!='android' or row.get('goarch')!={'arm64-v8a':'arm64','armeabi-v7a':'arm'}[abi]:raise ValueError('Embedded target does not match Android compiler proof')
+    spec=importlib.util.spec_from_file_location('package_evidence',root/'tools/native/package_evidence.py');proof_module=importlib.util.module_from_spec(spec);spec.loader.exec_module(proof_module)
+    proof=json.loads(proof_path.read_text())
+    row['compiled_packages']=proof_module.verify(proof,engine,abi,row['sha256'],row['go_version'])
+    row['package_proof_sha256']=hashlib.sha256(proof_path.read_bytes()).hexdigest()
   rows.append(row)
  for abi in ['arm64-v8a','armeabi-v7a']:
   for name in ['libsingbox.so','libmihomo.so']:
