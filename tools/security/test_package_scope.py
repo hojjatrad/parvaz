@@ -16,4 +16,12 @@ class PackageScopeTest(unittest.TestCase):
  def test_different_module_cannot_borrow_proof(self):self.a['affected'][0]['package']['name']='other';self.assertFalse(self.result())
  def test_another_affected_package_keeps_entire_advisory_open(self):self.a['affected'][0]['ecosystem_specific']['imports'].append({'path':'example.org/crypto/ssh'});self.assertFalse(self.result())
  def test_no_binary_is_not_compiler_evidence(self):self.c['sources']=[];self.assertFalse(self.result())
+ def binary(self):return {'binary':'lib.so','abi':'arm64-v8a','sha256':'digest','goos':'android','package_proof_sha256':'proof','compiled_packages':['runtime','example.org/crypto/ssh','example.org/cryptoevil/openpgp','vendor/example.org/tool']}
+ def test_production_mapper_respects_module_boundary(self):
+  p=m.compiled_package_evidence(self.binary(),'example.org/crypto')
+  self.assertEqual(p['compiled_packages'],['example.org/crypto/ssh']);self.assertIs(p['package_coverage_verified'],True)
+ def test_production_mapper_does_not_scope_uncertain_replacement(self):
+  self.assertNotIn('package_coverage_verified',m.compiled_package_evidence(self.binary(),'example.org/crypto',True))
+ def test_production_stdlib_mapper_retains_vendored_stdlib_packages(self):
+  self.assertEqual(m.compiled_package_evidence(self.binary(),'stdlib')['compiled_packages'],['runtime','vendor/example.org/tool'])
 if __name__=='__main__':unittest.main()
