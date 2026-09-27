@@ -1,0 +1,58 @@
+name: Inspect actual native symbols and ARM lab capability — no publication
+on:
+  push:
+    branches: ['ci/native-runtime-audit']
+    paths: ['tools/security/**', '.github/workflows/native-runtime-audit.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  native-symbols:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: {persist-credentials: false}
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with: {go-version: '1.27.1', cache: false}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: signed-apks-for-upgrade-test
+          path: release-artifacts
+          run-id: 36311876249
+          github-token: ${{ github.token }}
+      - name: Install pinned official inspection tool and inspect, never execute ARM binaries
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@v1.8.0
+          python3 tools/security/inspect_native_symbols.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: native-symbol-evidence
+          path: .cache/native-symbol-evidence/
+          include-hidden-files: true
+          retention-days: 7
+  arm-lab-capability:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Inspect official SDK QEMU capabilities without downloading a system image
+        run: |
+          set -u
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'emulator' >/dev/null
+          find "$ANDROID_HOME/emulator/qemu" -maxdepth 2 -type f -name '*aarch64*' -print
+          QEMU="$ANDROID_HOME/emulator/qemu/linux-x86_64/qemu-system-aarch64"
+          if [ -x "$QEMU" ]; then
+            timeout 20 "$QEMU" -machine help > "$RUNNER_TEMP/machines.txt" 2>&1 || true
+            timeout 20 "$QEMU" -help > "$RUNNER_TEMP/help.txt" 2>&1 || true
+          else
+            echo 'No official bundled ARM64 QEMU binary' > "$RUNNER_TEMP/machines.txt"
+          fi
+          python3 - <<'PY'
+          import pathlib,os
+          for n in ['machines.txt','help.txt']:
+              p=pathlib.Path(os.environ['RUNNER_TEMP'])/n
+              if p.exists():
+                  text=p.read_text(errors='replace')[:3000]
+                  print('::notice title=ARM_LAB_CAPABILITY::'+text.replace('%','%25').replace('\n','%0A'))
+          PY
