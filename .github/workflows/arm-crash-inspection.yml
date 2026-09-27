@@ -78,10 +78,12 @@ jobs:
               if len(records)!=2 or records[0]!={'name':'govulncheck-extract','version':'0.1.0'}:raise ValueError('Unknown extractor schema')
               body=records[1];symbols=body.get('pkgSymbols',[])
               if not symbols:raise ValueError('Missing actual recovered symbol coverage')
-              packages=sorted({x.get('Pkg',x.get('pkg','')) for x in symbols})
-              if '' in packages:raise ValueError('Unknown symbol package schema')
+              if any(not isinstance(x,dict) or not x.get('name',x.get('Name')) for x in symbols):raise ValueError('Unknown symbol schema')
+              packages=sorted({x.get('Pkg',x.get('pkg','')) for x in symbols}-{''})
+              unqualified=[x for x in symbols if not x.get('Pkg',x.get('pkg',''))]
+              result['xray'].setdefault('unqualified_symbol_records',{})[p.name]={'count':len(unqualified),'sample':unqualified[:12],'limitation':'Go extractor permits omitted pkg; these records are retained as a limitation, not assumed to establish package absence.'}
               result['xray'].setdefault('recovered_packages',{})[p.name]=packages
-              print('::notice title=REBUILT_XRAY_PACKAGES::'+json.dumps({'file':p.name,'symbols':len(symbols),'packages':len(packages),'openpgp_packages':[x for x in packages if x.startswith('golang.org/x/crypto/openpgp')]}))
+              print('::notice title=REBUILT_XRAY_PACKAGES::'+json.dumps({'file':p.name,'symbols':len(symbols),'packages':len(packages),'unqualified_symbols':len(unqualified),'openpgp_packages':[x for x in packages if x.startswith('golang.org/x/crypto/openpgp')]}))
           if len(result['android_builds'])!=4:raise ValueError('Expected four actual Android engine builds')
           pathlib.Path('summary.json').write_text(json.dumps(result,indent=2)+'\n')
           PY
