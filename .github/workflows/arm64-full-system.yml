@@ -1,14 +1,14 @@
-name: Stock full-system ARM64 Android boot probe — no APK publication
+name: Lighter stock ARM64 Android boot probe — no APK publication
 on:
   push:
-    branches: ['ci/arm64-full-system']
+    branches: ['ci/arm64-light-boot']
     paths: ['.github/workflows/arm64-full-system.yml']
 permissions:
   contents: read
 jobs:
   boot:
     runs-on: ubuntu-24.04
-    timeout-minutes: 340
+    timeout-minutes: 200
     env:
       QT_QPA_PLATFORM: xcb
       ANDROID_AVD_HOME: ${{ github.workspace }}/.cache/parvaz-arm64-avd
@@ -20,11 +20,14 @@ jobs:
           trap 'rc=$?; if [ "$rc" -ne 0 ]; then python3 -c "import pathlib; print(\"::error title=ARM64_PREPARATION::\"+pathlib.Path(\"evidence/preparation.log\").read_text(errors=\"replace\")[-3500:].replace(\"%\",\"%25\").replace(\"\\n\",\"%0A\"))"; fi' EXIT
           sudo apt-get update -qq
           sudo apt-get install -y libpulse0 libnss3 libx11-6 libxcb1 libgl1 libasound2t64 xvfb xauth libxcb-cursor0
-          (set +o pipefail; yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'emulator' 'platform-tools' 'system-images;android-30;google_apis;arm64-v8a')
+          (set +o pipefail; yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'emulator' 'platform-tools' 'system-images;android-30;default;arm64-v8a')
           mkdir -p "$ANDROID_AVD_HOME"
-          echo no | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd -n parvaz_arm64 -k 'system-images;android-30;google_apis;arm64-v8a' --device pixel_2 --force
+          echo no | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd -n parvaz_arm64 -k 'system-images;android-30;default;arm64-v8a' --device pixel_2 --force
           echo 'hw.ramSize=4096' >> "$ANDROID_AVD_HOME/parvaz_arm64.avd/config.ini"
           echo 'hw.cpu.ncore=2' >> "$ANDROID_AVD_HOME/parvaz_arm64.avd/config.ini"
+          # Remove the emulated audio device entirely: the virt machine has no HDA,
+          # and the guest audio HAL restart loop starves the slow TCG boot.
+          printf 'hw.audioInput=no\nhw.audioOutput=no\nhw.gpu.enabled=no\n' >> "$ANDROID_AVD_HOME/parvaz_arm64.avd/config.ini"
       - name: Start the actual bundled ARM64 backend with a real AVD and software acceleration
         run: |
           mkdir -p evidence
@@ -35,7 +38,7 @@ jobs:
           if [ -x "${QEMU}-headless" ]; then QEMU="${QEMU}-headless"; fi
           ulimit -c 0 # no host memory dump collection
           echo "Selected official backend: $QEMU"
-          cp "$ANDROID_HOME/system-images/android-30/google_apis/arm64-v8a/source.properties" evidence/image.properties
+          cp "$ANDROID_HOME/system-images/android-30/default/arm64-v8a/source.properties" evidence/image.properties
           sha256sum "$QEMU" > evidence/emulator-backend.sha256
           adb start-server
           # Upstream selects virt on AArch64 hosts, but ranchu on x86 hosts.
@@ -49,7 +52,7 @@ jobs:
           def adb(*args):
               try:return subprocess.run(['adb','-s','emulator-5554',*args],capture_output=True,text=True,timeout=10).stdout.strip()
               except subprocess.TimeoutExpired:return ''
-          deadline=time.monotonic()+19200;booted=False
+          deadline=time.monotonic()+11400;booted=False
           while time.monotonic()<deadline:
               try:os.kill(int(os.environ['QEMU_PID']),0)
               except ProcessLookupError:break
