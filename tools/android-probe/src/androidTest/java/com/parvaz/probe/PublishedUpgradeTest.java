@@ -19,7 +19,9 @@ public class PublishedUpgradeTest {
  }
  @Test public void updateButtonInstallsPermanentCandidateAndKeepsProfile()throws Exception{
   device=UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());device.wakeUp();device.pressHome();
-  assertTrue(device.executeShellCommand("dumpsys package "+APP).contains("versionCode=39"));
+  String priorCode=InstrumentationRegistry.getArguments().getString("priorCode", "39");
+  assertTrue("Reviewed prior required", priorCode.equals("39") || priorCode.equals("41"));
+  assertTrue(device.executeShellCommand("dumpsys package "+APP).contains("versionCode="+priorCode+" "));
   device.executeShellCommand("am start -W -a android.intent.action.VIEW -d vless://11111111-1111-4111-8111-111111111111@192.0.2.1:443#UPGRADE_FIXTURE -n "+APP+"/.MainActivity");
   waitFor(By.res("android","button1"),30000).click();
   waitFor(By.textContains("UPGRADE_FIXTURE"),30000);
@@ -49,11 +51,11 @@ public class PublishedUpgradeTest {
     if(confirm==null)confirm=device.findObject(By.res("android","button1"));
     if(confirm!=null){confirm.click();installerConfirmed=true;}
    }
-   if(device.executeShellCommand("dumpsys package "+APP).contains("versionCode="+InstrumentationRegistry.getArguments().getString("expectedCode")) )break;
+   if(device.executeShellCommand("dumpsys package "+APP).contains("versionCode="+InstrumentationRegistry.getArguments().getString("expectedCode")+" ") )break;
    SystemClock.sleep(700);
   }
   assertTrue("Real installer confirmation must occur",installerConfirmed);
-  assertTrue(device.executeShellCommand("dumpsys package "+APP).contains("versionCode="+InstrumentationRegistry.getArguments().getString("expectedCode")));
+  assertTrue(device.executeShellCommand("dumpsys package "+APP).contains("versionCode="+InstrumentationRegistry.getArguments().getString("expectedCode")+" "));
   device.executeShellCommand("am start -W -n "+APP+"/.MainActivity");
   waitFor(By.textContains("UPGRADE_FIXTURE"),30000);screenshot("02-upgraded-data");
   // Resizing exercises actual Persian UI layouts, not browser mockups.

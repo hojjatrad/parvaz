@@ -38,6 +38,7 @@ for original, destination in expected.items():
     if len(fingerprints) != 1 or fingerprints[0].replace(':', '').lower() != pin['certificate_sha256']:
         raise SystemExit(f'Signing certificate mismatch: {original}. Publishing refused.')
     badging = subprocess.check_output([aapt, 'dump', 'badging', str(apk)], text=True)
+    if 'application-debuggable' in badging:raise SystemExit('Debuggable APK cannot be distributed')
     match = re.search(r"package: name='([^']+)' versionCode='([^']+)' versionName='([^']+)'", badging)
     if not match or match.groups() != (pin['application_id'], code, version):
         raise SystemExit(f'Package/version mismatch: {original}. Publishing refused.')
