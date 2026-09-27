@@ -5,10 +5,11 @@ from dependency_floors import apply
 ROOT=pathlib.Path(__file__).resolve().parents[2]
 OUT=ROOT/'.cache/xray-security-review';OUT.mkdir(parents=True,exist_ok=True)
 source=vendor()
-env=dict(os.environ,GOTOOLCHAIN='auto',GOMAXPROCS='2',GOWORK='off',ANDROID_NDK_HOME=os.environ['ANDROID_HOME']+'/ndk/29.0.14206865')
+env=dict(os.environ,GOTOOLCHAIN='auto',GOMAXPROCS='2',GOWORK='off',GOFLAGS='-mod=mod',ANDROID_NDK_HOME=os.environ['ANDROID_HOME']+'/ndk/29.0.14206865')
 patch=apply(source,env,{'github.com/klauspost/compress':'v1.18.7'})
 # Use the tool version recorded by the reviewed source, never @latest.
 mobile='v0.0.0-20260908204917-8b95e45f8d3e'
+subprocess.run(['go','get','-tool','golang.org/x/mobile/cmd/gobind@'+mobile],cwd=source,env=env,check=True)
 for tool in ['gomobile','gobind']:
  subprocess.run(['go','install','golang.org/x/mobile/cmd/'+tool+'@'+mobile],cwd=source,env=env,check=True)
 # The baseline AAR is verified by fetch_core before this script. Reuse only its
@@ -42,7 +43,17 @@ with zipfile.ZipFile(output) as z:
   (OUT/(abi+'-extract.jsons')).write_text(extract.stdout)
   scan=subprocess.run(['govulncheck','-json','-mode=binary',str(file)],capture_output=True,text=True,timeout=180)
   (OUT/(abi+'-govuln.jsons')).write_text(scan.stdout)
-  binaries.append({'abi':abi,'sha256':hashlib.sha256(data).hexdigest(),'extraction_exit':extract.returncode,'scanner_exit_NOT_clean_verdict':scan.returncode,'stderr':(extract.stderr+scan.stderr)[-2000:]})
+  from package_evidence import objects
+  try:
+   records=list(objects(extract.stdout));body=records[1]
+   extraction={'goos':body.get('goos'),'goarch':body.get('goarch'),'symbol_count':len(body.get('pkgSymbols',[]))} if extract.returncode==0 and records[0]=={'name':'govulncheck-extract','version':'0.1.0'} else {'status':'UNKNOWN'}
+  except Exception:extraction={'status':'UNKNOWN'}
+  findings=[x['finding'] for x in objects(scan.stdout) if 'finding' in x]
+  grouped={}
+  for finding in findings:
+   counts=grouped.setdefault(finding['osv'],{'module':0,'package':0,'function_named_NOT_execution':0})
+   frames=finding.get('trace',[]);level='function_named_NOT_execution' if any(f.get('function') for f in frames) else ('package' if any(f.get('package') for f in frames) else 'module');counts[level]+=1
+  binaries.append({'extraction':extraction,'finding_groups':grouped,'abi':abi,'sha256':hashlib.sha256(data).hexdigest(),'extraction_exit':extract.returncode,'scanner_exit_NOT_clean_verdict':scan.returncode,'stderr':(extract.stderr+scan.stderr)[-2000:]})
   file.unlink()
 report={'scope':'Review-only rebuilt AAR, NOT used by the app or approved for release','base_aar_sha256':lock['sha256'],'aar_sha256':hashlib.file_digest(output.open('rb'),'sha256').hexdigest(),'patch':patch,'gomobile_version':mobile,'command':command,'baseline_asset_hashes':asset_hashes,'binaries':binaries}
 (OUT/'summary.json').write_text(json.dumps(report,indent=2)+'\n')

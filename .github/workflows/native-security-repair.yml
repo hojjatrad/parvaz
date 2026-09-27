@@ -1,7 +1,7 @@
 name: Targeted native dependency repair and immutable ARM launch controls
 on:
   push:
-    branches: ['security/native-dependency-repair']
+    branches: ['security/native-dependency-repair', 'ci/xray-security-probe']
     paths: ['tools/native/**', 'tools/upgrade-test/*launch_control*', '.github/workflows/native-security-repair.yml']
 concurrency:
   group: native-security-repair-${{ github.ref }}
@@ -11,6 +11,7 @@ permissions:
   actions: read
 jobs:
   source-compatibility:
+    if: github.ref == 'refs/heads/security/native-dependency-repair'
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
@@ -46,6 +47,7 @@ jobs:
           include-hidden-files: true
           retention-days: 7
   arm-launch-control:
+    if: github.ref == 'refs/heads/security/native-dependency-repair'
     strategy:
       fail-fast: false
       matrix: {api: [31, 32]}
@@ -120,6 +122,7 @@ jobs:
           include-hidden-files: true
           retention-days: 7
   patched-android-build:
+    if: github.ref == 'refs/heads/security/native-dependency-repair'
     needs: source-compatibility
     runs-on: ubuntu-24.04
     timeout-minutes: 35
