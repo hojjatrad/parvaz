@@ -21,7 +21,9 @@ jobs:
           python3 - <<'PY'
           import pathlib,xml.etree.ElementTree as ET
           def note(title,text):print('::notice title='+title+'::'+text[:3500].replace('%','%25').replace('\r','%0D').replace('\n','%0A'))
-          for path in pathlib.Path('fixture-evidence').rglob('99-final-ui.xml'):
+          note('FIXTURE_FILES','\n'.join(str(p) for p in pathlib.Path('fixture-evidence').rglob('*') if p.is_file()))
+          for path in pathlib.Path('fixture-evidence').rglob('*.xml'):
+              if 'final-ui' not in path.name:continue
               rows=[]
               for n in ET.parse(path).getroot().iter('node'):
                   if n.get('text') or n.get('content-desc'):rows.append(str({k:n.get(k) for k in ['package','resource-id','text','content-desc']}))
@@ -29,5 +31,8 @@ jobs:
           for path in pathlib.Path('fixture-evidence').rglob('device.log'):
               lines=path.read_text(errors='replace').splitlines()
               for i,line in enumerate(lines):
-                  if 'FATAL EXCEPTION' in line:note('FIXTURE_CRASH','\n'.join(lines[i:i+22]))
+                  if any(x in line for x in ['FATAL EXCEPTION','Process: com.parvaz.tunnel','Permission Denial','Error type 3','Force finishing activity com.parvaz']):note('FIXTURE_CRASH','\n'.join(lines[i:i+15]))
+              note('DEVICE_LOG_TAIL','\n'.join(lines[-25:]))
+          for path in pathlib.Path('fixture-evidence').rglob('fixture-run.log'):
+              note('FIXTURE_RUN_HEAD',path.read_text(errors='replace')[:3200])
           PY
