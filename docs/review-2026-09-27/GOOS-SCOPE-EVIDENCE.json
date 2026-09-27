@@ -1,0 +1,104 @@
+{
+  "scope": "Supplemental disposition of ONE advisory only; NOT a fresh full SCA run, security approval or installation proof",
+  "candidate_source": "00b7046",
+  "apk_artifact_run": 36311876249,
+  "inspection_run": 36315331773,
+  "inspection_evidence_commit": "6eb0313a794c0a9ada58dedcca972aca369f9836",
+  "component": {
+    "ecosystem": "Go",
+    "name": "golang.org/x/sys",
+    "version": "v0.30.0",
+    "sources": [
+      {
+        "binary": "app/libs/jni/arm64-v8a/libmihomo.so",
+        "abi": "arm64-v8a",
+        "sha256": "ec4101e4195c3b92f8c092c0dce4f011029ada609ade99729ec593eef11fecc3",
+        "goos": "android"
+      },
+      {
+        "binary": "app/libs/jni/armeabi-v7a/libmihomo.so",
+        "abi": "armeabi-v7a",
+        "sha256": "2ae830464f7bcf2006d77335354a95a7f18aa15b654a1094e904c546b6397b68",
+        "goos": "android"
+      },
+      {
+        "engine": "mihomo",
+        "module_sum": "h1:QjkSwP/36a20jFYWkSue1YwXzLmsV5Gfq7Eiy72C1uc="
+      }
+    ]
+  },
+  "advisory": {
+    "id": "GO-2026-5024",
+    "summary": "Invoking integer overflow in NewNTUnicodeString in golang.org/x/sys/windows",
+    "details": "NewNTUnicodeString does not check for string length overflow. When provided with a string that overflows the maximum size of a NTUnicodeString (a 16-bit number of bytes), it returns a truncated string rather than an error.",
+    "aliases": [
+      "CVE-2026-39824"
+    ],
+    "modified": "2026-06-09T18:59:22.740765220Z",
+    "published": "2026-05-22T18:28:47Z",
+    "related": [
+      "CGA-76vg-6p9r-2fx2"
+    ],
+    "database_specific": {
+      "url": "https://pkg.go.dev/vuln/GO-2026-5024",
+      "review_status": "REVIEWED"
+    },
+    "references": [
+      {
+        "type": "REPORT",
+        "url": "https://go.dev/issue/78916"
+      },
+      {
+        "type": "FIX",
+        "url": "https://go.dev/cl/770080"
+      },
+      {
+        "type": "WEB",
+        "url": "https://groups.google.com/g/golang-announce/c/6MMI8Lj-Atg"
+      }
+    ],
+    "affected": [
+      {
+        "package": {
+          "name": "golang.org/x/sys",
+          "ecosystem": "Go",
+          "purl": "pkg:golang/golang.org/x/sys"
+        },
+        "ranges": [
+          {
+            "type": "SEMVER",
+            "events": [
+              {
+                "introduced": "0"
+              },
+              {
+                "fixed": "0.44.0"
+              }
+            ]
+          }
+        ],
+        "ecosystem_specific": {
+          "imports": [
+            {
+              "goos": [
+                "windows"
+              ],
+              "symbols": [
+                "NewNTUnicodeString"
+              ],
+              "path": "golang.org/x/sys/windows"
+            }
+          ]
+        },
+        "database_specific": {
+          "source": "https://vuln.go.dev/ID/GO-2026-5024.json"
+        }
+      }
+    ],
+    "schema_version": "1.7.5"
+  },
+  "advisory_response_sha256": "3f336635e692a1da8793dc487fa127eff17c3881b03bb9d9de8deab653d5516b",
+  "disposition": "NOT_APPLICABLE_TO_VERIFIED_BINARY_OS",
+  "release_status": "BLOCKED",
+  "limitations": "All other findings and full release security gate remain unresolved. Last full scanner result remains the historical 12 coordinates; this supplemental review is not a refreshed total."
+}

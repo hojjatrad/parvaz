@@ -1,16 +1,16 @@
-name: Inspect actual native symbols and ARM lab capability — no publication
+name: Inspect actual native symbols and ARM lab capability — no APK publication
 on:
   push:
     branches: ['ci/native-runtime-audit']
     paths: ['tools/security/**', '.github/workflows/native-runtime-audit.yml']
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
   actions: read
 jobs:
   native-symbols:
-    permissions:
-      contents: write
-      actions: read
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -35,6 +35,18 @@ jobs:
           path: .cache/native-symbol-evidence/
           include-hidden-files: true
           retention-days: 7
+  publish-evidence:
+    needs: native-symbols
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: native-symbol-evidence
+          path: evidence
       - name: Preserve only public native inspection evidence on a separate QA branch
         env:
           GH_TOKEN: ${{ github.token }}
@@ -47,7 +59,11 @@ jobs:
               command=['gh','api',base+path]
               if data is not None:command+=['--method','POST','--input','-']
               return json.loads(subprocess.check_output(command,input=None if data is None else json.dumps(data).encode()))
-          data=pathlib.Path('.cache/native-symbol-evidence/summary.json').read_bytes()
+          path=pathlib.Path('evidence/summary.json')
+          assert path.stat().st_size<8*1024*1024
+          data=path.read_bytes()
+          parsed=json.loads(data)
+          assert len(parsed['reports'])==6 and parsed['tool']=='golang.org/x/vuln/cmd/govulncheck@v1.8.0'
           blob=api('blobs',{'content':base64.b64encode(data).decode(),'encoding':'base64'})['sha']
           tree=api('trees',{'tree':[{'path':'summary.json','mode':'100644','type':'blob','sha':blob}]})['sha']
           ref='refs/heads/qa/native-symbol-evidence'
@@ -58,6 +74,8 @@ jobs:
               subprocess.run(['gh','api',base+'refs/heads/qa/native-symbol-evidence','--method','PATCH','--input','-'],input=json.dumps({'sha':commit}).encode(),check=True)
           else:api('refs',{'ref':ref,'sha':commit})
           print('::notice title=NATIVE_EVIDENCE_COMMIT::'+commit)
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as report:
+              report.write('Native static evidence only, NOT security or installation approval: https://github.com/'+os.environ['GITHUB_REPOSITORY']+'/blob/'+commit+'/summary.json\n')
           PY
   arm-lab-capability:
     runs-on: ubuntu-24.04

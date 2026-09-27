@@ -2,6 +2,7 @@ name: Retry disposable upgrade fixture without rebuilding or publishing APKs
 on:
   push:
     branches: ['ci/upgrade-fixture-debug']
+    paths: ['tools/upgrade-test/**', 'tools/android-probe/**', '.github/workflows/retry-upgrade.yml']
 permissions:
   contents: read
   actions: read
