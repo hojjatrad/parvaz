@@ -61,7 +61,8 @@ for abi,arch,cc in [('arm64-v8a','arm64','aarch64-linux-android24-clang'),('arme
  targetenv=dict(env,GOOS='android',GOARCH=arch,GOARM='7',CGO_ENABLED='1',CC=str(ndk/cc),GOPATH=str(work)+os.pathsep+gopath,GOFLAGS='-mod=readonly')
  graph_command=['go','list','-deps','-json','-buildmode=c-shared','-trimpath','./gobind']
  graph=closed_import_graph(subprocess.check_output(graph_command,cwd=generated,env=targetenv,text=True))
- if graph['root']['import_path']!='gomobile.bind/gobind' or graph['root']['module_path']!='gomobile.bind':raise ValueError('Unexpected generated JNI main root')
+ # Pinned mobile bind.go explicitly calls AddModuleStmt("gobind").
+ if graph['root']['import_path']!='gobind/gobind' or graph['root']['module_path']!='gobind':raise ValueError('Unexpected generated JNI main root: '+json.dumps({k:v for k,v in graph['root'].items() if k!='dependencies'}))
  packages=graph['packages']
  if 'golang.org/x/mobile/bind/seq' not in packages or 'github.com/2dust/AndroidLibXrayLite' not in packages:raise ValueError('Incomplete JNI dependency roots')
  compiler_inventories[abi]={**graph,'inventory_command':graph_command,'cgo_enabled':'1','goos':'android','goarch':arch,'generated_go_mod_sha256':hashlib.file_digest((generated/'go.mod').open('rb'),'sha256').hexdigest(),'scope':'Complete Go import graph of actual preserved generated JNI module; not a call graph'}

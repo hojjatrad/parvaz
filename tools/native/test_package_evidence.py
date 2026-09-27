@@ -35,8 +35,8 @@ class PackageEvidenceTest(unittest.TestCase):
   c,_=self.proof()
   with self.assertRaises(ValueError):m.closed_graph('{\"ImportPath\":\"a\"}{\"ImportPath\":\"b\"}'.replace('\x1f','"'),c)
  def test_generated_jni_root_uses_the_same_closure_contract(self):
-  rows=[{'ImportPath':'runtime','DepOnly':True},{'ImportPath':'gomobile.bind/gobind','Name':'main','Module':{'Path':'gomobile.bind','Main':True},'Deps':['runtime']}]
-  graph=m.closed_import_graph(''.join(json.dumps(r) for r in rows));self.assertEqual(graph['root']['module_path'],'gomobile.bind')
+  rows=[{'ImportPath':'runtime','DepOnly':True},{'ImportPath':'gobind/gobind','Name':'main','Module':{'Path':'gobind','Main':True},'Deps':['runtime']}]
+  graph=m.closed_import_graph(''.join(json.dumps(r) for r in rows));self.assertEqual(graph['root']['module_path'],'gobind')
   rows[1]['Deps'].append('omitted/package')
   with self.assertRaises(ValueError):m.closed_import_graph(''.join(json.dumps(r) for r in rows))
 if __name__=='__main__':unittest.main()
