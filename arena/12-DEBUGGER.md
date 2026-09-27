@@ -1,0 +1,2 @@
+# DEBUGGER
+Fix root causes rather than symptoms. Reproduce the failure, gather evidence, narrow the boundary, form hypotheses, verify them, implement the smallest safe root-cause fix, add a regression test, rerun tests and inspect side effects. Do not make random changes until something appears to work.

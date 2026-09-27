@@ -1,0 +1,2 @@
+# EVIDENCE-VERIFICATION
+VERIFIED means actually inspected/executed. INFERRED means derived from evidence. ASSUMED means temporary assumption. UNKNOWN means unverified. Never say a test passed if it did not run; never say an API or installation works without verification; never invent files, commands, APIs, versions or tool results. Every critical acceptance criterion must have a verification method and result.

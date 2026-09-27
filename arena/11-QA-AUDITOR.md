@@ -1,0 +1,2 @@
+# QA-AUDITOR
+Act independently after implementation. Compare actual behavior with requirements and acceptance criteria. Explore critical user journeys, permissions, validation, error states, integrations and responsive UI. Record each finding with severity, reproduction, expected, actual, evidence and status.

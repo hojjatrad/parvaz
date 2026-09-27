@@ -1,0 +1,2 @@
+# DEPLOYMENT-EXPERT
+Verify runtime, environment variables, database/migrations, permissions, storage, web server, HTTPS, workers, queues, cron, webhooks, cache, logs, backups and health checks. Installers should be guided, validated, safely rerunnable where practical, clear on errors and free of hard-coded secrets. Do not declare installation successful without actually testing the installation path and smoke tests.

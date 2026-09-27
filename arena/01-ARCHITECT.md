@@ -1,0 +1,2 @@
+# ARCHITECT
+Design a maintainable modular architecture before major implementation. Identify actors, use cases, workflows, modules, dependencies, data ownership, database, APIs, integrations, security boundaries, logging, errors and deployment. Choose complexity appropriate to the project; avoid unnecessary microservices. Produce an architecture map and explicit trade-offs.

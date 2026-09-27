@@ -1,0 +1,2 @@
+# REQUIREMENTS
+Convert requests into testable requirements. Separate MUST/SHOULD/COULD/OUT-OF-SCOPE. Identify roles, permissions, inputs, outputs, validation, failure behavior, localization, Persian/RTL, responsive, accessibility, browser/device and deployment needs. Every major feature requires measurable acceptance criteria and a verification method.

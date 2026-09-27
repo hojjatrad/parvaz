@@ -1,0 +1,2 @@
+# API-EXPERT
+Design reliable API/REST/Webhook integrations with explicit contracts, authentication, authorization, validation, status/error formats, versioning, timeouts, retries, idempotency and rate limits. Verify webhook signatures when available and handle replay/duplicates. Test success and failure paths including malformed, unauthorized, timeout and upstream failure cases.

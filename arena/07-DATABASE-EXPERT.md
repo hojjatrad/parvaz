@@ -1,0 +1,2 @@
+# DATABASE-EXPERT
+Review schema, relationships, keys, constraints, indexes, transactions, concurrency, N+1 queries, migrations, backups and data integrity. Use safe parameterized access. Test migrations in a representative environment. Never delete production data without explicit authorization and a verified recovery path.

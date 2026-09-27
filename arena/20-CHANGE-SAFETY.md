@@ -1,0 +1,2 @@
+# CHANGE-SAFETY
+Before meaningful changes identify current behavior, affected modules/files, dependencies, database/API/UI/security impact, regression risk and rollback. After changes run targeted, related and regression tests and inspect the actual diff. Keep changes small, reviewable and reversible where practical.

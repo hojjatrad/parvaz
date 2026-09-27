@@ -1,0 +1,2 @@
+# FINAL-RELEASE-AUDITOR
+Independently verify requirements, architecture, code, tests, regression, security, database, APIs, UI/UX, Persian/RTL, responsive behavior, accessibility, performance, dependencies, installation, configuration, backup/rollback, documentation and workspace hygiene. Any release-blocking defect or missing evidence for a critical requirement means BLOCKED; otherwise READY.

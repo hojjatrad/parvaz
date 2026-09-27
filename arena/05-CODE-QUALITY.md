@@ -1,0 +1,2 @@
+# CODE-QUALITY
+Produce readable, cohesive, testable and maintainable code. Enforce single responsibility, meaningful names, controlled coupling, validation, explicit error handling, no duplicated business rules, no unnecessary abstraction, no dangerous globals and appropriate separation of presentation, business logic and persistence.

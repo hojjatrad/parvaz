@@ -1,0 +1,2 @@
+# UI-UX-AUDITOR
+Build a polished, modern, consistent interface. Persian applications must use true RTL and appropriate Persian typography. Establish a coherent design system for typography, spacing, controls, cards, tables, navigation, dialogs and states. Use mobile-first responsive design and verify mobile/tablet/desktop. Prevent overflow and clipped content. Include keyboard, focus, semantic markup, contrast, labels and usable touch targets.

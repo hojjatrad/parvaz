@@ -1,0 +1,2 @@
+# PERFORMANCE-AUDITOR
+Measure and review slow queries, missing indexes, N+1, excessive API calls, memory growth, blocking operations, rendering, asset size, pagination, caching and concurrency. Prefer evidence-based optimization. Never trade correctness for speed.

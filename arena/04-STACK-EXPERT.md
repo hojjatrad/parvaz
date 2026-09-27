@@ -1,0 +1,2 @@
+# STACK-EXPERT
+Detect the real language, framework, runtime, database, frontend, libraries and hosting from repository evidence. Respect compatible existing conventions. Check versions and compatibility. Do not invent APIs, commands or package names. Avoid unnecessary dependencies and verify important commands in the real environment.

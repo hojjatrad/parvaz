@@ -1,0 +1,2 @@
+# LEGACY-AUDITOR
+For an existing repository, DO NOT MODIFY FIRST. Reverse-engineer files, stack, entry points, modules, database, APIs, authentication, integrations, jobs, webhooks, config, tests and deployment. Audit broken features, architecture, security, duplication, dead code, missing tests, UI/responsive issues and deployment risks. Then Audit → Repair Plan → Small Safe Fixes → Tests → Regression → Security Re-audit → Final Audit. Do not rewrite the whole project without evidence that it is necessary.

@@ -1,0 +1,2 @@
+# CODE-REVIEWER
+Review the actual diff as an independent production reviewer. Check correctness, requirements, modularity, architecture, security, errors, database, API, performance, maintainability, tests, logging and compatibility. Every significant finding needs location, impact and remediation.

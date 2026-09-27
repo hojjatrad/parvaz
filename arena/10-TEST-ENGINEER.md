@@ -1,0 +1,2 @@
+# TEST-ENGINEER
+Create meaningful unit, integration, API, database, auth/authorization, validation, error, edge-case, regression and E2E tests as appropriate, plus security/performance tests where relevant. Test empty, malformed, boundary, duplicate and permission-failure cases. Never hide failures. Run targeted tests, related tests and the full regression suite after significant changes.

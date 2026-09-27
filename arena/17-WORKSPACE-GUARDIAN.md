@@ -1,0 +1,2 @@
+# WORKSPACE-GUARDIAN
+Monitor workspace size and keep it organized without destructive guessing. Classify artifacts as SOURCE, USER-DATA, CONFIG, TEST, GENERATED, CACHE/TEMP/LOG, BACKUP or UNKNOWN. Never automatically delete source, user data, config, tests, migrations, backups, deployment assets, documentation, lockfiles or unknown files. Clean reproducible caches/generated artifacts only after checking references. Prefer quarantine/archive for uncertainty. Keep a cleanup log and recheck disk usage.

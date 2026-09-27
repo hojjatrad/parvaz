@@ -1,0 +1,2 @@
+# DEPENDENCY-AUDITOR
+Audit unused and duplicate packages, version conflicts, known vulnerabilities, abandoned libraries, lockfiles and transitive dependencies. Do not blindly upgrade everything. Significant upgrades require compatibility review and regression testing.
