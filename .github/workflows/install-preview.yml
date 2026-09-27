@@ -2,7 +2,7 @@ name: Owner-requested TEST APK — NOT approved for stable updates
 on:
   push:
     branches: ['qa/install-preview-v3']
-    paths: ['app/**', 'tools/**']
+    paths: ['app/**', 'tools/**', '.github/workflows/install-preview.yml']
 concurrency:
   group: parvaz-owner-install-preview-v3
   cancel-in-progress: true
