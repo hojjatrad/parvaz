@@ -1,7 +1,7 @@
-name: Diagnose disposable upgrade fixture
+name: Inspect synthetic upgrade failure UI
 on:
   push:
-    branches: ['ci/upgrade-fixture-debug']
+    branches: ['ci/upgrade-inspect-ui']
 permissions:
   contents: read
   actions: read
@@ -10,20 +10,24 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - name: Inspect only failed disposable-emulator jobs from the fixed candidate run
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: 'actual-apk-upgrade-evidence-*'
+          path: fixture-evidence
+          run-id: 36313938999
+          github-token: ${{ github.token }}
+      - name: Expose only disposable-fixture UI and bounded crash traces
         run: |
-          gh run view 36311876249 --log-failed > "$RUNNER_TEMP/fixture.log"
           python3 - <<'PY'
-          import os,pathlib
-          text=(pathlib.Path(os.environ['RUNNER_TEMP'])/'fixture.log').read_text(errors='replace')
-          lines=text.splitlines()
-          for term in ['Traceback','ARM64 support','Disposable','Error:','error:','Exception','CI_ONLY','prepare_emulator','FAILED','Failure','Process completed','Exit code','Usage:']:
-              indices=[i for i,l in enumerate(lines) if term in l]
-              for i in indices[-3:]:
-                  excerpt='\n'.join(lines[max(0,i-2):i+7])[:3500]
-                  print('::notice title=FIXTURE_DIAGNOSTIC::'+excerpt.replace('%','%25').replace('\r','%0D').replace('\n','%0A'))
-          print('::notice title=FIXTURE_LOG_TAIL::'+text[-7000:].replace('%','%25').replace('\r','%0D').replace('\n','%0A'))
+          import pathlib,xml.etree.ElementTree as ET
+          def note(title,text):print('::notice title='+title+'::'+text[:3500].replace('%','%25').replace('\r','%0D').replace('\n','%0A'))
+          for path in pathlib.Path('fixture-evidence').rglob('99-final-ui.xml'):
+              rows=[]
+              for n in ET.parse(path).getroot().iter('node'):
+                  if n.get('text') or n.get('content-desc'):rows.append(str({k:n.get(k) for k in ['package','resource-id','text','content-desc']}))
+              note('FIXTURE_UI',str(path)+'\n'+'\n'.join(rows))
+          for path in pathlib.Path('fixture-evidence').rglob('device.log'):
+              lines=path.read_text(errors='replace').splitlines()
+              for i,line in enumerate(lines):
+                  if 'FATAL EXCEPTION' in line:note('FIXTURE_CRASH','\n'.join(lines[i:i+22]))
           PY
