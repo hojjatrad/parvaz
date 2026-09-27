@@ -35,7 +35,10 @@ jobs:
           cp "$ANDROID_HOME/system-images/android-30/google_apis/arm64-v8a/source.properties" evidence/image.properties
           sha256sum "$QEMU" > evidence/emulator-backend.sha256
           adb start-server
-          "$QEMU" -avd parvaz_arm64 -port 5554 -no-window -no-metrics -no-audio -no-snapshot -no-boot-anim -gpu swiftshader -accel off >evidence/emulator.log 2>&1 &
+          # Upstream selects virt on AArch64 hosts, but ranchu on x86 hosts.
+          # API30 audio requires PCI; no-audio only mutes the backend, not HDA.
+          # Select the official ARM64 virt machine explicitly; no image/APK modification.
+          "$QEMU" -avd parvaz_arm64 -port 5554 -no-window -no-metrics -no-audio -no-snapshot -no-boot-anim -gpu swiftshader -accel off -qemu -machine type=virt >evidence/emulator.log 2>&1 &
           export QEMU_PID=$!
           trap 'kill "$QEMU_PID" 2>/dev/null || true' EXIT
           python3 - <<'PY'
