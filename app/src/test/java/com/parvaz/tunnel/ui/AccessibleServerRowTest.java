@@ -81,4 +81,19 @@ public class AccessibleServerRowTest {
   for(int id:new int[]{R.id.btn_settings,R.id.btn_speed_test,R.id.btn_best_server,R.id.ip_text,R.id.btn_goto_servers})assertTrue("touch target id="+id,root.findViewById(id).getHeight()>=48*dp);
  }
 
+ @Test public void renderSyntheticComponentsForReview()throws Exception{
+  if(android.os.Build.VERSION.SDK_INT!=34)return; // One render set; behavior tests still run on both SDKs.
+  java.io.File dir=new java.io.File("build/reports/ui-review");assertTrue(dir.isDirectory()||dir.mkdirs());
+  for(boolean night:new boolean[]{false,true}){
+   Context c=context("fa",night,2f,320);String mode=night?"dark":"light";
+   saveRender(home(c,320),new java.io.File(dir,"home-fa-320-large-"+mode+".png"));
+   saveRender(row(c,320,-12,true).itemView,new java.io.File(dir,"server-fa-320-large-"+mode+".png"));
+  }
+ }
+ private void saveRender(View view,java.io.File destination)throws Exception{
+  android.graphics.Bitmap image=android.graphics.Bitmap.createBitmap(view.getWidth(),view.getHeight(),android.graphics.Bitmap.Config.ARGB_8888);
+  android.graphics.Canvas canvas=new android.graphics.Canvas(image);canvas.drawColor(view.getContext().getColor(R.color.bg));view.draw(canvas);
+  try(java.io.FileOutputStream output=new java.io.FileOutputStream(destination)){assertTrue(image.compress(android.graphics.Bitmap.CompressFormat.PNG,100,output));}finally{image.recycle();}
+ }
+
 }
