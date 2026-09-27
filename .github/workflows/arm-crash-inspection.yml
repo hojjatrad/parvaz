@@ -42,34 +42,26 @@ jobs:
               hits=[i for i,l in enumerate(lines) if re.search(patterns,l,re.I)]
               for i in hits[:2]:notice('ARM_RUNTIME_CONTEXT',p.as_posix()+'\n'+'\n'.join(lines[max(0,i-4):i+10])[:3500])
           PY
-  inspect-arm64-preparation:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    steps:
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        with:
-          name: full-arm64-boot-evidence
-          path: arm64-evidence
-          run-id: 36318752909
-          github-token: ${{ github.token }}
-      - name: Surface bounded preparation and boot evidence
-        run: |
-          python3 - <<'PYLOG'
-          import pathlib
-          for p in sorted(pathlib.Path('arm64-evidence').rglob('*')):
-              if p.is_file() and p.suffix in ('.log','.json','.properties'):
-                  text=p.name+'\n'+p.read_text(errors='replace')[-5000:]
-                  print('::notice title=ARM64_ENVIRONMENT_EVIDENCE::'+text.replace('%','%25').replace('\r','%0D').replace('\n','%0A'))
-          PYLOG
   inspect-repaired-builds:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 650df331fa9e21263efeb32dcf87bac329a81f72
+          path: policy-source
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: native-package-consumer-proof
+          path: consumer-evidence
+          run-id: 36319475913
+          github-token: ${{ github.token }}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: patched-android-build-evidence
           path: android-evidence
-          run-id: 36317318046
+          run-id: 36319475913
           github-token: ${{ github.token }}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
@@ -80,17 +72,22 @@ jobs:
       - name: Read compiler and binary package coverage; not a release verdict
         run: |
           python3 - <<'PY'
-          import json,pathlib
+          import json,pathlib,sys,hashlib
+          sys.path.insert(0,'policy-source/tools/native');sys.path.insert(0,'policy-source/tools/security')
+          import package_evidence,dependency_audit
+          locks=json.loads(pathlib.Path('policy-source/tools/native/engines-lock.json').read_text())
+          consumer=json.loads(pathlib.Path('consumer-evidence/consumer-review.json').read_text())
           def objects(text):
               d=json.JSONDecoder();i=0
               while i<len(text):
                   while i<len(text) and text[i].isspace():i+=1
                   if i==len(text):break
                   value,i=d.raw_decode(text,i);yield value
-          result={'release_status':'BLOCKED','scope':'Separate native build experiments with verified Xray Java API/class equality; not a combined APK, full SCA, installation or updater approval','android_build_run':36317318046,'xray_rebuild_run':36318208046,'android_builds':[],'xray':json.loads(pathlib.Path('xray-evidence/summary.json').read_text())}
+          result={'release_status':'BLOCKED','scope':'Separate native build experiments with verified Xray Java API/class equality; not a combined APK, full SCA, installation or updater approval','android_build_run':36319475913,'xray_rebuild_run':36318208046,'android_builds':[],'xray':json.loads(pathlib.Path('xray-evidence/summary.json').read_text())}
           for p in sorted(pathlib.Path('android-evidence').glob('*.json')):
               r=json.loads(p.read_text());result['android_builds'].append(r)
-              packages=r['package_inventory']['packages']
+              core=next(c for c in locks if c['name']==r['engine'])
+              packages=package_evidence.verify(r,core,r['abi'],r['sha256'],r['go_version'].removeprefix('go'))
               print('::notice title=PATCHED_ANDROID_EVIDENCE::'+json.dumps({'engine':r['engine'],'abi':r['abi'],'sha256':r['sha256'],'package_count':len(packages),'openpgp_packages':[x for x in packages if x.startswith('golang.org/x/crypto/openpgp')],'resolved_floors':r['dependency_patch']['resolved_floors']}))
           for p in sorted(pathlib.Path('xray-evidence').glob('*-extract.jsons')):
               records=list(objects(p.read_text()))
@@ -103,7 +100,22 @@ jobs:
               result['xray'].setdefault('unqualified_symbol_records',{})[p.name]={'count':len(unqualified),'sample':unqualified[:12],'limitation':'Go extractor permits omitted pkg; these records are retained as a limitation, not assumed to establish package absence.'}
               result['xray'].setdefault('recovered_packages',{})[p.name]=packages
               print('::notice title=REBUILT_XRAY_PACKAGES::'+json.dumps({'file':p.name,'symbols':len(symbols),'packages':len(packages),'unqualified_symbols':len(unqualified),'openpgp_packages':[x for x in packages if x.startswith('golang.org/x/crypto/openpgp')]}))
+          proof_files={hashlib.sha256(p.read_bytes()).hexdigest():json.loads(p.read_text()) for p in pathlib.Path('android-evidence').glob('*.json')}
+          verified_count=0
+          for item in consumer['results']:
+              component={'ecosystem':'Go','name':'golang.org/x/crypto','sources':item['binaries']}
+              recomputed=dependency_audit.excludes_verified_compiled_packages(component,consumer['advisory'])
+              if recomputed is not item['excluded_by_actual_compiler_package_scope']:raise ValueError('Scope policy result changed')
+              for source in item['binaries']:
+                  if source.get('package_coverage_verified') is True:
+                      record=proof_files[source['package_proof_sha256']]
+                      if record['sha256']!=source['sha256'] or record['abi']!=source['abi']:raise ValueError('Consumer proof does not reference the reviewed output')
+                      verified_count+=1
+          if verified_count!=4:raise ValueError('Expected four exact consumer-to-compiler-proof links')
+          result['single_advisory_consumer_review']=consumer
+          result['scope_policy_source']='650df331fa9e21263efeb32dcf87bac329a81f72'
           for b in result['xray']['binaries']:
+
               inv=b['compiler_inventory'];packages=inv['packages']
               if not packages or 'github.com/2dust/AndroidLibXrayLite' not in packages or 'golang.org/x/mobile/bind/seq' not in packages:raise ValueError('Incomplete generated JNI graph')
               print('::notice title=XRAY_COMPILER_GRAPH::'+json.dumps({'abi':b['abi'],'sha256':b['sha256'],'package_count':len(packages),'openpgp_packages':[p for p in packages if p.startswith('golang.org/x/crypto/openpgp')]}))
