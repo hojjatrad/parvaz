@@ -48,7 +48,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: 650df331fa9e21263efeb32dcf87bac329a81f72
+          ref: 628d8467b1d528ccb83949567667d239f72086b6
           path: policy-source
           persist-credentials: false
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
@@ -67,14 +67,14 @@ jobs:
         with:
           name: xray-source-rebuild-review
           path: xray-evidence
-          run-id: 36318208046
+          run-id: 36321197720
           github-token: ${{ github.token }}
       - name: Read compiler and binary package coverage; not a release verdict
         run: |
           python3 - <<'PY'
           import json,pathlib,sys,hashlib
           sys.path.insert(0,'policy-source/tools/native');sys.path.insert(0,'policy-source/tools/security')
-          import package_evidence,dependency_audit
+          import package_evidence,dependency_audit,source_manifest,shutil
           locks=json.loads(pathlib.Path('policy-source/tools/native/engines-lock.json').read_text())
           consumer=json.loads(pathlib.Path('consumer-evidence/consumer-review.json').read_text())
           def objects(text):
@@ -83,7 +83,7 @@ jobs:
                   while i<len(text) and text[i].isspace():i+=1
                   if i==len(text):break
                   value,i=d.raw_decode(text,i);yield value
-          result={'release_status':'BLOCKED','scope':'Separate native build experiments with verified Xray Java API/class equality; not a combined APK, full SCA, installation or updater approval','android_build_run':36319475913,'xray_rebuild_run':36318208046,'android_builds':[],'xray':json.loads(pathlib.Path('xray-evidence/summary.json').read_text())}
+          result={'release_status':'BLOCKED','scope':'Separate native build experiments with verified Xray Java API/class equality; not a combined APK, full SCA, installation or updater approval','android_build_run':36319475913,'xray_rebuild_run':36321197720,'android_builds':[],'xray':json.loads(pathlib.Path('xray-evidence/summary.json').read_text())}
           for p in sorted(pathlib.Path('android-evidence').glob('*.json')):
               r=json.loads(p.read_text());result['android_builds'].append(r)
               core=next(c for c in locks if c['name']==r['engine'])
@@ -113,12 +113,21 @@ jobs:
                       verified_count+=1
           if verified_count!=4:raise ValueError('Expected four exact consumer-to-compiler-proof links')
           result['single_advisory_consumer_review']=consumer
-          result['scope_policy_source']='650df331fa9e21263efeb32dcf87bac329a81f72'
+          result['scope_policy_source']='628d8467b1d528ccb83949567667d239f72086b6'
           for b in result['xray']['binaries']:
 
               inv=b['compiler_inventory'];packages=inv['packages']
+              package_evidence.validate_closure(packages,inv.get('root'))
+              if inv.get('coverage_schema')!=2 or inv['root']['import_path']!='gobind/gobind' or inv['root']['module_path']!='gobind' or inv.get('cgo_enabled')!='1':raise ValueError('Unknown generated JNI compiler contract')
               if not packages or 'github.com/2dust/AndroidLibXrayLite' not in packages or 'golang.org/x/mobile/bind/seq' not in packages:raise ValueError('Incomplete generated JNI graph')
               print('::notice title=XRAY_COMPILER_GRAPH::'+json.dumps({'abi':b['abi'],'sha256':b['sha256'],'package_count':len(packages),'openpgp_packages':[p for p in packages if p.startswith('golang.org/x/crypto/openpgp')]}))
+          provenance=result['xray']['source_provenance']
+          manifest_path=pathlib.Path('xray-evidence/source-tree-manifest.json');manifest_bytes=manifest_path.read_bytes();manifest=json.loads(manifest_bytes)
+          if len(manifest_bytes)>8*1024*1024 or hashlib.sha256(manifest_bytes).hexdigest()!=provenance['source_tree_manifest_sha256']:raise ValueError('Source manifest identity mismatch')
+          if source_manifest.canonical(manifest)!=manifest_bytes or manifest.get('schema')!=1 or manifest['file_count']!=len(manifest['files']) or manifest['file_count']!=provenance['source_tree_file_count']:raise ValueError('Unknown source manifest contract')
+          if provenance['source_lock']!=json.loads(pathlib.Path('policy-source/tools/native/xray-source-lock.json').read_text()):raise ValueError('Unrecognized wrapper source')
+          shutil.copyfile(manifest_path,'xray-source-tree-manifest.json')
+          print('::notice title=XRAY_SOURCE_PROVENANCE::'+json.dumps({'files':manifest['file_count'],'bytes':manifest['total_bytes'],'manifest_sha256':provenance['source_tree_manifest_sha256'],'aar_sha256':result['xray']['aar_sha256']}))
           if result['xray'].get('public_java_api_equal') is not True or result['xray'].get('all_java_class_bytes_equal') is not True:raise ValueError('Missing compatibility evidence')
           if len(result['android_builds'])!=4:raise ValueError('Expected four actual Android engine builds')
           pathlib.Path('summary.json').write_text(json.dumps(result,indent=2)+'\n')
@@ -126,7 +135,9 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: native-repair-summary
-          path: summary.json
+          path: |
+            summary.json
+            xray-source-tree-manifest.json
           retention-days: 7
   preserve-repair-evidence:
     needs: inspect-repaired-builds
@@ -149,8 +160,15 @@ jobs:
           if report['release_status']!='BLOCKED':raise ValueError('No release authority in this workflow')
           base='repos/'+os.environ['GITHUB_REPOSITORY']+'/git/'
           def api(path,data):return json.loads(subprocess.check_output(['gh','api',base+path,'--method','POST','--input','-'],input=json.dumps(data).encode()))
-          blob=api('blobs',{'content':base64.b64encode(data).decode(),'encoding':'base64'})['sha']
-          tree=api('trees',{'tree':[{'path':'summary.json','mode':'100644','type':'blob','sha':blob}]})['sha']
+          manifest=pathlib.Path('evidence/xray-source-tree-manifest.json')
+          if manifest.stat().st_size>8*1024*1024:raise ValueError('Oversized source manifest')
+          import hashlib
+          if hashlib.sha256(manifest.read_bytes()).hexdigest()!=report['xray']['source_provenance']['source_tree_manifest_sha256']:raise ValueError('Unbound source manifest')
+          entries=[]
+          for file in [path,manifest]:
+              blob=api('blobs',{'content':base64.b64encode(file.read_bytes()).decode(),'encoding':'base64'})['sha']
+              entries.append({'path':file.name,'mode':'100644','type':'blob','sha':blob})
+          tree=api('trees',{'tree':entries})['sha']
           ref='refs/heads/qa/native-security-repair-evidence'
           old=subprocess.run(['gh','api',base+'ref/heads/qa/native-security-repair-evidence'],capture_output=True,text=True)
           parents=[json.loads(old.stdout)['object']['sha']] if old.returncode==0 else []
