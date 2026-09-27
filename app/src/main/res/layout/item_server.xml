@@ -20,7 +20,7 @@
                 android:layout_marginTop="4dp" android:textSize="12sp" android:textColor="@color/brand_text" />
         </LinearLayout>
         <ImageView android:id="@id/check" android:layout_width="24dp" android:layout_height="24dp"
-            android:layout_marginStart="4dp" android:visibility="invisible" android:src="@drawable/ic_check"
+            android:layout_marginStart="4dp" android:visibility="invisible" android:src="@drawable/ic_check" android:tint="@color/brand_text"
             android:contentDescription="@string/server_selected" />
         <TextView android:id="@id/fav" style="@style/ActionText"
             android:layout_width="@dimen/touch_target_min" android:layout_height="@dimen/touch_target_min"
@@ -29,6 +29,6 @@
     </LinearLayout>
     <TextView android:id="@id/ping" style="@style/ActionText"
         android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp"
-        android:gravity="end|center_vertical" android:paddingStart="8dp" android:paddingEnd="8dp"
+        android:gravity="start|center_vertical" android:paddingStart="8dp" android:paddingEnd="8dp"
         android:textSize="13sp" android:textStyle="bold" android:text="@string/latency_untested" />
 </LinearLayout>

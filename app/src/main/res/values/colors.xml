@@ -6,7 +6,7 @@
     <color name="divider">#ffe5e7eb</color>
     <color name="surface">#ffffffff</color>
     <color name="text_primary">#ff111827</color>
-    <color name="text_secondary">#ff6b7280</color>
+    <color name="text_secondary">#ff5b6474</color>
         <color name="brand_text">#3046CF</color>
     <color name="latency_good">#006C4C</color>
     <color name="latency_moderate">#855000</color>

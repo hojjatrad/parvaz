@@ -109,7 +109,10 @@ public class Profile {
     }
 
     public String displayAddress() {
-        return safe(this.address, "") + ":" + this.port;
+        String host = safe(this.address, "");
+        // Display only: IPv6 must not be confused with its port. Connection fields stay unchanged.
+        if (host.indexOf(':') >= 0 && !(host.startsWith("[") && host.endsWith("]"))) host = "[" + host + "]";
+        return host + ":" + this.port;
     }
 
     public Profile normalize() {

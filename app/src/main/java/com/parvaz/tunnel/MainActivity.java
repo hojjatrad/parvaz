@@ -691,7 +691,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
                     long longExtra = intent.getLongExtra("uplink", 0L);
                     long longExtra2 = intent.getLongExtra("downlink", 0L);
                     long longExtra3 = intent.getLongExtra("duration", 0L);
-                    mainActivity.speedText.setText("↓ " + MainActivity.fmtSpeed(longExtra2) + "    ↑ " + MainActivity.fmtSpeed(longExtra));
+                    mainActivity.speedText.setText(mainActivity.getString(R.string.transfer_rate_lines, MainActivity.fmtSpeed(longExtra2), MainActivity.fmtSpeed(longExtra)));
                     mainActivity.timerText.setText(String.format(Locale.US, "%02d:%02d:%02d", Long.valueOf(longExtra3 / 3600), Long.valueOf((longExtra3 % 3600) / 60), Long.valueOf(longExtra3 % 60)));
                     if (mainActivity.sparkline != null) {
                         mainActivity.sparkline.push(longExtra2, longExtra);
@@ -1666,7 +1666,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
                 this.timerText.setText("00:00:00");
             }
             if (this.speedText != null) {
-                this.speedText.setText("↓ " + fmtSpeed(0L) + "    ↑ " + fmtSpeed(0L));
+                this.speedText.setText(getString(R.string.transfer_rate_lines, fmtSpeed(0L), fmtSpeed(0L)));
             }
             // A graph of a session that has ended is misleading, so drop the history
             // rather than freezing the last shape on screen.

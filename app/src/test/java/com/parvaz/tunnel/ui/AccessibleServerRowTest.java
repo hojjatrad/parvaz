@@ -40,6 +40,7 @@ public class AccessibleServerRowTest {
   for(String lang:new String[]{"fa","en"})for(boolean night:new boolean[]{false,true})for(float font:new float[]{1f,2f})for(int width:new int[]{320,600,840}){
    Context c=context(lang,night,font,width);ServerAdapter.b h=row(c,width,-12,false);float density=c.getResources().getDisplayMetrics().density;
    assertTrue(lang+" width="+width+" font="+font+" name collapsed",h.f369A.getWidth()>=96*density);
+   assertEquals("[2001:db8::1]:443",h.u.getText().toString());
    assertNotNull(h.f370B.getLayout());assertEquals("status must not be silently ellipsized",0,h.f370B.getLayout().getEllipsisCount(h.f370B.getLineCount()-1));
    assertEquals(h.f370B.getText().length(),h.f370B.getLayout().getLineEnd(h.f370B.getLineCount()-1));
    assertTrue(h.f370B.getWidth()<=h.itemView.getWidth());assertEquals(lang.equals("fa")?View.LAYOUT_DIRECTION_RTL:View.LAYOUT_DIRECTION_LTR,h.itemView.getLayoutDirection());
@@ -57,6 +58,7 @@ public class AccessibleServerRowTest {
   for(boolean night:new boolean[]{false,true})for(int ping:new int[]{120,450,900,-2,-11}){
    Context c=context("fa",night,1,360);ServerAdapter.b h=row(c,360,ping,true);int surface=c.getColor(R.color.surface);
    assertTrue("latency contrast night="+night+" value="+ping,ColorUtils.calculateContrast(h.f370B.getCurrentTextColor(),surface)>=4.5);
+   assertTrue("secondary text on page",ColorUtils.calculateContrast(c.getColor(R.color.text_secondary),c.getColor(R.color.bg))>=4.5);
    assertTrue("protocol badge contrast",ColorUtils.calculateContrast(h.f371v.getCurrentTextColor(),surface)>=4.5);
    assertTrue("favorite contrast",ColorUtils.calculateContrast(h.f374y.getCurrentTextColor(),surface)>=3.0);
   }
@@ -64,7 +66,7 @@ public class AccessibleServerRowTest {
  private View home(Context c,int width){
   View root=LayoutInflater.from(c).inflate(R.layout.activity_main,new FrameLayout(c),false);root.setLayoutDirection(c.getResources().getConfiguration().getLayoutDirection());
   ((TextView)root.findViewById(R.id.status_text)).setText(c.getString(R.string.latency_route_unverified));
-  ((TextView)root.findViewById(R.id.speed_text)).setText("↓ 123.45 MB/s    ↑ 678.90 MB/s");
+  ((TextView)root.findViewById(R.id.speed_text)).setText(c.getString(R.string.transfer_rate_lines,"123.45 MB/s","678.90 MB/s"));
   int px=Math.round(width*c.getResources().getDisplayMetrics().density);root.measure(View.MeasureSpec.makeMeasureSpec(px,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(800,View.MeasureSpec.EXACTLY));root.layout(0,0,px,800);return root;
  }
  @Test public void homeStatisticsAndStatusFitSmallLargeFontAndTabletWindows(){

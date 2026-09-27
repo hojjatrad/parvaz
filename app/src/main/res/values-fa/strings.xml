@@ -495,4 +495,6 @@
     <string name="favorite_remove">حذف سرور از علاقه‌مندی‌ها</string>
     <string name="filter_favorites">نمایش سرورهای مورد علاقه</string>
     <string name="filter_all_servers">نمایش همهٔ سرورها</string>
+    <string name="transfer_rate_lines">↓ %1$s\n↑ %2$s</string>
+    <string name="transfer_rate_idle">↓ 0 B/s\n↑ 0 B/s</string>
 </resources>
