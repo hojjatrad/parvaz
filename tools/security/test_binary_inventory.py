@@ -3,7 +3,7 @@ spec=importlib.util.spec_from_file_location('binary_inventory',pathlib.Path(__fi
 class BinaryInventoryTest(unittest.TestCase):
  def test_realistic_embedded_compiler_and_dependencies(self):
   value=inventory.parse('/tmp/engine.so: go1.26.7\n\tpath\texample.org/engine\n\tmod\texample.org/engine\t(devel)\n\tdep\texample.org/library\tv1.2.3\th1:sum\n\tbuild\tGOOS=android\n')
-  self.assertEqual(value,{'go_version':'1.26.7','modules':[{'name':'example.org/library','version':'v1.2.3'}],'main_module':{'name':'example.org/engine','version':'(devel)'}})
+  self.assertEqual(value,{'goos':'android','go_version':'1.26.7','modules':[{'name':'example.org/library','version':'v1.2.3'}],'main_module':{'name':'example.org/engine','version':'(devel)'}})
  def test_replacement_uses_actual_module_not_original(self):
   value=inventory.parse('engine.so: go1.26.7\n\tdep\texample.org/original\tv1.0.0\th1:x\n\t=>\texample.org/fork\tv1.0.2\th1:y\n')
   self.assertEqual(value['modules'],[{'name':'example.org/fork','version':'v1.0.2','upstream_baseline':{'name':'example.org/original','version':'v1.0.0'}}])

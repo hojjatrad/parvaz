@@ -6,7 +6,7 @@ def parse(text,local_root=None):
  if not lines:raise ValueError('Empty Go binary build metadata')
  match=re.search(r':\s+(go\d+\.\d+(?:\.\d+)?)(?:\s|$)',lines[0])
  if not match:raise ValueError('Unrecognized Go compiler metadata')
- modules=[];pending=None;main=None
+ modules=[];pending=None;main=None;goos=None
  for line in lines[1:]:
   fields=line.strip().split()
   if not fields:continue
@@ -24,10 +24,13 @@ def parse(text,local_root=None):
    else:
     pending['upstream_baseline']={'name':pending['name'],'version':pending['version']}
     pending.update(name=fields[1],version=fields[2])
+  elif fields[0]=='build' and len(fields)==2 and fields[1].startswith('GOOS='):
+   goos=fields[1].split('=',1)[1];pending=None
   else:pending=None
  if not modules:raise ValueError('Missing binary dependency table; cannot infer non-applicability')
  if any(not r['version'].startswith('v') for r in modules):raise ValueError('Unversioned binary dependency requires review')
  result={'go_version':match[1].removeprefix('go'),'modules':modules}
+ if goos:result['goos']=goos
  if main:result['main_module']=main
  return result
 

@@ -3,7 +3,7 @@ import os,pathlib,runpy,subprocess,sys,tempfile,unittest
 from unittest.mock import patch
 HELPER=pathlib.Path(__file__).with_name('prepare_emulator.py')
 class EmulatorBoundaryTest(unittest.TestCase):
- def run_helper(self,serial='emulator-5554',qemu='1',sdk='30',abis='x86_64,arm64-v8a',permission='1',mutations_allowed=False,remount_requests_reboot=False):
+ def run_helper(self,serial='emulator-5554',qemu='1',sdk='30',abis='x86_64,arm64-v8a',permission='1',mutations_allowed=False,bad_staging=False,bad_readback=False):
   self.mutations=[];self.commands=[]
   def fake(cmd,**kwargs):
    self.commands.append(cmd)
@@ -17,7 +17,8 @@ class EmulatorBoundaryTest(unittest.TestCase):
    self.mutations.append(args)
    if not mutations_allowed:raise AssertionError('An unapproved device mutation was attempted')
    self.assertTrue(bound,'Every mutation must stay bound to the verified emulator')
-   if args==['remount'] and remount_requests_reboot and self.mutations.count(['remount'])==1:return 'Now reboot your device for settings to take effect'
+   if args[:2]==['shell','mktemp']:return '/unsafe' if bad_staging else '/data/local/tmp/parvaz-ca.ABC123'
+   if 'cat' in args:return 'wrong' if bad_readback else 'synthetic fixture, not a certificate'
    return ''
   with tempfile.TemporaryDirectory() as temp:
    cert=pathlib.Path(temp)/'cert.pem';cert.write_text('synthetic fixture, not a certificate')
@@ -35,12 +36,24 @@ class EmulatorBoundaryTest(unittest.TestCase):
  def test_abi_must_be_an_exact_token(self):self.refused(abis='x86_64,not-arm64-v8a')
  def test_approved_emulator_uses_same_target_for_every_mutation(self):
   self.run_helper(mutations_allowed=True);self.assertIn(['root'],self.mutations);self.assertTrue(any(c[:1]==['push'] for c in self.mutations))
- def test_writable_avd_does_not_disable_verity_or_reboot(self):
+ def test_ca_overlay_never_disables_verity_remounts_disk_or_reboots(self):
   self.run_helper(mutations_allowed=True)
-  self.assertNotIn(['disable-verity'],self.mutations);self.assertNotIn(['reboot'],self.mutations)
- def test_explicit_remount_reboot_request_uses_same_verified_target(self):
-  self.run_helper(mutations_allowed=True,remount_requests_reboot=True)
-  self.assertIn(['disable-verity'],self.mutations);self.assertIn(['reboot'],self.mutations);self.assertEqual(self.mutations.count(['remount']),2)
+  for command in ['disable-verity','reboot','remount']:self.assertNotIn([command],self.mutations)
+  self.assertIn(['shell','stop'],self.mutations);self.assertIn(['shell','start'],self.mutations)
+  mounts=[c for c in self.mutations if 'mount' in c]
+  self.assertEqual(len(mounts),1);self.assertEqual(mounts[0][:7],['shell','nsenter','-t','1','-m','--','mount'])
+  self.assertIn('tmpfs',mounts[0])
+ def test_original_system_roots_are_copied_before_overlay(self):
+  self.run_helper(mutations_allowed=True)
+  copy=['shell','cp','-R','/system/etc/security/cacerts/.','/data/local/tmp/parvaz-ca.ABC123']
+  self.assertLess(self.mutations.index(copy),self.mutations.index(['shell','stop']))
+ def test_unexpected_staging_path_refused_before_framework_stop(self):
+  with self.assertRaises(SystemExit):self.run_helper(mutations_allowed=True,bad_staging=True)
+  self.assertNotIn(['shell','stop'],self.mutations)
+ def test_readback_failure_restarts_framework_but_does_not_enable_proxy(self):
+  with self.assertRaises(SystemExit):self.run_helper(mutations_allowed=True,bad_readback=True)
+  self.assertIn(['shell','start'],self.mutations)
+  self.assertFalse(any('http_proxy' in c for c in self.mutations))
 class RunnerCleanupBoundaryTest(unittest.TestCase):
  def test_refused_physical_target_is_not_mutated_by_exit_trap(self):
   import shutil

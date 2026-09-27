@@ -34,7 +34,7 @@ def components(native):
   binaries=binary_inventory.scan(ROOT)
   (OUT/'binary-runtime.json').write_text(json.dumps(binaries,indent=2)+'\n')
   for binary in binaries:
-   evidence={'binary':binary['binary'],'abi':binary['abi'],'sha256':binary['sha256']}
+   evidence={'binary':binary['binary'],'abi':binary['abi'],'sha256':binary['sha256'],'goos':binary.get('goos')}
    add('Go','stdlib',binary['go_version'],evidence)
    for module in binary['modules']:
     add('Go',module['name'],module['version'],evidence)
@@ -82,6 +82,24 @@ def purl(c):
   return 'pkg:github/'+name.lower()+'@'+c['version']
  return 'pkg:golang/'+c['name']+'@'+c['version']
 
+def excludes_verified_binary_os(component, advisory):
+ # Scope evidence, not a vulnerability waiver. Android also satisfies Linux
+ # build constraints. Missing scope, unknown OS or fork baselines stay open.
+ if component['ecosystem']!='Go':return False
+ binaries=[s for s in component['sources'] if 'binary' in s]
+ if not binaries or any(not s.get('goos') or s.get('fork_target') for s in binaries):return False
+ targets={s['goos'] for s in binaries}
+ if 'android' in targets:targets.add('linux')
+ affected=[a for a in advisory.get('affected',[]) if a.get('package',{}).get('ecosystem')=='Go' and a['package'].get('name')==component['name']]
+ if not affected:return False
+ for a in affected:
+  imports=a.get('ecosystem_specific',{}).get('imports',[])
+  if not imports:return False
+  for item in imports:
+   systems=item.get('goos')
+   if not systems or not isinstance(systems,list) or not all(isinstance(x,str) and x for x in systems) or targets.intersection(systems):return False
+ return True
+
 def run(native):
  OUT.mkdir(parents=True,exist_ok=True);items=components(native);now=datetime.datetime.now(datetime.timezone.utc).isoformat()
  comp=[]
@@ -108,8 +126,10 @@ def run(native):
   active=any(not details[v['id']].get('withdrawn') for v in row['vulnerabilities'])
   c=row['component']
   not_built=native and c['ecosystem']=='Go' and not any('binary' in source for source in c['sources'])
-  row['disposition']='WITHDRAWN' if not active else ('NOT_IN_ANY_SHIPPED_BINARY_MODULE_TABLE' if not_built else 'REVIEW_REQUIRED')
-  if active and not not_built:actionable.append(row)
+  row['advisory_dispositions']={v['id']:('WITHDRAWN' if details[v['id']].get('withdrawn') else ('NOT_APPLICABLE_TO_VERIFIED_BINARY_OS' if native and excludes_verified_binary_os(c,details[v['id']]) else 'REVIEW_REQUIRED')) for v in row['vulnerabilities']}
+  excluded=active and all(x!='REVIEW_REQUIRED' for x in row['advisory_dispositions'].values())
+  row['disposition']='WITHDRAWN' if not active else ('NOT_IN_ANY_SHIPPED_BINARY_MODULE_TABLE' if not_built else ('NOT_APPLICABLE_TO_VERIFIED_BINARY_OS' if excluded else 'REVIEW_REQUIRED'))
+  if row['disposition']=='REVIEW_REQUIRED':actionable.append(row)
  report={'timestamp':now,'source_commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),'native_graphs_included':native,'components_queried':len(items),'binary_runtime_verified':native,'status':'REVIEW_REQUIRED' if actionable else ('NO_APPLICABLE_MATCHES_IN_BUILT_RUNTIME' if findings else 'NO_KNOWN_MATCHES_IN_SCANNED_SCOPE'),'findings':findings,'advisories':details}
  (OUT/'vulnerability-review.json').write_text(json.dumps(report,indent=2)+'\n')
  print('::notice title=DEPENDENCY_REVIEW::'+report['status']+' components='+str(len(items))+' native_graphs='+str(native))
