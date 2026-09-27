@@ -52,16 +52,19 @@ for label,aar in [('baseline',baseline),('rebuilt',output)]:
  (OUT/(label+'-public-api.txt')).write_text(api[label]);jarfile.unlink()
 if api['baseline']!=api['rebuilt']:raise ValueError('Generated public Java API mismatch')
 compiler_inventories={}
-from package_evidence import package_names
+from package_evidence import closed_import_graph
 ndk=pathlib.Path(env['ANDROID_NDK_HOME'])/'toolchains/llvm/prebuilt/linux-x86_64/bin'
 gopath=subprocess.check_output(['go','env','GOPATH'],cwd=source,env=env,text=True).strip()
 for abi,arch,cc in [('arm64-v8a','arm64','aarch64-linux-android24-clang'),('armeabi-v7a','arm','armv7a-linux-androideabi24-clang')]:
  generated=work/('src-android-'+arch)
  if not (generated/'go.mod').is_file():raise ValueError('Missing actual generated JNI module')
  targetenv=dict(env,GOOS='android',GOARCH=arch,GOARM='7',CGO_ENABLED='1',CC=str(ndk/cc),GOPATH=str(work)+os.pathsep+gopath,GOFLAGS='-mod=readonly')
- packages=package_names(subprocess.check_output(['go','list','-deps','-json','-buildmode=c-shared','-trimpath','./gobind'],cwd=generated,env=targetenv,text=True))
+ graph_command=['go','list','-deps','-json','-buildmode=c-shared','-trimpath','./gobind']
+ graph=closed_import_graph(subprocess.check_output(graph_command,cwd=generated,env=targetenv,text=True))
+ if graph['root']['import_path']!='gomobile.bind/gobind' or graph['root']['module_path']!='gomobile.bind':raise ValueError('Unexpected generated JNI main root')
+ packages=graph['packages']
  if 'golang.org/x/mobile/bind/seq' not in packages or 'github.com/2dust/AndroidLibXrayLite' not in packages:raise ValueError('Incomplete JNI dependency roots')
- compiler_inventories[abi]={'goos':'android','goarch':arch,'packages':packages,'generated_go_mod_sha256':hashlib.file_digest((generated/'go.mod').open('rb'),'sha256').hexdigest(),'scope':'Complete Go import graph of actual preserved generated JNI module; not a call graph'}
+ compiler_inventories[abi]={**graph,'inventory_command':graph_command,'cgo_enabled':'1','goos':'android','goarch':arch,'generated_go_mod_sha256':hashlib.file_digest((generated/'go.mod').open('rb'),'sha256').hexdigest(),'scope':'Complete Go import graph of actual preserved generated JNI module; not a call graph'}
 for name in ['go.mod','go.sum']:shutil.copyfile(source/name,OUT/name)
 subprocess.run(['go','install','golang.org/x/vuln/cmd/govulncheck@v1.8.0'],cwd=source,env=env,check=True)
 binaries=[]
@@ -84,7 +87,11 @@ with zipfile.ZipFile(output) as z:
    frames=finding.get('trace',[]);level='function_named_NOT_execution' if any(f.get('function') for f in frames) else ('package' if any(f.get('package') for f in frames) else 'module');counts[level]+=1
   binaries.append({'compiler_inventory':compiler_inventories[abi],'extraction':extraction,'finding_groups':grouped,'abi':abi,'sha256':hashlib.sha256(data).hexdigest(),'extraction_exit':extract.returncode,'scanner_exit_NOT_clean_verdict':scan.returncode,'stderr':(extract.stderr+scan.stderr)[-2000:]})
   file.unlink()
-report={'public_java_api_equal':True,'all_java_class_bytes_equal':class_hashes['baseline']==class_hashes['rebuilt'],'scope':'Review-only rebuilt AAR, NOT used by the app or approved for release','base_aar_sha256':lock['sha256'],'aar_sha256':hashlib.file_digest(output.open('rb'),'sha256').hexdigest(),'patch':patch,'gomobile_version':mobile,'command':command,'baseline_asset_hashes':asset_hashes,'binaries':binaries}
+from source_manifest import collect as source_tree_manifest,canonical
+source_bytes=canonical(source_tree_manifest(source))
+(OUT/'source-tree-manifest.json').write_bytes(source_bytes)
+source_provenance={'source_lock':json.loads((ROOT/'tools/native/xray-source-lock.json').read_text()),'go_version':subprocess.check_output(['go','env','GOVERSION'],cwd=source,env=env,text=True).strip(),'ndk':'29.0.14206865','mobile':mobile,'source_tree_manifest_sha256':hashlib.sha256(source_bytes).hexdigest(),'source_tree_file_count':json.loads(source_bytes)['file_count'],'go_mod_sha256':hashlib.file_digest((source/'go.mod').open('rb'),'sha256').hexdigest(),'go_sum_sha256':hashlib.file_digest((source/'go.sum').open('rb'),'sha256').hexdigest(),'vendor_modules_sha256':hashlib.file_digest((source/'vendor/modules.txt').open('rb'),'sha256').hexdigest(),'scope':'Exact review-build source tree inventory, not production source-bundle adoption or approval'}
+report={'source_provenance':source_provenance,'public_java_api_equal':True,'all_java_class_bytes_equal':class_hashes['baseline']==class_hashes['rebuilt'],'scope':'Review-only rebuilt AAR, NOT used by the app or approved for release','base_aar_sha256':lock['sha256'],'aar_sha256':hashlib.file_digest(output.open('rb'),'sha256').hexdigest(),'patch':patch,'gomobile_version':mobile,'command':command,'baseline_asset_hashes':asset_hashes,'binaries':binaries}
 (OUT/'summary.json').write_text(json.dumps(report,indent=2)+'\n')
 print('::notice title=XRAY_PUBLIC_JAVA_API::'+json.dumps({'public_api_equal':True,'class_bytes_equal':report['all_java_class_bytes_equal']}))
 for b in binaries:

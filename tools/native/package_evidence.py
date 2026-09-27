@@ -26,24 +26,34 @@ def inventory_command(core,goos):
  if core['tags']:cmd+=['-tags',core['tags']]
  return cmd+[core['package']]
 
-def validate_root(packages,root,core):
- module='github.com/'+core['repository']
- suffix=core['package'].removeprefix('./') if core['package']!='.' else ''
- expected=module+('/'+suffix if suffix else '')
+def validate_closure(packages,root):
  if not isinstance(root,dict) or root.get('name')!='main' or root.get('module_main') is not True:raise ValueError('Expected an actual main build root')
- if not isinstance(root.get('import_path'),str) or root['import_path'].lower()!=expected.lower() or not isinstance(root.get('module_path'),str) or root['module_path'].lower()!=module.lower():raise ValueError('Compiler root is not the pinned target')
+ if not isinstance(root.get('import_path'),str) or not root['import_path'] or not isinstance(root.get('module_path'),str) or not root['module_path']:raise ValueError('Missing root/module identity')
  deps=root.get('dependencies')
  if not isinstance(deps,list) or not all(isinstance(d,str) and d and not any(c.isspace() for c in d) for d in deps) or len(set(deps))!=len(deps) or 'runtime' not in deps:raise ValueError('Missing full root dependency closure')
  if root['import_path'] in deps or set(packages)!=set(deps+[root['import_path']]):raise ValueError('Package records do not equal the main root transitive dependency closure')
 
-def closed_graph(text,core):
+def validate_root(packages,root,core):
+ validate_closure(packages,root)
+ module='github.com/'+core['repository']
+ suffix=core['package'].removeprefix('./') if core['package']!='.' else ''
+ expected=module+('/'+suffix if suffix else '')
+ if root['import_path'].lower()!=expected.lower() or root['module_path'].lower()!=module.lower():raise ValueError('Compiler root is not the pinned target')
+
+def closed_import_graph(text):
  packages=package_names(text);records=list(objects(text))
  roots=[r for r in records if not r.get('DepOnly',False)]
  if len(roots)!=1:raise ValueError('Exactly one compiler root is required')
  r=roots[0];module=r.get('Module',{})
+ if not isinstance(module,dict):raise ValueError('Missing main module metadata')
  root={'import_path':r['ImportPath'],'name':r.get('Name'),'module_path':module.get('Path'),'module_main':module.get('Main'),'dependencies':r.get('Deps')}
- validate_root(packages,root,core)
+ validate_closure(packages,root)
  return {'coverage_schema':2,'packages':packages,'root':root}
+
+def closed_graph(text,core):
+ result=closed_import_graph(text)
+ validate_root(result['packages'],result['root'],core)
+ return result
 
 def collect(source,env,core):
  cmd=inventory_command(core,env['GOOS'])
