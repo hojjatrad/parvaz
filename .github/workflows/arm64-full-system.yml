@@ -12,6 +12,9 @@ jobs:
     steps:
       - name: Install official ARM64 system image and host renderer dependencies
         run: |
+          mkdir -p evidence
+          exec > >(tee evidence/preparation.log) 2>&1
+          trap 'rc=$?; if [ "$rc" -ne 0 ]; then python3 -c "import pathlib; print(\"::error title=ARM64_PREPARATION::\"+pathlib.Path(\"evidence/preparation.log\").read_text(errors=\"replace\")[-3500:].replace(\"%\",\"%25\").replace(\"\\n\",\"%0A\"))"; fi' EXIT
           sudo apt-get update -qq
           sudo apt-get install -y libpulse0 libnss3 libx11-6 libxcb1 libgl1 libasound2t64
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'emulator' 'platform-tools' 'system-images;android-30;google_apis;arm64-v8a'
