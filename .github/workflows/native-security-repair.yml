@@ -1,0 +1,195 @@
+name: Targeted native dependency repair and immutable ARM launch controls
+on:
+  push:
+    branches: ['security/native-dependency-repair', 'ci/xray-security-probe', 'ci/native-package-proof']
+    paths: ['tools/native/**', 'tools/upgrade-test/*launch_control*', '.github/workflows/native-security-repair.yml']
+concurrency:
+  group: native-security-repair-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+  actions: read
+jobs:
+  source-compatibility:
+    if: github.ref == 'refs/heads/security/native-dependency-repair' || github.ref == 'refs/heads/ci/native-package-proof'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: {persist-credentials: false}
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with: {go-version: '1.27.1', cache: false}
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with: {distribution: temurin, java-version: '17'}
+      - name: Test floor selection then compile the patched pinned sources
+        run: |
+          python3 -m unittest discover -s tools/native -p 'test_*.py'
+          python3 -m unittest discover -s tools/security -p 'test_*.py'
+          mkdir -p .cache/native/security-review
+          if ! python3 tools/native/build.py --host >.cache/native/security-review/build.log 2>&1; then
+            tail -80 .cache/native/security-review/build.log
+            python3 - <<'PY'
+          from pathlib import Path
+          text=Path('.cache/native/security-review/build.log').read_text(errors='replace')[-3500:]
+          print('::error title=NATIVE_PATCH_BUILD::'+text.replace('%','%25').replace('\n','%0A'))
+          PY
+            exit 1
+          fi
+          tail -30 .cache/native/security-review/build.log
+      - name: Real loopback protocol regression, not Android installation
+        run: |
+          bash tools/audit/run.sh
+          python3 tools/native/protocol_smoke.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: native-security-source-compatibility
+          path: .cache/native/security-review/
+          include-hidden-files: true
+          retention-days: 7
+  arm-launch-control:
+    if: github.ref == 'refs/heads/security/native-dependency-repair'
+    strategy:
+      fail-fast: false
+      matrix: {api: [31, 32]}
+    env:
+      PARVAZ_LAUNCH_API: ${{ matrix.api }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: {persist-credentials: false}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: signed-apks-for-upgrade-test
+          path: release-artifacts
+          run-id: 36311876249
+          github-token: ${{ github.token }}
+      - name: Prepare reviewed tools and emulator acceleration
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'build-tools;34.0.0'
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: ${{ matrix.api }}
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
+          script: bash tools/upgrade-test/run_launch_control.sh
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: arm${{ matrix.api }}-immutable-launch-control
+          path: .cache/launch-control/
+          include-hidden-files: true
+          retention-days: 7
+  xray-rebuild-probe:
+    # This independent rebuild already passed; compiler-consumer probes use the unchanged official AAR.
+    if: github.ref != 'refs/heads/ci/native-package-proof'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: {persist-credentials: false}
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with: {go-version: '1.27.1', cache: false}
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with: {distribution: temurin, java-version: '17'}
+      - name: Build a review-only patched AAR from the pinned wrapper source
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-34' 'ndk;29.0.14206865'
+          bash tools/release/fetch_core.sh
+          mkdir -p .cache/xray-security-review
+          if ! python3 tools/native/rebuild_xray_probe.py >.cache/xray-security-review/build.log 2>&1; then
+            tail -60 .cache/xray-security-review/build.log
+            python3 - <<'PYERROR'
+          from pathlib import Path
+          text=Path('.cache/xray-security-review/build.log').read_text(errors='replace')[-3500:]
+          print('::error title=XRAY_REBUILD_PROBE::'+text.replace('%','%25').replace('\n','%0A'))
+          PYERROR
+            exit 1
+          fi
+          tail -15 .cache/xray-security-review/build.log
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: xray-source-rebuild-review
+          path: |
+            .cache/xray-security-review/*.json
+            .cache/xray-security-review/*.jsons
+            .cache/xray-security-review/*.log
+            .cache/xray-security-review/go.*
+            .cache/xray-security-review/*-public-api.txt
+          include-hidden-files: true
+          retention-days: 7
+  patched-android-build:
+    if: github.ref == 'refs/heads/security/native-dependency-repair' || github.ref == 'refs/heads/ci/native-package-proof'
+    needs: source-compatibility
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: {persist-credentials: false}
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with: {go-version: '1.27.1', cache: false}
+      - name: Compile both Android ABIs and bind complete package lists to outputs
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'ndk;27.2.12479018'
+          mkdir -p .cache/native/security-review
+          if ! python3 tools/native/build.py >.cache/native/security-review/android-build.log 2>&1; then
+            tail -60 .cache/native/security-review/android-build.log
+            python3 - <<'PYERROR'
+          from pathlib import Path
+          text=Path('.cache/native/security-review/android-build.log').read_text(errors='replace')[-3500:]
+          print('::error title=PATCHED_ANDROID_BUILD::'+text.replace('%','%25').replace('\n','%0A'))
+          PYERROR
+            exit 1
+          fi
+          python3 - <<'PYREPORT'
+          import json,pathlib,sys
+          sys.path.insert(0,'tools/native')
+          from package_evidence import verify
+          locks=json.loads(pathlib.Path('tools/native/engines-lock.json').read_text())
+          for p in sorted(pathlib.Path('.cache/native/security-review').glob('*.json')):
+              r=json.loads(p.read_text());core=next(c for c in locks if c['name']==r['engine']);packages=verify(r,core,r['abi'],r['sha256'],r['go_version'].removeprefix('go'))
+              print('::notice title=PATCHED_ANDROID_BINARY::'+json.dumps({'engine':r['engine'],'abi':r['abi'],'sha256':r['sha256'],'package_count':len(packages),'openpgp_packages':[p for p in packages if p.startswith('golang.org/x/crypto/openpgp')],'resolved_floors':r['dependency_patch']['resolved_floors']}))
+          PYREPORT
+      - name: Exercise actual binary-to-proof consumer; original Xray remains unmodified
+        run: |
+          bash tools/release/fetch_core.sh
+          python3 - <<'PYCONSUMER'
+          import pathlib,sys,json
+          sys.path.insert(0,'tools/security')
+          import binary_inventory,dependency_audit
+          rows=binary_inventory.scan(pathlib.Path.cwd())
+          covered=[b for b in rows if 'compiled_packages' in b]
+          if len(rows)!=6 or len(covered)!=4:raise ValueError('Expected four validated repaired outputs and two unchanged Xray outputs')
+          advisory=dependency_audit.request('vulns/GO-2026-5932')
+          components={}
+          for binary in rows:
+              for module in binary['modules']:
+                  if module['name']!='golang.org/x/crypto':continue
+                  c=components.setdefault(module['version'],{'ecosystem':'Go','name':module['name'],'sources':[]})
+                  c['sources'].append(dependency_audit.compiled_package_evidence(binary,module['name']))
+          results=[{'version':v,'binaries':c['sources'],'excluded_by_actual_compiler_package_scope':dependency_audit.excludes_verified_compiled_packages(c,advisory)} for v,c in components.items()]
+          report={'release_status':'BLOCKED','scope':'Actual binary/proof consumer and one-advisory applicability check only; not full SCA or a combined APK; Xray is still the original AAR','results':results,'advisory':advisory}
+          pathlib.Path('.cache/native/consumer-review.json').write_text(json.dumps(report,indent=2)+'\n')
+          print('::notice title=NATIVE_PACKAGE_CONSUMER::'+json.dumps({'validated_outputs':len(covered),'results':[{'version':r['version'],'excluded':r['excluded_by_actual_compiler_package_scope'],'binaries':len(r['binaries'])} for r in results]}))
+          PYCONSUMER
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: native-package-consumer-proof
+          path: .cache/native/consumer-review.json
+          include-hidden-files: true
+          retention-days: 7
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: patched-android-build-evidence
+          path: .cache/native/security-review/
+          include-hidden-files: true
+          retention-days: 7

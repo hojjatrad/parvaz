@@ -23,3 +23,27 @@ class DependencyAuditTest(unittest.TestCase):
    with patch.object(audit,'ROOT',root),patch.object(audit,'OUT',root):
     with self.assertRaisesRegex(ValueError,'Missing shipped native binary'):audit.components(True)
 if __name__=='__main__':unittest.main()
+
+class AdvisoryPlatformScopeTest(unittest.TestCase):
+ def setUp(self):
+  self.c={'ecosystem':'Go','name':'example.org/sys','sources':[{'binary':'arm64.so','goos':'android'},{'binary':'arm.so','goos':'android'}]}
+  self.a={'affected':[{'package':{'name':'example.org/sys','ecosystem':'Go'},'ecosystem_specific':{'imports':[{'path':'example.org/sys/windows','goos':['windows']}]}}]}
+ def check(self):return audit.excludes_verified_binary_os(self.c,self.a)
+ def test_explicit_windows_only_cannot_apply_to_both_android_binaries(self):self.assertTrue(self.check())
+ def test_android_linux_overlap_is_not_excluded(self):
+  for os in ['android','linux']:
+   self.a['affected'][0]['ecosystem_specific']['imports'][0]['goos']=[os];self.assertFalse(self.check())
+ def test_unknown_binary_os_keeps_finding_open(self):
+  del self.c['sources'][1]['goos'];self.assertFalse(self.check())
+ def test_one_affected_abi_keeps_finding_open(self):
+  self.c['sources'][1]['goos']='windows';self.assertFalse(self.check())
+ def test_no_binary_is_not_os_evidence(self):
+  self.c['sources']=[];self.assertFalse(self.check())
+ def test_missing_or_empty_advisory_scope_keeps_finding_open(self):
+  self.a['affected'][0]['ecosystem_specific']['imports'][0]['goos']=[];self.assertFalse(self.check())
+  self.a['affected'][0]['ecosystem_specific']['imports']=[];self.assertFalse(self.check())
+ def test_one_unscoped_import_keeps_finding_open(self):
+  self.a['affected'][0]['ecosystem_specific']['imports'].append({'path':'example.org/sys/shared'});self.assertFalse(self.check())
+ def test_fork_or_foreign_module_cannot_inherit_an_exclusion(self):
+  self.c['sources'][0]['fork_target']='fork/version';self.assertFalse(self.check());del self.c['sources'][0]['fork_target']
+  self.c['name']='other';self.assertFalse(self.check())

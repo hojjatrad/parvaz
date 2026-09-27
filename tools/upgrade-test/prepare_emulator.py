@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
-"""Explicitly approved disposable Android30 emulator only; no APK trust change.
-Every device command is pinned to the emulator selected before modification.
-Importing this module has no ADB or filesystem side effects.
+"""Explicitly approved Android30 emulator only; no production APK trust change.
+Use a RAM-only system-CA overlay in init's mount namespace, preserving existing
+roots. Never disable verity, remount the disk image, or reboot the emulator.
 """
 import os,pathlib,re,subprocess,sys,time
 
 def adb(*args):
- return subprocess.check_output(['adb',*args],text=True,stderr=subprocess.STDOUT,timeout=60).strip()
+ try:
+  return subprocess.check_output(['adb',*args],text=True,stderr=subprocess.STDOUT,timeout=60).strip()
+ except subprocess.CalledProcessError as e:
+  raise SystemExit('ADB fixture command failed: '+str(e.output)[-1500:]) from None
 
 def require_target(device):
  if device('shell','getprop','ro.kernel.qemu')!='1':raise SystemExit('Disposable emulator required; refusing device changes')
@@ -21,22 +24,46 @@ def prepare(cert):
  if not re.fullmatch(r'emulator-\d+',serial):raise SystemExit('Disposable emulator serial required; refusing device changes')
  device=lambda *args:adb('-s',serial,*args)
  require_target(device)
- # Validate the certificate before root, reboot or any trust-store modification.
  digest=subprocess.check_output(['openssl','x509','-in',str(cert),'-subject_hash_old','-noout'],text=True).splitlines()[0]
  if not re.fullmatch(r'[0-9a-fA-F]{8}',digest):raise SystemExit('Invalid temporary certificate hash')
- device('root');device('wait-for-device');device('disable-verity');device('reboot');device('wait-for-device')
- deadline=time.monotonic()+150
+ device('root');device('wait-for-device');require_target(device)
+ work=device('shell','mktemp','-d','/data/local/tmp/parvaz-ca.XXXXXX')
+ if not re.fullmatch(r'/data/local/tmp/parvaz-ca\.[A-Za-z0-9]{6}',work):raise SystemExit('Unexpected disposable staging directory')
+ store='/system/etc/security/cacerts'
+ device('shell','cp','-R',store+'/.',work)
+ existing=set(device('shell','ls',work).split())
+ filename=next((digest+'.'+str(i) for i in range(100) if digest+'.'+str(i) not in existing),None)
+ if filename is None:raise SystemExit('No free CA hash slot; original roots must not be overwritten')
+ device('push',str(cert),work+'/'+filename)
+ device('shell','chmod','644',work+'/'+filename)
+ if device('shell','getenforce')!='Enforcing':raise SystemExit('Enforcing SELinux required for the installation fixture')
+ ns=('shell','nsenter','-t','1','-m','--')
+ stopped=False;restore_enforcement=False
+ try:
+  # New zygote/app processes must inherit init's mount, not adbd's namespace.
+  device('shell','stop');stopped=True
+  # Only the trusted disposable setup runs permissive. Restore enforcement before
+  # Android framework/app restart, including every failure path. Never ship this.
+  restore_enforcement=True;device('shell','setenforce','0')
+  device(*ns,'mount','-t','tmpfs','-o','mode=0755,uid=0,gid=0,context=u:object_r:system_file:s0','tmpfs',store)
+  device(*ns,'cp','-R',work+'/.',store)
+  if device(*ns,'cat',store+'/'+filename)!=cert.read_text().strip():raise SystemExit('Temporary CA readback mismatch')
+  device('shell','setprop','sys.boot_completed','0')
+ finally:
+  try:
+   if restore_enforcement:device('shell','setenforce','1')
+  finally:
+   if stopped:device('shell','start')
+ if device('shell','getenforce')!='Enforcing':raise SystemExit('SELinux restoration failed; APK test forbidden')
+ deadline=time.monotonic()+180
  while device('shell','getprop','sys.boot_completed')!='1':
-  if time.monotonic()>deadline:raise SystemExit('Emulator boot deadline')
+  if time.monotonic()>deadline:raise SystemExit('Framework restart deadline; no installation proof')
   time.sleep(2)
  require_target(device)
- device('root');device('wait-for-device');device('remount')
- destination='/system/etc/security/cacerts/'+digest+'.0'
- device('push',str(cert),destination);device('shell','chmod','644',destination)
  device('shell','settings','put','global','http_proxy','10.0.2.2:8765')
  for setting in ['window_animation_scale','transition_animation_scale','animator_duration_scale']:
   device('shell','settings','put','global',setting,'0')
- print('CI_ONLY_STAGED_TLS_TRUST_READY (verified disposable emulator; unmodified signed APK)')
+ print('CI_ONLY_STAGED_TLS_TRUST_READY (verified disposable emulator, RAM-only CA overlay; unmodified signed APK)')
 
 if __name__=='__main__':
  if len(sys.argv)!=2:raise SystemExit('Usage: prepare_emulator.py temporary-certificate.pem')

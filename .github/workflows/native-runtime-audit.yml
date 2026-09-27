@@ -1,0 +1,123 @@
+name: Inspect actual native symbols and ARM lab capability — no APK publication
+on:
+  push:
+    branches: ['ci/native-runtime-audit']
+    paths: ['tools/security/**', '.github/workflows/native-runtime-audit.yml']
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+  actions: read
+jobs:
+  native-symbols:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: {persist-credentials: false}
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with: {go-version: '1.27.1', cache: false}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: signed-apks-for-upgrade-test
+          path: release-artifacts
+          run-id: 36311876249
+          github-token: ${{ github.token }}
+      - name: Install pinned official inspection tool and inspect, never execute ARM binaries
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@v1.8.0
+          python3 tools/security/inspect_native_symbols.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: native-symbol-evidence
+          path: .cache/native-symbol-evidence/
+          include-hidden-files: true
+          retention-days: 7
+  publish-evidence:
+    needs: native-symbols
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: native-symbol-evidence
+          path: evidence
+      - name: Preserve only public native inspection evidence on a separate QA branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import pathlib,json,subprocess,os,base64
+          assert os.environ['GITHUB_REF']=='refs/heads/ci/native-runtime-audit'
+          base='repos/'+os.environ['GITHUB_REPOSITORY']+'/git/'
+          def api(path,data=None):
+              command=['gh','api',base+path]
+              if data is not None:command+=['--method','POST','--input','-']
+              return json.loads(subprocess.check_output(command,input=None if data is None else json.dumps(data).encode()))
+          path=pathlib.Path('evidence/summary.json')
+          assert path.stat().st_size<8*1024*1024
+          data=path.read_bytes()
+          parsed=json.loads(data)
+          assert len(parsed['reports'])==6 and parsed['tool']=='golang.org/x/vuln/cmd/govulncheck@v1.8.0'
+          blob=api('blobs',{'content':base64.b64encode(data).decode(),'encoding':'base64'})['sha']
+          tree=api('trees',{'tree':[{'path':'summary.json','mode':'100644','type':'blob','sha':blob}]})['sha']
+          ref='refs/heads/qa/native-symbol-evidence'
+          existing=subprocess.run(['gh','api',base+'ref/heads/qa/native-symbol-evidence'],capture_output=True,text=True)
+          parents=[json.loads(existing.stdout)['object']['sha']] if existing.returncode==0 else []
+          commit=api('commits',{'message':'Static native inspection for signed candidate 00b7046; NOT security approval','tree':tree,'parents':parents})['sha']
+          if parents:
+              subprocess.run(['gh','api',base+'refs/heads/qa/native-symbol-evidence','--method','PATCH','--input','-'],input=json.dumps({'sha':commit}).encode(),check=True)
+          else:api('refs',{'ref':ref,'sha':commit})
+          print('::notice title=NATIVE_EVIDENCE_COMMIT::'+commit)
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as report:
+              report.write('Native static evidence only, NOT security or installation approval: https://github.com/'+os.environ['GITHUB_REPOSITORY']+'/blob/'+commit+'/summary.json\n')
+          PY
+  arm-lab-capability:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Inspect official SDK QEMU capabilities without downloading a system image
+        run: |
+          set -u
+          sudo apt-get update -qq
+          sudo apt-get install -y libpulse0 libnss3 libx11-6 libxcb1 libgl1 libasound2t64
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'emulator' >/dev/null
+          find "$ANDROID_HOME/emulator/qemu" -maxdepth 2 -type f -name '*aarch64*' -print
+          export LD_LIBRARY_PATH="$ANDROID_HOME/emulator/lib64:$ANDROID_HOME/emulator/lib64/qt/lib:${LD_LIBRARY_PATH:-}"
+          QEMU="$ANDROID_HOME/emulator/qemu/linux-x86_64/qemu-system-aarch64"
+          if [ -x "$QEMU" ]; then
+            ldd "$QEMU" | grep "not found" || true
+            timeout 20 "$QEMU" -fuchsia -machine help > "$RUNNER_TEMP/fuchsia-machines.txt" 2>&1 || true
+            timeout 20 "$QEMU" -fuchsia -accel help > "$RUNNER_TEMP/fuchsia-accel.txt" 2>&1 || true
+            timeout 20 "$QEMU" -machine help > "$RUNNER_TEMP/machines.txt" 2>&1 || true
+            timeout 20 "$QEMU" -accel help > "$RUNNER_TEMP/accel.txt" 2>&1 || true
+            timeout 20 "$QEMU" -help > "$RUNNER_TEMP/help.txt" 2>&1 || true
+          else
+            echo 'No official bundled ARM64 QEMU binary' > "$RUNNER_TEMP/machines.txt"
+          fi
+          python3 - <<'PY'
+          import pathlib,os
+          for n in ['machines.txt','accel.txt','fuchsia-machines.txt','fuchsia-accel.txt','help.txt']:
+              p=pathlib.Path(os.environ['RUNNER_TEMP'])/n
+              if p.exists():
+                  text=p.read_text(errors='replace')[:3000]
+                  print('::notice title=ARM_LAB_CAPABILITY::'+text.replace('%','%25').replace('\n','%0A'))
+          PY
+  native-arm-host:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 4
+    steps:
+      - name: Check actual native ARM runner KVM availability, no Android or APK installation
+        run: |
+          uname -m
+          sudo modprobe kvm || true
+          if [ -c /dev/kvm ]; then
+            echo '::notice title=ARM_HOST_CAPABILITY::ARM host has a KVM character device; guest acceleration still requires a real boot test.'
+          else
+            echo '::notice title=ARM_HOST_CAPABILITY::ARM host has no KVM device. Native ARM Android VM installation has NOT been demonstrated.'
+          fi

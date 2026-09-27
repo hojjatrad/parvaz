@@ -1,0 +1,110 @@
+name: Combined corrected native candidate — no signing or publication
+on:
+  push:
+    branches: ['repair/combined-native-candidate']
+    paths: ['app/**', 'tools/**', '.github/workflows/combined-native-candidate.yml']
+permissions:
+  contents: read
+concurrency:
+  group: combined-native-candidate-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  host-protocols:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: {persist-credentials: false}
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with: {go-version: '1.27.1', cache: false}
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with: {distribution: temurin, java-version: '17'}
+      - run: |
+          python3 tools/native/build.py --host
+          bash tools/audit/run.sh
+          python3 tools/native/protocol_smoke.py
+  combined:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: {persist-credentials: false}
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with: {go-version: '1.27.1', cache: false}
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with: {distribution: temurin, java-version: '17'}
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a
+        with: {gradle-version: '8.9', cache-disabled: true}
+      - name: Fast fail-closed contract tests
+        run: |
+          python3 -m unittest discover -s tools/native -p 'test_*.py'
+          python3 -m unittest discover -s tools/security -p 'test_*.py'
+          python3 -m unittest discover -s tools/release -p 'test_*.py'
+          mkdir -p .cache/combined-candidate
+      - name: Prepare pinned toolchains
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/share/swift
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-34' 'build-tools;34.0.0' 'ndk;27.2.12479018' 'ndk;29.0.14206865'
+      - name: Build all corrected Android cores and integrate exact reviewed Xray candidate
+        run: |
+          python3 tools/native/build.py >.cache/combined-candidate/native-build.log 2>&1
+          python3 tools/native/xray_candidate.py build >.cache/combined-candidate/xray-build.log 2>&1
+      - name: Test the combined Java interface and retain strict lint gates
+        env: {PARVAZ_UNSIGNED_CANDIDATE: 'true'}
+        run: |
+          ./gradlew --no-daemon --max-workers=2 :app:testDebugUnitTest :app:lintDebug :app:lintRelease :app:writeRuntimeInventory >.cache/combined-candidate/android-checks.log 2>&1
+          python3 - <<'PYTEST'
+          import pathlib,xml.etree.ElementTree as ET
+          counts={k:0 for k in ['tests','failures','errors','skipped']}
+          for p in pathlib.Path('app/build/test-results/testDebugUnitTest').glob('TEST-*.xml'):
+              r=ET.parse(p).getroot()
+              for key in counts:counts[key]+=int(r.get(key,0))
+          print('::notice title=COMBINED_ANDROID_TESTS::'+str(counts))
+          if counts['tests']<587 or any(counts[k] for k in ['failures','errors','skipped']):raise SystemExit('Incomplete regression gate')
+          PYTEST
+      - name: Package exact corresponding source without resetting the patched wrapper
+        run: python3 tools/native/source_bundle.py --candidate-xray >.cache/combined-candidate/source-bundle.log 2>&1
+      - name: Full resolved Java and all six native binary vulnerability audit
+        run: python3 tools/security/dependency_audit.py --native --candidate-xray >.cache/combined-candidate/sca.log 2>&1
+      - name: Build and seal unsigned APKs; enforce exact packaged native bytes
+        env: {PARVAZ_UNSIGNED_CANDIDATE: 'true'}
+        run: |
+          bash tools/release/unsigned_candidate.sh
+          python3 tools/native/xray_candidate.py verify
+          python3 - <<'PY'
+          import pathlib,json,hashlib,subprocess
+          rows=[]
+          for p in sorted(pathlib.Path('app/build/outputs/apk/release').glob('*.apk')):
+              with p.open('rb') as f:digest=hashlib.file_digest(f,'sha256').hexdigest()
+              rows.append({'file':p.name,'sha256':digest,'bytes':p.stat().st_size})
+          report={'release_status':'BLOCKED','scope':'Unsigned combined build, source, SCA and packaged-byte validation only; NOT installation, migration, updater or handoff approval','source_commit':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),'apks':rows}
+          pathlib.Path('.cache/combined-candidate/summary.json').write_text(json.dumps(report,indent=2)+'\n')
+          print('::notice title=COMBINED_CANDIDATE_BUILT::'+json.dumps(report))
+          PY
+      - name: Surface bounded failure diagnostics
+        if: failure()
+        run: |
+          python3 - <<'PY'
+          import pathlib
+          for p in pathlib.Path('.cache/combined-candidate').glob('*.log'):
+              print('::error title=COMBINED_CANDIDATE_DIAGNOSTIC::'+(p.name+'\n'+p.read_text(errors='replace')[-4500:]).replace('%','%25').replace('\n','%0A'))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: combined-candidate-review-evidence
+          path: |
+            .cache/combined-candidate/
+            .cache/supply-chain/
+            .cache/native/security-review/*.json
+            .cache/xray-security-review/*.json
+            app/build/test-results/
+            app/build/reports/lint-results-*.xml
+          include-hidden-files: true
+          retention-days: 7
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: sealed-unsigned-combined-candidate-NOT-FOR-HANDOFF
+          path: .cache/core-candidate/
+          include-hidden-files: true
+          retention-days: 1

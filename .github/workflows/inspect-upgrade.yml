@@ -1,0 +1,29 @@
+name: Diagnose disposable upgrade fixture
+on:
+  push:
+    branches: ['ci/upgrade-fixture-debug']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Inspect only failed disposable-emulator jobs from the fixed candidate run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh run view 36311876249 --log-failed > "$RUNNER_TEMP/fixture.log"
+          python3 - <<'PY'
+          import os,pathlib
+          text=(pathlib.Path(os.environ['RUNNER_TEMP'])/'fixture.log').read_text(errors='replace')
+          lines=text.splitlines()
+          for term in ['Traceback','ARM64 support','Disposable','Error:','error:','Exception','CI_ONLY','prepare_emulator','FAILED','Failure','Process completed','Exit code','Usage:']:
+              indices=[i for i,l in enumerate(lines) if term in l]
+              for i in indices[-3:]:
+                  excerpt='\n'.join(lines[max(0,i-2):i+7])[:3500]
+                  print('::notice title=FIXTURE_DIAGNOSTIC::'+excerpt.replace('%','%25').replace('\r','%0D').replace('\n','%0A'))
+          print('::notice title=FIXTURE_LOG_TAIL::'+text[-7000:].replace('%','%25').replace('\r','%0D').replace('\n','%0A'))
+          PY

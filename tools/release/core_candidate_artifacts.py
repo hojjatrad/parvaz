@@ -4,7 +4,7 @@ is regenerated with trusted repository code and compared before signing starts."
 import hashlib,json,shutil,sys,subprocess
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[2];ART=ROOT/'.cache/core-candidate'
-FIXED=['tools/native/engines-lock.json','tools/native/xray-source-lock.json','tools/release/core-lock.json','tools/release/auto-core-release.json','app/build.gradle']
+FIXED=['tools/native/engines-lock.json','tools/native/xray-source-lock.json','tools/native/xray-candidate-lock.json','tools/release/core-lock.json','tools/release/auto-core-release.json','app/build.gradle']
 def digest(path):
  h=hashlib.sha256()
  with path.open('rb') as f:

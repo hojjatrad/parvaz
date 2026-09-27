@@ -20,7 +20,7 @@ def objects(text):
   if i==len(text):break
   value,end=decoder.raw_decode(text,i);yield value;i=end
 
-def components(native):
+def components(native,xray_candidate=False):
  data=json.loads((OUT/'java-runtime.json').read_text());result={}
  def add(ecosystem,name,version,extra=None):
   if not version:raise ValueError('Missing dependency version: '+name)
@@ -31,13 +31,13 @@ def components(native):
  if native:
   import importlib.util
   spec=importlib.util.spec_from_file_location('binary_inventory',pathlib.Path(__file__).with_name('binary_inventory.py'));binary_inventory=importlib.util.module_from_spec(spec);spec.loader.exec_module(binary_inventory)
-  binaries=binary_inventory.scan(ROOT)
+  binaries=binary_inventory.scan(ROOT,xray_candidate)
   (OUT/'binary-runtime.json').write_text(json.dumps(binaries,indent=2)+'\n')
   for binary in binaries:
-   evidence={'binary':binary['binary'],'abi':binary['abi'],'sha256':binary['sha256']}
-   add('Go','stdlib',binary['go_version'],evidence)
+   evidence={'binary':binary['binary'],'abi':binary['abi'],'sha256':binary['sha256'],'goos':binary.get('goos')}
+   add('Go','stdlib',binary['go_version'],compiled_package_evidence(binary,'stdlib'))
    for module in binary['modules']:
-    add('Go',module['name'],module['version'],evidence)
+    add('Go',module['name'],module['version'],compiled_package_evidence(binary,module['name'],bool(module.get('upstream_baseline'))))
     upstream=module.get('upstream_baseline')
     if upstream:
      add('Go',upstream['name'],upstream['version'],dict(evidence,fork_target=module['name']+'@'+module['version'],scope='conservative upstream baseline; fork patch applicability requires review'))
@@ -46,7 +46,7 @@ def components(native):
   for lock in locks:
    source=sources/lock['name']
    if not (source/'vendor/modules.txt').is_file():raise ValueError('Missing vendored graph '+lock['name'])
-   env=dict(os.environ,GOTOOLCHAIN='auto',GOFLAGS='-mod=mod')
+   env=dict(os.environ,GOTOOLCHAIN='auto',GOFLAGS='-mod=readonly')
    raw=subprocess.check_output(['go','list','-m','-json','all'],cwd=source,env=env,text=True)
    (OUT/(lock['name']+'-modules.jsons')).write_text(raw)
    for module in objects(raw):
@@ -58,6 +58,14 @@ def components(native):
    add('Go','stdlib',version,{'engine':lock['name'],'scope':'source toolchain; verify binary compiler separately'})
    add('Git',lock['repository'],lock['commit'],{'tag':lock['tag'],'source_archive_sha256':lock['sha256']})
  return list(result.values())
+
+def compiled_package_evidence(binary,module_name,uncertain=False):
+ result={'binary':binary['binary'],'abi':binary['abi'],'sha256':binary['sha256'],'goos':binary.get('goos')}
+ if 'compiled_packages' in binary and not uncertain:
+  packages=binary['compiled_packages']
+  subset=[p for p in packages if ('.' not in p.split('/')[0] if module_name=='stdlib' else (p==module_name or p.startswith(module_name+'/')))]
+  result.update(package_coverage_verified=True,compiled_packages=subset,package_proof_sha256=binary['package_proof_sha256'])
+ return result
 
 def request(path,payload=None):
  req=urllib.request.Request('https://api.osv.dev/v1/'+path,data=None if payload is None else json.dumps(payload).encode(),headers={'Content-Type':'application/json','User-Agent':'Parvaz-public-dependency-review'})
@@ -82,8 +90,44 @@ def purl(c):
   return 'pkg:github/'+name.lower()+'@'+c['version']
  return 'pkg:golang/'+c['name']+'@'+c['version']
 
-def run(native):
- OUT.mkdir(parents=True,exist_ok=True);items=components(native);now=datetime.datetime.now(datetime.timezone.utc).isoformat()
+def excludes_verified_binary_os(component, advisory):
+ # Scope evidence, not a vulnerability waiver. Android also satisfies Linux
+ # build constraints. Missing scope, unknown OS or fork baselines stay open.
+ if component['ecosystem']!='Go':return False
+ binaries=[s for s in component['sources'] if 'binary' in s]
+ if not binaries or any(not s.get('goos') or s.get('fork_target') for s in binaries):return False
+ targets={s['goos'] for s in binaries}
+ if 'android' in targets:targets.add('linux')
+ affected=[a for a in advisory.get('affected',[]) if a.get('package',{}).get('ecosystem')=='Go' and a['package'].get('name')==component['name']]
+ if not affected:return False
+ for a in affected:
+  imports=a.get('ecosystem_specific',{}).get('imports',[])
+  if not imports:return False
+  for item in imports:
+   systems=item.get('goos')
+   if not systems or not isinstance(systems,list) or not all(isinstance(x,str) and x for x in systems) or targets.intersection(systems):return False
+ return True
+
+def excludes_verified_compiled_packages(component,advisory):
+ # Only complete compiler inventories bound to the exact Android outputs qualify.
+ # Neither host builds, stripped-scanner function names, nor source go.mod qualify.
+ if component.get('ecosystem')!='Go':return False
+ sources=[s for s in component.get('sources',[]) if 'binary' in s]
+ if not sources or any(s.get('package_coverage_verified') is not True or s.get('goos')!='android' or not isinstance(s.get('package_proof_sha256'),str) or not re.fullmatch(r'[0-9a-f]{64}',s['package_proof_sha256']) or not isinstance(s.get('sha256'),str) or not re.fullmatch(r'[0-9a-f]{64}',s['sha256']) or s.get('fork_target') for s in sources):return False
+ if any(not isinstance(s.get('compiled_packages'),list) or any(not isinstance(p,str) or not p for p in s['compiled_packages']) for s in sources):return False
+ compiled=set(p for s in sources for p in s['compiled_packages'])
+ affected=[a for a in advisory.get('affected',[]) if a.get('package',{}).get('ecosystem')=='Go' and a['package'].get('name')==component['name']]
+ if not affected:return False
+ for entry in affected:
+  imports=entry.get('ecosystem_specific',{}).get('imports')
+  if not isinstance(imports,list) or not imports:return False
+  for item in imports:
+   path=item.get('path') if isinstance(item,dict) else None
+   if not isinstance(path,str) or not path or '*' in path or any(c.isspace() for c in path) or path in compiled:return False
+ return True
+
+def run(native,xray_candidate=False):
+ OUT.mkdir(parents=True,exist_ok=True);items=components(native,xray_candidate);now=datetime.datetime.now(datetime.timezone.utc).isoformat()
  comp=[]
  for c in items:
   comp.append({'type':'library','name':c['name'],'version':c['version'],'purl':purl(c),'bom-ref':purl(c),'properties':[{'name':'parvaz:inventory-evidence','value':json.dumps(c['sources'],sort_keys=True)}]})
@@ -108,14 +152,17 @@ def run(native):
   active=any(not details[v['id']].get('withdrawn') for v in row['vulnerabilities'])
   c=row['component']
   not_built=native and c['ecosystem']=='Go' and not any('binary' in source for source in c['sources'])
-  row['disposition']='WITHDRAWN' if not active else ('NOT_IN_ANY_SHIPPED_BINARY_MODULE_TABLE' if not_built else 'REVIEW_REQUIRED')
-  if active and not not_built:actionable.append(row)
- report={'timestamp':now,'source_commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),'native_graphs_included':native,'components_queried':len(items),'binary_runtime_verified':native,'status':'REVIEW_REQUIRED' if actionable else ('NO_APPLICABLE_MATCHES_IN_BUILT_RUNTIME' if findings else 'NO_KNOWN_MATCHES_IN_SCANNED_SCOPE'),'findings':findings,'advisories':details}
+  row['advisory_dispositions']={v['id']:('WITHDRAWN' if details[v['id']].get('withdrawn') else ('NOT_APPLICABLE_TO_VERIFIED_BINARY_OS' if native and excludes_verified_binary_os(c,details[v['id']]) else ('NOT_IN_VERIFIED_COMPILED_PACKAGE_GRAPH' if native and excludes_verified_compiled_packages(c,details[v['id']]) else 'REVIEW_REQUIRED'))) for v in row['vulnerabilities']}
+  excluded=active and all(x!='REVIEW_REQUIRED' for x in row['advisory_dispositions'].values())
+  row['disposition']='WITHDRAWN' if not active else ('NOT_IN_ANY_SHIPPED_BINARY_MODULE_TABLE' if not_built else (('NOT_APPLICABLE_TO_VERIFIED_BINARY_OS' if all(x in ('WITHDRAWN','NOT_APPLICABLE_TO_VERIFIED_BINARY_OS') for x in row['advisory_dispositions'].values()) else 'NOT_APPLICABLE_TO_VERIFIED_BINARY_SCOPE') if excluded else 'REVIEW_REQUIRED'))
+  if row['disposition']=='REVIEW_REQUIRED':actionable.append(row)
+ report={'timestamp':now,'source_commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),'xray_candidate':xray_candidate,'native_graphs_included':native,'components_queried':len(items),'binary_runtime_verified':native,'status':'REVIEW_REQUIRED' if actionable else ('NO_APPLICABLE_MATCHES_IN_BUILT_RUNTIME' if findings else 'NO_KNOWN_MATCHES_IN_SCANNED_SCOPE'),'findings':findings,'advisories':details}
  (OUT/'vulnerability-review.json').write_text(json.dumps(report,indent=2)+'\n')
  print('::notice title=DEPENDENCY_REVIEW::'+report['status']+' components='+str(len(items))+' native_graphs='+str(native))
  for row in actionable:
   print('::error title=Dependency requires triage::'+row['component']['name']+' '+row['component']['version']+' '+','.join(v['id'] for v in row['vulnerabilities']))
  return 2 if actionable else 0
 if __name__=='__main__':
- parser=argparse.ArgumentParser();parser.add_argument('--native',action='store_true');args=parser.parse_args()
- raise SystemExit(run(args.native))
+ parser=argparse.ArgumentParser();parser.add_argument('--native',action='store_true');parser.add_argument('--candidate-xray',action='store_true');args=parser.parse_args()
+ if args.candidate_xray and not args.native:parser.error('--candidate-xray requires full --native inventory')
+ raise SystemExit(run(args.native,args.candidate_xray))

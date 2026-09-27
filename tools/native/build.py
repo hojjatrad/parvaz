@@ -3,6 +3,8 @@
 NDK 27.2.12479018 and a compatible Go toolchain are prerequisites. Test/release sources stay in CI cache."""
 import argparse,hashlib,json,os,shutil,subprocess,tarfile,urllib.request
 from pathlib import Path
+from dependency_floors import apply
+from package_evidence import collect
 ROOT=Path(__file__).resolve().parents[2]
 parser=argparse.ArgumentParser();parser.add_argument('--probe',action='store_true');parser.add_argument('--host',action='store_true');args=parser.parse_args()
 cache=ROOT/'.cache/native';cache.mkdir(parents=True,exist_ok=True)
@@ -24,6 +26,7 @@ for core in json.loads((ROOT/'tools/native/engines-lock.json').read_text()):
   subprocess.run(['patch','--batch','--forward','-p1','-i',str(ROOT/'tools/native/patches'/patch)],cwd=source,check=True)
  shutil.copyfile(ROOT/'tools/native/parvaz_parent_android.go',source/core['patchdir']/'parvaz_parent_android.go')
  env=dict(os.environ,GOMAXPROCS='2',GOTOOLCHAIN='auto')
+ patch_evidence=apply(source,env,core.get('dependency_floors',{})) if core.get('dependency_floors') else {}
  subprocess.run(['go','mod','download'],cwd=source,env=env,check=True)
  targets=[('x86_64','amd64','x86_64-linux-android24-clang')] if args.probe else [('arm64-v8a','arm64','aarch64-linux-android24-clang'),('armeabi-v7a','arm','armv7a-linux-androideabi24-clang')]
  if args.host:targets=[('host','amd64','')]
@@ -32,12 +35,18 @@ for core in json.loads((ROOT/'tools/native/engines-lock.json').read_text()):
   output.parent.mkdir(parents=True,exist_ok=True)
   buildenv=dict(env,GOOS='linux' if args.host else 'android',GOARCH=arch,CGO_ENABLED='0' if args.host else '1',GOARM='7')
   if not args.host:buildenv.update(CC=str(ndk/compiler),CGO_LDFLAGS='-Wl,-z,max-page-size=16384')
+  buildenv.update(GOWORK='off',GOFLAGS='-mod=readonly')
+  package_inventory=collect(source,buildenv,core)
   cmd=['go','build','-p','2','-trimpath','-buildvcs=false']
   if not args.host:cmd+=['-buildmode=pie']
   if core['tags']:cmd+=['-tags',core['tags']]
   version_symbol='github.com/sagernet/sing-box/constant.Version' if core['name']=='sing-box' else 'github.com/metacubex/mihomo/constant.Version'
-  cmd+=['-ldflags','-s -w -X '+version_symbol+'='+core['tag'].lstrip('v'),'-o',str(output),core['package']]
+  cmd+=['-ldflags','-s -w -X '+version_symbol+'='+core['tag'].lstrip('v')+core.get('version_suffix',''),'-o',str(output),core['package']]
   subprocess.run(cmd,cwd=source,env=buildenv,check=True)
+  evidence=cache/'security-review';evidence.mkdir(exist_ok=True)
+  (evidence/(core['name']+'-'+abi+'.json')).write_text(json.dumps({'package_inventory':package_inventory,'scope':'Build evidence only, NOT installation or release approval','engine':core['name'],'base_commit':core['commit'],'base_tag':core['tag'],'dependency_patch':patch_evidence,'abi':abi,'sha256':hashlib.sha256(output.read_bytes()).hexdigest(),'command':cmd,'go_version':subprocess.check_output(['go','env','GOVERSION'],cwd=source,env=buildenv,text=True).strip()},indent=2)+'\n')
+  for filename in ['go.mod','go.sum']:
+   shutil.copyfile(source/filename,evidence/(core['name']+'-'+filename))
   print('ENGINE_BUILT',core['name'],core['tag'],abi,hashlib.sha256(output.read_bytes()).hexdigest(),flush=True)
  if not args.probe and not args.host:
   # Preserve corresponding dependency source for the release's source bundle.

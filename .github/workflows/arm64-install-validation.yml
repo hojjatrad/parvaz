@@ -1,0 +1,210 @@
+name: Genuine ARM64 installation, upgrade and updater validation of the corrected candidate
+on:
+  push:
+    branches: ['release/arm64-install-validation']
+permissions:
+  contents: read
+concurrency:
+  group: arm64-install-validation
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: {persist-credentials: false}
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with: {go-version: '1.27.1', cache: false}
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with: {distribution: temurin, java-version: '17'}
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a
+        with: {gradle-version: '8.9', cache-disabled: true}
+      - name: Keep every fail-closed contract test in front of packaging
+        run: |
+          python3 -m unittest discover -s tools/native -p 'test_*.py'
+          python3 -m unittest discover -s tools/security -p 'test_*.py'
+          python3 -m unittest discover -s tools/release -p 'test_*.py'
+          python3 -m unittest discover -s tools/upgrade-test -p 'test_*.py'
+          mkdir -p .cache/combined-candidate
+      - name: Prepare pinned toolchains
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/share/swift
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-34' 'build-tools;34.0.0' 'ndk;27.2.12479018' 'ndk;29.0.14206865'
+      - name: Check ordinary fail-closed signing before any candidate packaging
+        run: |
+          if env -u PARVAZ_UNSIGNED_CANDIDATE ./gradlew --no-daemon :app:requireReleaseSigning > .cache/expected-signing-denial.log 2>&1; then
+            echo 'Ordinary uncredentialed packaging must fail'; exit 1
+          fi
+          grep -q 'Release signing secrets are missing' .cache/expected-signing-denial.log
+      - name: Rebuild the corrected cores and integrate the exact reviewed Xray candidate
+        run: |
+          python3 tools/native/build.py >.cache/combined-candidate/native-build.log 2>&1
+          python3 tools/native/xray_candidate.py build >.cache/combined-candidate/xray-build.log 2>&1
+      - name: Android regressions, lint and runtime inventory
+        env: {PARVAZ_UNSIGNED_CANDIDATE: 'true'}
+        run: |
+          ./gradlew --no-daemon --max-workers=2 :app:testDebugUnitTest :app:lintDebug :app:lintRelease :app:writeRuntimeInventory >.cache/combined-candidate/android-checks.log 2>&1
+          python3 - <<'PYTEST'
+          import pathlib,xml.etree.ElementTree as ET
+          counts={k:0 for k in ['tests','failures','errors','skipped']}
+          for p in pathlib.Path('app/build/test-results/testDebugUnitTest').glob('TEST-*.xml'):
+              r=ET.parse(p).getroot()
+              for key in counts:counts[key]+=int(r.get(key,0))
+          print('::notice title=COMBINED_ANDROID_TESTS::'+str(counts))
+          if counts['tests']<587 or any(counts[k] for k in ['failures','errors','skipped']):raise SystemExit('Incomplete regression gate')
+          PYTEST
+      - name: Corresponding source and full native supply-chain review
+        run: |
+          python3 tools/native/source_bundle.py --candidate-xray >.cache/combined-candidate/source-bundle.log 2>&1
+          python3 tools/security/dependency_audit.py --native --candidate-xray >.cache/combined-candidate/sca.log 2>&1
+      - name: Seal unsigned candidate with packaged-byte identity
+        env: {PARVAZ_UNSIGNED_CANDIDATE: 'true'}
+        run: |
+          bash tools/release/unsigned_candidate.sh
+          python3 tools/native/xray_candidate.py verify
+      - name: Surface bounded diagnostics
+        if: failure()
+        run: |
+          python3 - <<'PY'
+          import pathlib
+          for p in pathlib.Path('.cache/combined-candidate').glob('*.log'):
+              print('::error title=ARM64_CANDIDATE_BUILD::'+(p.name+'\n'+p.read_text(errors='replace')[-4000:]).replace('%','%25').replace('\n','%0A'))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: arm64-candidate-review-evidence
+          path: |
+            .cache/combined-candidate/
+            .cache/supply-chain/
+            .cache/native/security-review/*.json
+            .cache/xray-security-review/*.json
+          include-hidden-files: true
+          retention-days: 7
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: sealed-unsigned-arm64-candidate
+          path: .cache/core-candidate/
+          include-hidden-files: true
+          retention-days: 1
+  sign:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: {persist-credentials: false}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with: {name: sealed-unsigned-arm64-candidate, path: .cache/core-candidate}
+      - name: Bind sealed artifacts to this exact reviewed source tree
+        run: |
+          VERSION=$(python3 -c 'import re;print(re.search(r"versionName\s+\"([^\"]+)\"",open("app/build.gradle").read())[1])')
+          python3 tools/release/core_candidate_artifacts.py verify "$VERSION"
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with: {distribution: temurin, java-version: '17'}
+      - run: |
+          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'build-tools;34.0.0'
+      - name: Sign with the unchanged permanent generation-3 key
+        env:
+          PARVAZ_KEYSTORE_BASE64: ${{ secrets.PARVAZ_KEYSTORE_BASE64 }}
+          PARVAZ_KEYSTORE_PASSWORD: ${{ secrets.PARVAZ_KEYSTORE_PASSWORD }}
+          PARVAZ_KEY_ALIAS: ${{ secrets.PARVAZ_KEY_ALIAS }}
+          PARVAZ_KEY_PASSWORD: ${{ secrets.PARVAZ_KEY_PASSWORD }}
+        run: python3 tools/release/sign_prebuilt.py
+      - run: python3 tools/release/verify_apk.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: signed-arm64-candidate
+          path: release-artifacts/*
+          retention-days: 3
+  arm64-install-upgrade:
+    needs: sign
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    env:
+      ANDROID_AVD_HOME: ${{ github.workspace }}/.cache/parvaz-arm64-avd
+      QT_QPA_PLATFORM: xcb
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: {persist-credentials: false}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with: {name: signed-arm64-candidate, path: release-artifacts}
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with: {distribution: temurin, java-version: '17'}
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a
+        with: {gradle-version: '8.9', cache-disabled: true}
+      - name: Install exactly the official ARM64 API30 image the boot probe proved
+        env:
+          PARVAZ_ARM_IMAGE: ${{ vars.PARVAZ_ARM_IMAGE }}
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y libpulse0 libnss3 libx11-6 libxcb1 libgl1 libasound2t64 xvfb xauth libxcb-cursor0
+          IMAGE="${PARVAZ_ARM_IMAGE:-system-images;android-30;google_apis;arm64-v8a}"
+          case "$IMAGE" in "system-images;android-30;google_apis;arm64-v8a"|"system-images;android-30;default;arm64-v8a") ;; *) echo 'Unreviewed system image'; exit 1;; esac
+          (set +o pipefail; yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'emulator' 'platform-tools' 'build-tools;34.0.0' "$IMAGE")
+          mkdir -p "$ANDROID_AVD_HOME"
+          echo no | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd -n parvaz_arm64 -k "$IMAGE" --device pixel_2 --force
+          printf 'hw.ramSize=4096\nhw.cpu.ncore=2\nhw.audioInput=no\nhw.audioOutput=no\nhw.gpu.enabled=no\n' >> "$ANDROID_AVD_HOME/parvaz_arm64.avd/config.ini"
+      - name: Boot the genuine ARM64 guest
+        run: |
+          mkdir -p .cache/arm64-install
+          export PATH="$ANDROID_HOME/platform-tools:$PATH"
+          export LD_LIBRARY_PATH="$ANDROID_HOME/emulator/lib64:$ANDROID_HOME/emulator/lib64/qt/lib:${LD_LIBRARY_PATH:-}"
+          QEMU="$ANDROID_HOME/emulator/qemu/linux-x86_64/qemu-system-aarch64"
+          if [ -x "${QEMU}-headless" ]; then QEMU="${QEMU}-headless"; fi
+          ulimit -c 0
+          adb start-server
+          setsid xvfb-run -a -s "-screen 0 1280x1024x24" "$QEMU" -avd parvaz_arm64 -port 5554 -show-kernel -no-window -no-metrics -no-audio -no-snapshot -no-boot-anim -gpu swiftshader -accel off -qemu -machine type=virt >.cache/arm64-install/emulator.log 2>&1 &
+          echo "QEMU_PGID=$!" >> "$GITHUB_ENV"
+          python3 - <<'PY'
+          import subprocess,time,json,pathlib
+          def adb(*a):
+              try:return subprocess.run(['adb','-s','emulator-5554',*a],capture_output=True,text=True,timeout=30).stdout.strip()
+              except subprocess.TimeoutExpired:return ''
+          deadline=time.monotonic()+13800;booted=False
+          while time.monotonic()<deadline:
+              if adb('shell','getprop','sys.boot_completed')=='1':booted=True;break
+              time.sleep(15)
+          info={'booted':booted,'architecture':adb('shell','uname','-m'),'sdk':adb('shell','getprop','ro.build.version.sdk'),'abilist':adb('shell','getprop','ro.product.cpu.abilist'),'selinux':adb('shell','getenforce'),'native_bridge':adb('shell','getprop','ro.dalvik.vm.native.bridge')}
+          pathlib.Path('.cache/arm64-install/environment.json').write_text(json.dumps(info,indent=2)+'\n')
+          print('::notice title=ARM64_INSTALL_ENVIRONMENT::'+json.dumps(info))
+          if not booted or info['architecture']!='aarch64' or info['sdk']!='30' or info['selinux']!='Enforcing' or info['native_bridge'] not in ('','0'):raise SystemExit('No genuine booted ARM64 environment; installation cannot be claimed')
+          PY
+      - name: Install the published stable prior, upgrade through the real updater and keep data
+        env:
+          ANDROID_SERIAL: emulator-5554
+          PARVAZ_UPGRADE_PRIOR: stable39
+        run: bash tools/upgrade-test/run.sh
+      - name: Report installation fixture outcome
+        if: always()
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          for p in Path('tools/android-probe/build/outputs/androidTest-results').rglob('*.xml'):
+              root=ET.parse(p).getroot()
+              for f in list(root.iter('failure'))+list(root.iter('error')):
+                  print('::error title=ARM64 upgrade fixture::'+((f.get('message') or f.text or 'failed')[:2800]).replace('%','%25').replace('\n','%0A'))
+          for name in ['device.log','transport.log','environment.log']:
+              p=Path('.cache/upgrade-evidence')/name
+              if p.exists():
+                  for line in p.read_text(errors='replace').splitlines():
+                      if any(k in line for k in ['ACTUAL_SIGNED_APK_UPDATE_BUTTON_OK','SIGNED_CANDIDATE_TRANSFER_COMPLETE','STAGED_METADATA_REQUEST']):print('::notice title=ARM64_UPGRADE_EVIDENCE::'+line[:800])
+          p=Path('.cache/arm64-install/emulator.log')
+          if p.exists():print('::notice title=ARM64_GUEST_TAIL::'+p.read_text(errors='replace')[-2500:].replace('%','%25').replace('\n','%0A'))
+          PY
+      - name: Stop the disposable guest
+        if: always()
+        run: kill -- "-${QEMU_PGID:-0}" 2>/dev/null || true
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: arm64-actual-install-evidence
+          path: |
+            .cache/arm64-install/
+            .cache/upgrade-evidence/
+            tools/android-probe/build/outputs/androidTest-results/
+          include-hidden-files: true
+          retention-days: 7
