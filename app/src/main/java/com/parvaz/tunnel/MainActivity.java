@@ -1751,17 +1751,8 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
         boolean z2 = i == 0;
         this.pageHome.setVisibility(z2 ? 0 : 8);
         this.pageServers.setVisibility(z2 ? 8 : 0);
-        this.tabHome.setBackgroundResource(z2 ? R.drawable.bg_tab_selected : 0);
-        this.tabServers.setBackgroundResource(z2 ? 0 : R.drawable.bg_tab_selected);
-        int color = getResources().getColor(R.color.brand);
-        this.tabHomeIcon.setColorFilter(z2 ? color : -6511697);
-        this.tabServersIcon.setColorFilter(z2 ? -6511697 : color);
-        this.tabHomeLabel.setTextColor(z2 ? color : -6511697);
-        TextView textView = this.tabServersLabel;
-        if (z2) {
-            color = -6511697;
-        }
-        textView.setTextColor(color);
+        com.parvaz.tunnel.ui.NavigationAppearance.select(tabHome, tabHomeIcon, tabHomeLabel, z2);
+        com.parvaz.tunnel.ui.NavigationAppearance.select(tabServers, tabServersIcon, tabServersLabel, !z2);
         if (z2 || (editText = this.searchInput) == null) {
             return;
         }

@@ -65,6 +65,8 @@ public class AccessibleServerRowTest {
  }
  private View home(Context c,int width){
   View root=LayoutInflater.from(c).inflate(R.layout.activity_main,new FrameLayout(c),false);root.setLayoutDirection(c.getResources().getConfiguration().getLayoutDirection());
+  NavigationAppearance.select(root.findViewById(R.id.tab_home),root.findViewById(R.id.tab_home_icon),root.findViewById(R.id.tab_home_label),true);
+  NavigationAppearance.select(root.findViewById(R.id.tab_servers),root.findViewById(R.id.tab_servers_icon),root.findViewById(R.id.tab_servers_label),false);
   ((TextView)root.findViewById(R.id.status_text)).setText(c.getString(R.string.latency_route_unverified));
   ((TextView)root.findViewById(R.id.speed_text)).setText(c.getString(R.string.transfer_rate_lines,"123.45 MB/s","678.90 MB/s"));
   int px=Math.round(width*c.getResources().getDisplayMetrics().density);root.measure(View.MeasureSpec.makeMeasureSpec(px,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(800,View.MeasureSpec.EXACTLY));root.layout(0,0,px,800);return root;
@@ -96,6 +98,15 @@ public class AccessibleServerRowTest {
   android.graphics.Bitmap image=android.graphics.Bitmap.createBitmap(view.getWidth(),view.getHeight(),android.graphics.Bitmap.Config.ARGB_8888);
   android.graphics.Canvas canvas=new android.graphics.Canvas(image);canvas.drawColor(view.getContext().getColor(R.color.bg));view.draw(canvas);
   try(java.io.FileOutputStream output=new java.io.FileOutputStream(destination)){assertTrue(image.compress(android.graphics.Bitmap.CompressFormat.PNG,100,output));}finally{image.recycle();}
+ }
+
+ @Test public void navigationSelectionHasThemeContrastAndScreenReaderLabel(){
+  for(boolean night:new boolean[]{false,true}){
+   Context c=context("fa",night,1f,320);View root=home(c,320);View selected=root.findViewById(R.id.tab_home),other=root.findViewById(R.id.tab_servers);TextView label=root.findViewById(R.id.tab_home_label),otherLabel=root.findViewById(R.id.tab_servers_label);
+   assertTrue(selected.isSelected());assertFalse(other.isSelected());assertEquals(label.getText(),selected.getContentDescription());assertTrue(selected.isFocusable());
+   int tinted=ColorUtils.compositeColors(((android.graphics.drawable.GradientDrawable)selected.getBackground()).getColor().getDefaultColor(),c.getColor(R.color.bg));
+   assertTrue(ColorUtils.calculateContrast(label.getCurrentTextColor(),tinted)>=4.5);assertTrue(ColorUtils.calculateContrast(otherLabel.getCurrentTextColor(),c.getColor(R.color.bg))>=4.5);
+  }
  }
 
 }

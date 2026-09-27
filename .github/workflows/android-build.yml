@@ -40,12 +40,12 @@ jobs:
         run: |
           ./gradlew --no-daemon --max-workers=2 :app:writeRuntimeInventory
           python3 tools/security/dependency_audit.py
-      - name: Compile debug, run Android unit tests and check release R8 (no release secrets)
+      - name: Compile debug, run Android unit tests, lint and release R8 (no release secrets)
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p .cache
-          if ! ./gradlew --no-daemon --max-workers=2 :app:testDebugUnitTest :app:assembleDebug :app:minifyReleaseWithR8 >.cache/android-build.log 2>&1; then
+          if ! ./gradlew --no-daemon --max-workers=2 :app:testDebugUnitTest :app:assembleDebug :app:minifyReleaseWithR8 :app:lintDebug :app:lintRelease >.cache/android-build.log 2>&1; then
             tail -100 .cache/android-build.log
             python3 - <<'PY'
           from pathlib import Path
