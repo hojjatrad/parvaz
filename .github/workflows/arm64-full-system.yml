@@ -8,7 +8,7 @@ permissions:
 jobs:
   boot:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 75
     env:
       QT_QPA_PLATFORM: xcb
       ANDROID_AVD_HOME: ${{ github.workspace }}/.cache/parvaz-arm64-avd
@@ -24,7 +24,7 @@ jobs:
           mkdir -p "$ANDROID_AVD_HOME"
           echo no | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd -n parvaz_arm64 -k 'system-images;android-30;google_apis;arm64-v8a' --device pixel_2 --force
           echo 'hw.ramSize=4096' >> "$ANDROID_AVD_HOME/parvaz_arm64.avd/config.ini"
-          echo 'hw.cpu.ncore=2' >> "$ANDROID_AVD_HOME/parvaz_arm64.avd/config.ini"
+          echo 'hw.cpu.ncore=4' >> "$ANDROID_AVD_HOME/parvaz_arm64.avd/config.ini"
       - name: Start the actual bundled ARM64 backend with a real AVD and software acceleration
         run: |
           mkdir -p evidence
@@ -49,11 +49,13 @@ jobs:
           def adb(*args):
               try:return subprocess.run(['adb','-s','emulator-5554',*args],capture_output=True,text=True,timeout=10).stdout.strip()
               except subprocess.TimeoutExpired:return ''
-          deadline=time.monotonic()+480;booted=False
+          deadline=time.monotonic()+3600;booted=False
           while time.monotonic()<deadline:
               try:os.kill(int(os.environ['QEMU_PID']),0)
               except ProcessLookupError:break
               if adb('shell','getprop','sys.boot_completed')=='1':booted=True;break
+              if int(time.monotonic())%60<6:
+                  print('progress',int(time.monotonic()),{k:adb('shell','getprop',k) for k in ['init.svc.bootanim','dev.bootcomplete','init.svc.zygote','ro.boot.hardware']},flush=True)
               time.sleep(5)
           devices=subprocess.run(['adb','devices','-l'],capture_output=True,text=True,timeout=15)
           pathlib.Path('evidence/adb-devices.txt').write_text(devices.stdout+devices.stderr)
