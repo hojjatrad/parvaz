@@ -119,6 +119,7 @@ jobs:
             .cache/xray-security-review/*.jsons
             .cache/xray-security-review/*.log
             .cache/xray-security-review/go.*
+            .cache/xray-security-review/*-public-api.txt
           include-hidden-files: true
           retention-days: 7
   patched-android-build:

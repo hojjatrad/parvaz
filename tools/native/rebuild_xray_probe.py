@@ -1,5 +1,5 @@
 """Review-only patched wrapper build. Does NOT replace the app's pinned AAR."""
-import hashlib,json,os,pathlib,shutil,subprocess,zipfile
+import hashlib,io,json,os,pathlib,re,shutil,subprocess,zipfile
 from vendor_xray import vendor
 from dependency_floors import apply
 ROOT=pathlib.Path(__file__).resolve().parents[2]
@@ -29,10 +29,39 @@ with zipfile.ZipFile(baseline) as z:
 subprocess.run(['go','mod','vendor'],cwd=source,env=env,check=True)
 subprocess.run(['gomobile','init'],cwd=source,env=env,check=True)
 output=OUT/'libv2ray-review.aar'
-command=['gomobile','bind','-v','-androidapi','24','-target=android/arm,android/arm64','-trimpath','-ldflags=-w -buildid= -checklinkname=0','-o',str(output),'./']
+command=['gomobile','bind','-v','-work','-x','-androidapi','24','-target=android/arm,android/arm64','-trimpath','-ldflags=-w -buildid= -checklinkname=0','-o',str(output),'./']
 # Retain symbol tables for direct binary inspection. No production replacement,
 # TLS changes, signing operations, or execution of APK/native ARM bytes occurs.
-subprocess.run(command,cwd=source,env=env,check=True)
+built=subprocess.run(command,cwd=source,env=env,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+(OUT/'gomobile.log').write_text(built.stdout)
+if built.returncode:
+ print(built.stdout[-4000:]);raise SystemExit(built.returncode)
+work_paths=re.findall(r'^WORK=(/[^\n]+)$',built.stdout,re.M)
+if not work_paths:raise ValueError('Missing preserved compiler workspace')
+work=pathlib.Path(work_paths[-1]).resolve()
+if not re.fullmatch(r'gomobile-work-[0-9]+',work.name):raise ValueError('Unexpected compiler workspace')
+# Compare the complete generated public Java interface with the immutable AAR.
+api={};class_hashes={}
+for label,aar in [('baseline',baseline),('rebuilt',output)]:
+ with zipfile.ZipFile(aar) as z:jar=z.read('classes.jar')
+ jarfile=OUT/(label+'-classes.jar');jarfile.write_bytes(jar)
+ with zipfile.ZipFile(io.BytesIO(jar)) as j:
+  classes=sorted(n[:-6].replace('/','.') for n in j.namelist() if n.endswith('.class'))
+  class_hashes[label]={n:hashlib.sha256(j.read(n)).hexdigest() for n in j.namelist() if n.endswith('.class')}
+ api[label]=subprocess.check_output(['javap','-classpath',str(jarfile),'-public','-s',*classes],text=True)
+ (OUT/(label+'-public-api.txt')).write_text(api[label]);jarfile.unlink()
+if api['baseline']!=api['rebuilt']:raise ValueError('Generated public Java API mismatch')
+compiler_inventories={}
+from package_evidence import package_names
+ndk=pathlib.Path(env['ANDROID_NDK_HOME'])/'toolchains/llvm/prebuilt/linux-x86_64/bin'
+gopath=subprocess.check_output(['go','env','GOPATH'],cwd=source,env=env,text=True).strip()
+for abi,arch,cc in [('arm64-v8a','arm64','aarch64-linux-android24-clang'),('armeabi-v7a','arm','armv7a-linux-androideabi24-clang')]:
+ generated=work/('src-android-'+arch)
+ if not (generated/'go.mod').is_file():raise ValueError('Missing actual generated JNI module')
+ targetenv=dict(env,GOOS='android',GOARCH=arch,GOARM='7',CGO_ENABLED='1',CC=str(ndk/cc),GOPATH=str(work)+os.pathsep+gopath,GOFLAGS='-mod=readonly')
+ packages=package_names(subprocess.check_output(['go','list','-deps','-json','-buildmode=c-shared','-trimpath','./gobind'],cwd=generated,env=targetenv,text=True))
+ if 'golang.org/x/mobile/bind/seq' not in packages or 'github.com/2dust/AndroidLibXrayLite' not in packages:raise ValueError('Incomplete JNI dependency roots')
+ compiler_inventories[abi]={'goos':'android','goarch':arch,'packages':packages,'generated_go_mod_sha256':hashlib.file_digest((generated/'go.mod').open('rb'),'sha256').hexdigest(),'scope':'Complete Go import graph of actual preserved generated JNI module; not a call graph'}
 for name in ['go.mod','go.sum']:shutil.copyfile(source/name,OUT/name)
 subprocess.run(['go','install','golang.org/x/vuln/cmd/govulncheck@v1.8.0'],cwd=source,env=env,check=True)
 binaries=[]
@@ -53,8 +82,10 @@ with zipfile.ZipFile(output) as z:
   for finding in findings:
    counts=grouped.setdefault(finding['osv'],{'module':0,'package':0,'function_named_NOT_execution':0})
    frames=finding.get('trace',[]);level='function_named_NOT_execution' if any(f.get('function') for f in frames) else ('package' if any(f.get('package') for f in frames) else 'module');counts[level]+=1
-  binaries.append({'extraction':extraction,'finding_groups':grouped,'abi':abi,'sha256':hashlib.sha256(data).hexdigest(),'extraction_exit':extract.returncode,'scanner_exit_NOT_clean_verdict':scan.returncode,'stderr':(extract.stderr+scan.stderr)[-2000:]})
+  binaries.append({'compiler_inventory':compiler_inventories[abi],'extraction':extraction,'finding_groups':grouped,'abi':abi,'sha256':hashlib.sha256(data).hexdigest(),'extraction_exit':extract.returncode,'scanner_exit_NOT_clean_verdict':scan.returncode,'stderr':(extract.stderr+scan.stderr)[-2000:]})
   file.unlink()
-report={'scope':'Review-only rebuilt AAR, NOT used by the app or approved for release','base_aar_sha256':lock['sha256'],'aar_sha256':hashlib.file_digest(output.open('rb'),'sha256').hexdigest(),'patch':patch,'gomobile_version':mobile,'command':command,'baseline_asset_hashes':asset_hashes,'binaries':binaries}
+report={'public_java_api_equal':True,'all_java_class_bytes_equal':class_hashes['baseline']==class_hashes['rebuilt'],'scope':'Review-only rebuilt AAR, NOT used by the app or approved for release','base_aar_sha256':lock['sha256'],'aar_sha256':hashlib.file_digest(output.open('rb'),'sha256').hexdigest(),'patch':patch,'gomobile_version':mobile,'command':command,'baseline_asset_hashes':asset_hashes,'binaries':binaries}
 (OUT/'summary.json').write_text(json.dumps(report,indent=2)+'\n')
-print('::notice title=XRAY_REBUILD_PROBE::'+json.dumps(report)[:3000])
+print('::notice title=XRAY_PUBLIC_JAVA_API::'+json.dumps({'public_api_equal':True,'class_bytes_equal':report['all_java_class_bytes_equal']}))
+for b in binaries:
+ print('::notice title=XRAY_JNI_COMPILER_COVERAGE::'+json.dumps({'abi':b['abi'],'sha256':b['sha256'],'package_count':len(b['compiler_inventory']['packages']),'openpgp_packages':[p for p in b['compiler_inventory']['packages'] if p.startswith('golang.org/x/crypto/openpgp')],'finding_groups':b['finding_groups'],'extraction':b['extraction']}))
