@@ -6,7 +6,7 @@ Importing this module has no ADB or filesystem side effects.
 import os,pathlib,re,subprocess,sys,time
 
 def adb(*args):
- return subprocess.check_output(['adb',*args],text=True,stderr=subprocess.STDOUT,timeout=60).strip()
+ return subprocess.check_output(['adb',*args],text=True,stderr=subprocess.STDOUT,timeout=300 if args[-1:] == ('wait-for-device',) else 60).strip()
 
 def require_target(device):
  if device('shell','getprop','ro.kernel.qemu')!='1':raise SystemExit('Disposable emulator required; refusing device changes')
@@ -24,13 +24,20 @@ def prepare(cert):
  # Validate the certificate before root, reboot or any trust-store modification.
  digest=subprocess.check_output(['openssl','x509','-in',str(cert),'-subject_hash_old','-noout'],text=True).splitlines()[0]
  if not re.fullmatch(r'[0-9a-fA-F]{8}',digest):raise SystemExit('Invalid temporary certificate hash')
- device('root');device('wait-for-device');device('disable-verity');device('reboot');device('wait-for-device')
- deadline=time.monotonic()+150
- while device('shell','getprop','sys.boot_completed')!='1':
-  if time.monotonic()>deadline:raise SystemExit('Emulator boot deadline')
-  time.sleep(2)
+ device('root');device('wait-for-device')
+ # The reviewed AVD starts with -writable-system. Do not unconditionally reboot
+ # it: both real CI targets lost their ADB transport during that unnecessary step.
+ # Push below is still required to succeed; a non-writable image fails closed.
+ mounted=device('remount')
+ if 'reboot' in mounted.lower():
+  device('disable-verity');device('reboot');device('wait-for-device')
+  deadline=time.monotonic()+300
+  while device('shell','getprop','sys.boot_completed')!='1':
+   if time.monotonic()>deadline:raise SystemExit('Emulator boot deadline')
+   time.sleep(2)
+  require_target(device)
+  device('root');device('wait-for-device');device('remount')
  require_target(device)
- device('root');device('wait-for-device');device('remount')
  destination='/system/etc/security/cacerts/'+digest+'.0'
  device('push',str(cert),destination);device('shell','chmod','644',destination)
  device('shell','settings','put','global','http_proxy','10.0.2.2:8765')
