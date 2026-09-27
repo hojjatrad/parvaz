@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 28
     env:
-      ANDROID_AVD_HOME: ${{ runner.temp }}/parvaz-arm64-avd
+      ANDROID_AVD_HOME: ${{ github.workspace }}/.cache/parvaz-arm64-avd
     steps:
       - name: Install official ARM64 system image and host renderer dependencies
         run: |
@@ -27,6 +27,7 @@ jobs:
       - name: Start the actual bundled ARM64 backend with a real AVD and software acceleration
         run: |
           mkdir -p evidence
+          exec > >(tee evidence/boot-setup.log) 2>&1
           export PATH="$ANDROID_HOME/platform-tools:$PATH"
           export LD_LIBRARY_PATH="$ANDROID_HOME/emulator/lib64:$ANDROID_HOME/emulator/lib64/qt/lib:${LD_LIBRARY_PATH:-}"
           QEMU="$ANDROID_HOME/emulator/qemu/linux-x86_64/qemu-system-aarch64"
