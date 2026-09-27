@@ -44,9 +44,9 @@ public class TileService extends android.service.quicksettings.TileService {
             startService(intent);
         } else if (VpnService.prepare(this) != null) {
             Intent intent2 = new Intent(this, (Class<?>) MainActivity.class);
-            intent2.addFlags(268435456);
+            intent2.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
             if (Build.VERSION.SDK_INT >= 34) {
-                startActivityAndCollapse(PendingIntent.getActivity(this, 0, intent2, 201326592));
+                startActivityAndCollapse(PendingIntent.getActivity(this, 0, intent2, (android.app.PendingIntent.FLAG_UPDATE_CURRENT | android.app.PendingIntent.FLAG_IMMUTABLE)));
             } else {
                 startActivityAndCollapse(intent2);
             }

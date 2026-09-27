@@ -55,7 +55,7 @@ public final class CrashReporter {
             }
             try {
                 Intent intent = new Intent(context, (Class<?>) CrashActivity.class);
-                intent.addFlags(276856832);
+                intent.addFlags((android.content.Intent.FLAG_ACTIVITY_NEW_TASK | android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK | android.content.Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS));
                 intent.putExtra("report", str);
                 context.startActivity(intent);
             } catch (Throwable unused3) {

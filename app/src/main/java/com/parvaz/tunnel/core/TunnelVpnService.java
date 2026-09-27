@@ -777,15 +777,15 @@ public class TunnelVpnService extends VpnService {
     /* renamed from: b */
     public final Notification buildNotification(String str, String str2) {
         PendingIntent activity = PendingIntent.getActivity(
-                this, 0, new Intent(this, (Class<?>) MainActivity.class), 201326592);
+                this, 0, new Intent(this, (Class<?>) MainActivity.class), (android.app.PendingIntent.FLAG_UPDATE_CURRENT | android.app.PendingIntent.FLAG_IMMUTABLE));
         PendingIntent broadcast = PendingIntent.getBroadcast(
                 this, 1,
                 new Intent("com.parvaz.tunnel.STOP").setPackage(getPackageName()),
-                201326592);
+                (android.app.PendingIntent.FLAG_UPDATE_CURRENT | android.app.PendingIntent.FLAG_IMMUTABLE));
         PendingIntent nextServer = PendingIntent.getService(
                 this, 2,
                 new Intent(this, TunnelVpnService.class).setAction("com.parvaz.tunnel.SWITCH_NEXT"),
-                201326592);
+                (android.app.PendingIntent.FLAG_UPDATE_CURRENT | android.app.PendingIntent.FLAG_IMMUTABLE));
 
         NotificationCompat.Builder builder =
                 new NotificationCompat.Builder(this, CHANNEL_ID);
@@ -864,7 +864,7 @@ public class TunnelVpnService extends VpnService {
                     Log.w("ParvazVpn", "setHttpProxy unavailable", th);
                 }
             }
-            builder.setConfigureIntent(PendingIntent.getActivity(this, 0, new Intent(this, (Class<?>) MainActivity.class), 201326592));
+            builder.setConfigureIntent(PendingIntent.getActivity(this, 0, new Intent(this, (Class<?>) MainActivity.class), (android.app.PendingIntent.FLAG_UPDATE_CURRENT | android.app.PendingIntent.FLAG_IMMUTABLE)));
             ParcelFileDescriptor established = builder.establish();
             // Pin the tunnel to the network that is actually carrying traffic right now.
             // Without this the protected sockets keep using whatever network was the
@@ -1189,7 +1189,7 @@ public class TunnelVpnService extends VpnService {
 
     /* renamed from: m */
     public final void updateNotification(String str, String str2) {
-        NotificationManager notificationManager = (NotificationManager) getSystemService("notification");
+        NotificationManager notificationManager = (NotificationManager) getSystemService(android.content.Context.NOTIFICATION_SERVICE);
         if (notificationManager != null) {
             notificationManager.notify(8811, buildNotification(str, str2));
         }

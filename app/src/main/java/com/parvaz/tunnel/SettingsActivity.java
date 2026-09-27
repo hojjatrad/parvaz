@@ -162,7 +162,7 @@ public class SettingsActivity extends com.parvaz.tunnel.LockedActivity {
         @Override // android.widget.CompoundButton.OnCheckedChangeListener
         public final void onCheckedChanged(CompoundButton compoundButton, boolean z) {
             RulesActivity__ExternalSyntheticOutline0.k(SettingsActivity.this.C.f343a, "fragment_enabled", z);
-            this.f6169a.setVisibility(z ? 0 : 8);
+            this.f6169a.setVisibility(z ? android.view.View.VISIBLE : android.view.View.GONE);
         }
     }
 
@@ -530,7 +530,7 @@ public class SettingsActivity extends com.parvaz.tunnel.LockedActivity {
             }
             settingsActivity.C.f343a.edit().putString("lang", str).apply();
             Intent intent = new Intent(settingsActivity, (Class<?>) MainActivity.class);
-            intent.addFlags(335544320);
+            intent.addFlags((android.content.Intent.FLAG_ACTIVITY_NEW_TASK | android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP));
             settingsActivity.startActivity(intent);
             settingsActivity.finish();
         }
@@ -866,9 +866,9 @@ public class SettingsActivity extends com.parvaz.tunnel.LockedActivity {
         SwitchCompat switchCompat6 = (SwitchCompat) findViewById(R.id.tls_fragment);
         switchCompat6.setChecked(this.C.f343a.getBoolean("fragment_enabled", false));
         if (this.C.f343a.getBoolean("fragment_enabled", false)) {
-            i2 = 0;
+            i2 = android.view.View.VISIBLE;
         } else {
-            i2 = 8;
+            i2 = android.view.View.GONE;
         }
         linearLayout.setVisibility(i2);
         switchCompat6.setOnCheckedChangeListener(new d(linearLayout));

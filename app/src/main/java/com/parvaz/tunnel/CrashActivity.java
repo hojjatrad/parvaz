@@ -29,10 +29,10 @@ public class CrashActivity extends com.parvaz.tunnel.LockedActivity {
             CrashActivity crashActivity = CrashActivity.this;
             crashActivity.getClass();
             try {
-                ClipboardManager clipboardManager = (ClipboardManager) crashActivity.getSystemService("clipboard");
+                ClipboardManager clipboardManager = (ClipboardManager) crashActivity.getSystemService(android.content.Context.CLIPBOARD_SERVICE);
                 if (clipboardManager != null) {
                     clipboardManager.setPrimaryClip(ClipData.newPlainText("parvaz-crash", crashActivity.report));
-                    Toast.makeText(crashActivity, R.string.copied, 0).show();
+                    Toast.makeText(crashActivity, R.string.copied, Toast.LENGTH_SHORT).show();
                 }
             } catch (Throwable unused) {
                 android.util.Log.w("Parvaz/CrashActivity", "Throwable ignored", unused);
@@ -74,7 +74,7 @@ public class CrashActivity extends com.parvaz.tunnel.LockedActivity {
             crashActivity.getClass();
             try {
                 Intent intent = new Intent(crashActivity, (Class<?>) MainActivity.class);
-                intent.addFlags(268468224);
+                intent.addFlags((android.content.Intent.FLAG_ACTIVITY_NEW_TASK | android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK));
                 crashActivity.startActivity(intent);
             } catch (Throwable unused) {
                 android.util.Log.w("Parvaz/CrashActivity", "Throwable ignored", unused);

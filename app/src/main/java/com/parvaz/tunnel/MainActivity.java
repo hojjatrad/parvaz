@@ -324,7 +324,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
                 }
             }
             if (i == 1) {
-                ClipboardManager clipboard=(ClipboardManager)mainActivity.getSystemService("clipboard");
+                ClipboardManager clipboard=(ClipboardManager)mainActivity.getSystemService(android.content.Context.CLIPBOARD_SERVICE);
                 if(clipboard==null||clipboard.getPrimaryClip()==null||clipboard.getPrimaryClip().getItemCount()==0) {
                     Snackbar.make(mainActivity.connectButton,R.string.clipboard_empty,0).show();return;
                 }
@@ -1149,7 +1149,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
             .setMessage(getString(R.string.import_report_help)+"\n\n"+report)
             .setPositiveButton(R.string.ok,null)
             .setNeutralButton(R.string.copy_safe_report,(dialog,which)->{
-                ClipboardManager clipboard=(ClipboardManager)getSystemService("clipboard");
+                ClipboardManager clipboard=(ClipboardManager)getSystemService(android.content.Context.CLIPBOARD_SERVICE);
                 if(clipboard!=null)clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Parvaz import report",report));
             }).show();
     }
@@ -1164,7 +1164,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
             .setNegativeButton(R.string.cancel,null)
             .setPositiveButton(R.string.manual_group,(d,w)->applyPrimarySubscription(ProfileStore.MANUAL_GROUP,false))
             .setNeutralButton(R.string.add_from_clipboard,(d,w)->{
-                ClipboardManager clipboard=(ClipboardManager)getSystemService("clipboard");
+                ClipboardManager clipboard=(ClipboardManager)getSystemService(android.content.Context.CLIPBOARD_SERVICE);
                 if(clipboard!=null&&clipboard.hasPrimaryClip())importText(clipboard.getPrimaryClip().getItemAt(0).coerceToText(this).toString());
                 else Snackbar.make(findViewById(android.R.id.content),R.string.clipboard_empty,Snackbar.LENGTH_SHORT).show();
             }).show();
@@ -1192,7 +1192,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
         String report=L.f343a.getString(key,getString(R.string.import_report_empty));
         new SecureDialogBuilder(this).setTitle(title).setMessage(getString(help)+"\n\n"+report)
             .setPositiveButton(R.string.ok,null).setNeutralButton(R.string.copy_safe_report,(dialog,which)->{
-                ClipboardManager clipboard=(ClipboardManager)getSystemService("clipboard");
+                ClipboardManager clipboard=(ClipboardManager)getSystemService(android.content.Context.CLIPBOARD_SERVICE);
                 if(clipboard!=null)clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Parvaz safe report",report));
             }).show();
     }
@@ -1401,7 +1401,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
         serverAdapter2.f368h = str5;
         serverAdapter2.notifyDataSetChanged();
         if (arrayList.isEmpty()) {
-            this.emptyText.setVisibility(0);
+            this.emptyText.setVisibility(android.view.View.VISIBLE);
             TextView textView = this.emptyText;
             if (e.isEmpty()) {
                 i = R.string.no_servers_yet;
@@ -1410,7 +1410,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
             }
             textView.setText(i);
         } else {
-            this.emptyText.setVisibility(8);
+            this.emptyText.setVisibility(android.view.View.GONE);
         }
         renderState();
     }
@@ -1749,8 +1749,8 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
         EditText editText;
         this.currentTab = i;
         boolean z2 = i == 0;
-        this.pageHome.setVisibility(z2 ? 0 : 8);
-        this.pageServers.setVisibility(z2 ? 8 : 0);
+        this.pageHome.setVisibility(z2 ? android.view.View.VISIBLE : android.view.View.GONE);
+        this.pageServers.setVisibility(z2 ? android.view.View.GONE : android.view.View.VISIBLE);
         com.parvaz.tunnel.ui.NavigationAppearance.select(tabHome, tabHomeIcon, tabHomeLabel, z2);
         com.parvaz.tunnel.ui.NavigationAppearance.select(tabServers, tabServersIcon, tabServersLabel, !z2);
         if (z2 || (editText = this.searchInput) == null) {
@@ -1763,11 +1763,11 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
     public final void setPingAllBusy(boolean z2) {
         ProgressBar progressBar = this.pingAllProgress;
         if (progressBar != null) {
-            progressBar.setVisibility(z2 ? 0 : 8);
+            progressBar.setVisibility(z2 ? android.view.View.VISIBLE : android.view.View.GONE);
         }
         ImageButton imageButton = this.pingAllButton;
         if (imageButton != null) {
-            imageButton.setVisibility(z2 ? 8 : 0);
+            imageButton.setVisibility(z2 ? android.view.View.GONE : android.view.View.VISIBLE);
         }
     }
 

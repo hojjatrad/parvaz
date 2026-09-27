@@ -243,9 +243,9 @@ public class RulesActivity extends com.parvaz.tunnel.LockedActivity {
         this.f6141a.notifyDataSetChanged();
         TextView textView = this.f6142b;
         if (this.f6144d.length() == 0) {
-            i = 0;
+            i = android.view.View.VISIBLE;
         } else {
-            i = 8;
+            i = android.view.View.GONE;
         }
         textView.setVisibility(i);
         if (TunnelVpnService.serviceRunning) {
@@ -351,9 +351,9 @@ public class RulesActivity extends com.parvaz.tunnel.LockedActivity {
         this.f6141a.notifyDataSetChanged();
         TextView textView = this.f6142b;
         if (this.f6144d.length() == 0) {
-            i = 0;
+            i = android.view.View.VISIBLE;
         } else {
-            i = 8;
+            i = android.view.View.GONE;
         }
         textView.setVisibility(i);
     }

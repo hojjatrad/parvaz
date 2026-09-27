@@ -114,8 +114,8 @@ public class UsageActivity extends com.parvaz.tunnel.LockedActivity {
             i++;
         }
         this.f6206a.setDays(arrayList);
-        this.f6207b.setVisibility(z ? 8 : 0);
-        this.f6206a.setVisibility(z ? 0 : 4);
+        this.f6207b.setVisibility(z ? android.view.View.GONE : android.view.View.VISIBLE);
+        this.f6206a.setVisibility(z ? android.view.View.VISIBLE : android.view.View.INVISIBLE);
         this.f6209d.setText("↑ " + MainActivity.fmtBytes(j3) + "    ↓ " + MainActivity.fmtBytes(j4) + "    Σ " + MainActivity.fmtBytes(j3 + j4));
         renderWeeklyCard(arrayList, j3 + j4);
     }

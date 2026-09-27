@@ -42,7 +42,7 @@ public final class AppPickerActivity_3 implements Runnable {
             arrayList.clear();
             arrayList.addAll(this.val$rows);
             appPickerActivity.h("");
-            appPickerActivity.f6071d.setVisibility(8);
+            appPickerActivity.f6071d.setVisibility(android.view.View.GONE);
             // The list is only now complete, so this is the first moment the banking
             // check can see the real selection.
             appPickerActivity.maybeSuggestBankingExclusion();
@@ -81,7 +81,7 @@ public final class AppPickerActivity_3 implements Runnable {
             if (applicationInfo == null || applicationInfo.packageName == null) {
                 continue;
             }
-            if (!applicationInfo.packageName.equals(packageName) && packageManager.checkPermission("android.permission.INTERNET", applicationInfo.packageName) == 0) {
+            if (!applicationInfo.packageName.equals(packageName) && packageManager.checkPermission("android.permission.INTERNET", applicationInfo.packageName) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
                 AppPickerActivity.d dVar = new AppPickerActivity.d();
                 dVar.f6081c = applicationInfo.packageName;
                 try {

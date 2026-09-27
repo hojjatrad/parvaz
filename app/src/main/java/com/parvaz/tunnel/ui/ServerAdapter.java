@@ -149,7 +149,7 @@ public final class ServerAdapter extends RecyclerView.Adapter<ServerAdapter.b> {
         holder.f375z.setText(flag);
 
         boolean selected = profile.id.equals(this.f368h);
-        holder.f373x.setVisibility(selected ? 0 : 4);
+        holder.f373x.setVisibility(selected ? android.view.View.VISIBLE : android.view.View.INVISIBLE);
         View card = holder.f372w;
         card.setSelected(selected);
         card.setAlpha(dialable ? 1.0f : 0.55f);

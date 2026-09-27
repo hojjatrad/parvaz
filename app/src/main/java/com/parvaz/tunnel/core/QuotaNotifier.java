@@ -45,7 +45,7 @@ public final class QuotaNotifier {
 
         Intent openApp = new Intent(context, MainActivity.class);
         openApp.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        PendingIntent pi = PendingIntent.getActivity(context, 0, openApp, 201326592);
+        PendingIntent pi = PendingIntent.getActivity(context, 0, openApp, (android.app.PendingIntent.FLAG_UPDATE_CURRENT | android.app.PendingIntent.FLAG_IMMUTABLE));
 
         // 1. 100% Exceeded
         if (percent >= 100) {

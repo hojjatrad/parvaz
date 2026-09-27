@@ -115,7 +115,7 @@ public class LogActivity extends com.parvaz.tunnel.LockedActivity {
     }
 
     public void lambda$onCreate$2(View view) {
-        ClipboardManager clipboardManager = (ClipboardManager) getSystemService("clipboard");
+        ClipboardManager clipboardManager = (ClipboardManager) getSystemService(android.content.Context.CLIPBOARD_SERVICE);
         if (clipboardManager != null) {
             clipboardManager.setPrimaryClip(ClipData.newPlainText("parvaz-log", LogBuffer.lines()));
             Snackbar.make(view, R.string.log_copied, -1).show();

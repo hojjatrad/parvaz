@@ -229,7 +229,7 @@ public class AppPickerActivity extends com.parvaz.tunnel.LockedActivity {
                 AppPickerActivity.this.showPresets();
             }
         });
-        this.f6071d.setVisibility(0);
+        this.f6071d.setVisibility(android.view.View.VISIBLE);
         this.f6074h.execute(new AppPickerActivity_3(0, this));
     }
 

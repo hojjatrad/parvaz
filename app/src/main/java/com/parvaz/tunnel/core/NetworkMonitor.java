@@ -180,7 +180,7 @@ public final class NetworkMonitor {
             return;
         }
         try {
-            ConnectivityManager connectivityManager = (ConnectivityManager) this.f6246a.getSystemService("connectivity");
+            ConnectivityManager connectivityManager = (ConnectivityManager) this.f6246a.getSystemService(android.content.Context.CONNECTIVITY_SERVICE);
             this.f6249d = connectivityManager;
             if (connectivityManager == null) {
                 return;

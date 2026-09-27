@@ -66,7 +66,7 @@ public class ParvazWidget extends AppWidgetProvider {
         remoteViews.setTextViewText(R.id.widget_name, string2);
         Intent intent = new Intent(context, (Class<?>) ParvazWidget.class);
         intent.setAction("com.parvaz.tunnel.WIDGET_TOGGLE");
-        remoteViews.setOnClickPendingIntent(R.id.widget_root, PendingIntent.getBroadcast(context, 0, intent, 201326592));
+        remoteViews.setOnClickPendingIntent(R.id.widget_root, PendingIntent.getBroadcast(context, 0, intent, (android.app.PendingIntent.FLAG_UPDATE_CURRENT | android.app.PendingIntent.FLAG_IMMUTABLE)));
         appWidgetManager.updateAppWidget(i, remoteViews);
     }
 
@@ -80,7 +80,7 @@ public class ParvazWidget extends AppWidgetProvider {
                 context.startService(intent2);
             } else {
                 Intent intent3 = new Intent(context, (Class<?>) MainActivity.class);
-                intent3.setFlags(335544320);
+                intent3.setFlags((android.content.Intent.FLAG_ACTIVITY_NEW_TASK | android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP));
                 intent3.putExtra("com.parvaz.tunnel.AUTO_CONNECT", true);
                 context.startActivity(intent3);
             }
