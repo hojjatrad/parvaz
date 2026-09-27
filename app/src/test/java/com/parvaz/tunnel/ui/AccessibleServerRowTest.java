@@ -1,0 +1,63 @@
+package com.parvaz.tunnel.ui;
+
+import android.app.Application;
+import android.content.Context;
+import android.content.res.Configuration;
+import android.view.*;
+import android.widget.*;
+import androidx.core.graphics.ColorUtils;
+import androidx.test.core.app.ApplicationProvider;
+import com.parvaz.tunnel.R;
+import com.parvaz.tunnel.core.LatencyStamp;
+import com.parvaz.tunnel.model.Profile;
+import com.parvaz.tunnel.store.ProfileStore;
+import java.util.Locale;
+import org.junit.*;
+import org.junit.runner.RunWith;
+import org.robolectric.RobolectricTestRunner;
+import org.robolectric.annotation.*;
+import static org.junit.Assert.*;
+
+@RunWith(RobolectricTestRunner.class)
+@Config(sdk={29,34},application=Application.class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+public class AccessibleServerRowTest {
+ private Context app;
+ @Before public void setup(){app=ApplicationProvider.getApplicationContext();ProfileStore.d=null;app.getSharedPreferences("parvaz_store",0).edit().clear().commit();app.getSharedPreferences("parvaz_prefs",0).edit().clear().commit();}
+ @After public void cleanup(){ProfileStore.d=null;}
+ private Context context(String language,boolean night,float font,int width){
+  Configuration config=new Configuration(app.getResources().getConfiguration());config.setLocale(new Locale(language));config.fontScale=font;config.densityDpi=160;config.screenWidthDp=width;config.uiMode=(config.uiMode&~Configuration.UI_MODE_NIGHT_MASK)|(night?Configuration.UI_MODE_NIGHT_YES:Configuration.UI_MODE_NIGHT_NO);
+  return new ContextThemeWrapper(app.createConfigurationContext(config),R.style.AppTheme);
+ }
+ private ServerAdapter.b row(Context context,int width,int ping,boolean favorite){
+  Profile p=new Profile();p.id="synthetic-row";p.protocol="vless";p.address="2001:db8::1";p.port=443;p.remark="سرور آزمایشی با نام طولانی / Test server";p.ping=ping;if(ping>0)p.latency=LatencyStamp.manual("fixture");
+  ServerAdapter adapter=new ServerAdapter(context,null);adapter.g.clear();adapter.g.add(p);adapter.f368h=p.id;if(favorite)adapter.visibleFavorites.add(p.id);
+  ServerAdapter.b holder=adapter.onCreateViewHolder(new FrameLayout(context),0);adapter.onBindViewHolder(holder,0);
+  View view=holder.itemView;view.setLayoutDirection(context.getResources().getConfiguration().getLayoutDirection());int px=Math.round((width-28)*context.getResources().getDisplayMetrics().density);
+  view.measure(View.MeasureSpec.makeMeasureSpec(px,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(0,View.MeasureSpec.UNSPECIFIED));view.layout(0,0,px,view.getMeasuredHeight());return holder;
+ }
+ @Test public void longStatusDoesNotConsumeServerIdentityAtSmallOrWideWidths(){
+  for(String lang:new String[]{"fa","en"})for(boolean night:new boolean[]{false,true})for(float font:new float[]{1f,2f})for(int width:new int[]{320,600,840}){
+   Context c=context(lang,night,font,width);ServerAdapter.b h=row(c,width,-12,false);float density=c.getResources().getDisplayMetrics().density;
+   assertTrue(lang+" width="+width+" font="+font+" name collapsed",h.f369A.getWidth()>=96*density);
+   assertNotNull(h.f370B.getLayout());assertEquals("status must not be silently ellipsized",0,h.f370B.getLayout().getEllipsisCount(h.f370B.getLineCount()-1));
+   assertEquals(h.f370B.getText().length(),h.f370B.getLayout().getLineEnd(h.f370B.getLineCount()-1));
+   assertTrue(h.f370B.getWidth()<=h.itemView.getWidth());assertEquals(lang.equals("fa")?View.LAYOUT_DIRECTION_RTL:View.LAYOUT_DIRECTION_LTR,h.itemView.getLayoutDirection());
+  }
+ }
+ @Test public void rowActionsHaveTouchTargetsFocusAndActionNames(){
+  Context c=context("fa",false,1,320);ServerAdapter.b h=row(c,320,-11,false);float dp=c.getResources().getDisplayMetrics().density;
+  for(View v:new View[]{h.f374y,h.f370B}){assertTrue("48dp target height",v.getHeight()>=48*dp);assertTrue("48dp target width",v.getWidth()>=48*dp);assertTrue("keyboard focus",v.isFocusable());assertNotNull(v.getContentDescription());assertTrue(v.getContentDescription().length()>1);}
+  CharSequence unselected=h.f374y.getContentDescription();assertNotEquals(unselected,row(c,320,-11,true).f374y.getContentDescription());
+ }
+ @Test public void selectedServerIsNotAnnouncedAsAuthenticatedConnection(){
+  Context c=context("fa",false,1,320);ServerAdapter.b h=row(c,320,-4,false);assertEquals(View.VISIBLE,h.f373x.getVisibility());assertNotEquals(c.getString(R.string.state_connected),h.f373x.getContentDescription());
+ }
+ @Test public void latencyAndFavoriteHaveReadableDayAndNightContrast(){
+  for(boolean night:new boolean[]{false,true})for(int ping:new int[]{120,450,900,-2,-11}){
+   Context c=context("fa",night,1,360);ServerAdapter.b h=row(c,360,ping,true);int surface=c.getColor(R.color.surface);
+   assertTrue("latency contrast night="+night+" value="+ping,ColorUtils.calculateContrast(h.f370B.getCurrentTextColor(),surface)>=4.5);
+   assertTrue("favorite contrast",ColorUtils.calculateContrast(h.f374y.getCurrentTextColor(),surface)>=3.0);
+  }
+ }
+}
