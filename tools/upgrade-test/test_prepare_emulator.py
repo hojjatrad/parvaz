@@ -34,4 +34,21 @@ class EmulatorBoundaryTest(unittest.TestCase):
  def test_abi_must_be_an_exact_token(self):self.refused(abis='x86_64,not-arm64-v8a')
  def test_approved_emulator_uses_same_target_for_every_mutation(self):
   self.run_helper(mutations_allowed=True);self.assertIn(['root'],self.mutations);self.assertTrue(any(c[:1]==['push'] for c in self.mutations))
+class RunnerCleanupBoundaryTest(unittest.TestCase):
+ def test_refused_physical_target_is_not_mutated_by_exit_trap(self):
+  import shutil
+  with tempfile.TemporaryDirectory() as temp:
+   root=pathlib.Path(temp);tools=root/'tools/upgrade-test';tools.mkdir(parents=True);(root/'app').mkdir();(root/'bin').mkdir()
+   (root/'app/build.gradle').write_text('versionName "1.28.8"\nversionCode 42\n')
+   shutil.copyfile(HELPER,tools/'prepare_emulator.py');shutil.copyfile(HELPER.with_name('run.sh'),tools/'run.sh')
+   (tools/'fixture_proxy.py').write_text('raise SystemExit(0)\n')
+   fake="#!"+sys.executable+"\nimport os,sys,pathlib\n"
+   (root/'bin/adb').write_text(fake+"with open(os.environ['ADB_TRACE'],'a') as f:f.write(' '.join(sys.argv[1:])+'\\n')\nprint('physical-device')\n")
+   (root/'bin/openssl').write_text(fake+"for flag in ['-out','-keyout']:\n if flag in sys.argv:pathlib.Path(sys.argv[sys.argv.index(flag)+1]).write_text('synthetic fixture')\n")
+   (root/'bin/curl').write_text('#!/bin/sh\nexit 91\n')
+   for p in (root/'bin').iterdir():p.chmod(0o700)
+   trace=root/'adb-trace.txt';env=dict(os.environ,PATH=str(root/'bin')+os.pathsep+os.environ['PATH'],ADB_TRACE=str(trace))
+   result=subprocess.run(['bash','tools/upgrade-test/run.sh'],cwd=root,env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,timeout=10)
+   self.assertNotEqual(result.returncode,0);self.assertIn('Disposable emulator serial required',result.stderr)
+   self.assertEqual(trace.read_text().splitlines(),['get-serialno','get-serialno'])
 if __name__=='__main__':unittest.main()
