@@ -11,7 +11,7 @@ permissions:
   actions: read
 jobs:
   source-compatibility:
-    if: github.ref == 'refs/heads/security/native-dependency-repair'
+    if: github.ref == 'refs/heads/security/native-dependency-repair' || github.ref == 'refs/heads/ci/native-package-proof'
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
@@ -87,6 +87,8 @@ jobs:
           include-hidden-files: true
           retention-days: 7
   xray-rebuild-probe:
+    # This independent rebuild already passed; compiler-consumer probes use the unchanged official AAR.
+    if: github.ref != 'refs/heads/ci/native-package-proof'
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
@@ -124,7 +126,7 @@ jobs:
           include-hidden-files: true
           retention-days: 7
   patched-android-build:
-    if: github.ref == 'refs/heads/security/native-dependency-repair'
+    if: github.ref == 'refs/heads/security/native-dependency-repair' || github.ref == 'refs/heads/ci/native-package-proof'
     needs: source-compatibility
     runs-on: ubuntu-24.04
     timeout-minutes: 35
