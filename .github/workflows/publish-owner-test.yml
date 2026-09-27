@@ -1,0 +1,60 @@
+name: Publish the owner-requested TEST APK (prerelease only, never stable)
+on:
+  push:
+    branches: ['release/owner-test-1288']
+permissions:
+  contents: read
+concurrency:
+  group: publish-owner-test-1288
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with: {distribution: temurin, java-version: '17'}
+      - name: Download exactly the already-built and signed candidate bytes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh run download 36337164540 --repo "$GITHUB_REPOSITORY" -n signed-apks-for-upgrade-test -D signed
+          ls -l signed
+      - name: Verify signer, package identity and TEST labelling before any publication
+        run: |
+          set -euo pipefail
+          echo "$ANDROID_HOME/build-tools/34.0.0" >> "$GITHUB_PATH"
+          export PATH="$ANDROID_HOME/build-tools/34.0.0:$PATH"
+          python3 - <<'PY'
+          import hashlib,json,pathlib,re,subprocess
+          SIGNER='d1383b8f34da5d3299b13634de421487289d82c1bb47ec3bc7f20ae8d02fe500'
+          rows=[]
+          files=sorted(pathlib.Path('signed').glob('*.apk'))
+          if not files:raise SystemExit('No signed candidate found')
+          for apk in files:
+              certs=subprocess.check_output(['apksigner','verify','--print-certs',str(apk)],text=True)
+              if SIGNER not in certs:raise SystemExit('Wrong signer: '+apk.name)
+              badging=subprocess.check_output(['aapt','dump','badging',str(apk)],text=True)
+              if not re.search(r"package: name='com\.parvaz\.tunnel' versionCode='42' versionName='1\.28\.8'",badging):raise SystemExit('Unexpected identity: '+apk.name)
+              if "application-label:'Parvaz (TEST)'" not in badging:raise SystemExit('Visible TEST label required: '+apk.name)
+              with apk.open('rb') as f:rows.append({'file':apk.name,'sha256':hashlib.file_digest(f,'sha256').hexdigest(),'bytes':apk.stat().st_size})
+          pathlib.Path('signed/HASHES.json').write_text(json.dumps({'scope':'Owner manual TEST only; installation/upgrade fixture NOT passed; stable release remains BLOCKED','apks':rows},indent=2)+'\n')
+          print('::notice title=OWNER_TEST_APKS::'+json.dumps(rows))
+          PY
+      - name: Publish as prerelease without touching stable or latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG='test/v1.28.8-r1'
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo 'Existing test release must not be overwritten'; exit 1
+          fi
+          gh release create "$TAG" signed/*.apk signed/HASHES.json --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title 'Parvaz 1.28.8 — TEST ONLY / فقط آزمایشی' --notes-file docs/releases/OWNER-TEST-1288-fa.md --prerelease --latest=false
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isLatest,isPrerelease,assets
