@@ -27,4 +27,3 @@ class FloorsTest(unittest.TestCase):
   with patch.object(m,'read_modules',side_effect=[before,after]),patch.object(m.subprocess,'run'):
    with self.assertRaises(ValueError):m.apply(pathlib.Path('.'),{}, {'a':'v1.2.0'})
 if __name__=='__main__':unittest.main()
-

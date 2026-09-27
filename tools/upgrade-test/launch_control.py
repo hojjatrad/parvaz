@@ -1,4 +1,4 @@
-"""Launch-only control on a disposable API33 emulator. NEVER an upgrade verdict."""
+"""Launch-only control on a disposable reviewed API31–33 emulator. NEVER an upgrade verdict."""
 import hashlib,json,os,pathlib,re,subprocess,time,urllib.request
 from prior_release import PRIORS
 ROOT=pathlib.Path(__file__).resolve().parents[2]
@@ -10,7 +10,8 @@ serial=run('adb','get-serialno').stdout.strip()
 if not re.fullmatch(r'emulator-\d+',serial):raise SystemExit('Only disposable emulator serials allowed')
 def adb(*args,check=True):return run('adb','-s',serial,*args,check=check).stdout.strip()
 (OUT/'environment.txt').write_text(adb('shell','getprop'))
-if adb('shell','getprop','ro.kernel.qemu')!='1' or adb('shell','getprop','ro.build.version.sdk')!='33':raise SystemExit('Unreviewed emulator target')
+expected=os.environ.get('PARVAZ_LAUNCH_API','33')
+if expected not in ['31','32','33'] or adb('shell','getprop','ro.kernel.qemu')!='1' or adb('shell','getprop','ro.build.version.sdk')!=expected:raise SystemExit('Unreviewed emulator target')
 if 'arm64-v8a' not in adb('shell','getprop','ro.product.cpu.abilist').split(','):raise SystemExit('No actual ARM64 APK support')
 adb('root');adb('wait-for-device')
 if adb('shell','getenforce')!='Enforcing':raise SystemExit('SELinux must remain enforcing')

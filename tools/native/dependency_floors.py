@@ -17,7 +17,7 @@ def upgrades(modules,floors):
  return selected
 
 def read_modules(source,env):
- raw=subprocess.check_output(['go','list','-m','-json','all'],cwd=source,env=env,text=True)
+ raw=subprocess.check_output(['go','list','-m','-json','all'],cwd=source,env=dict(env,GOFLAGS='-mod=mod'),text=True)
  decoder=json.JSONDecoder();i=0;result={}
  while i<len(raw):
   while i<len(raw) and raw[i].isspace():i+=1

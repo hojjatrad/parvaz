@@ -12,7 +12,7 @@ print('::error title=ARM_LAUNCH_STAGE::'+text.replace('%','%25').replace('\n','%
 p=Path('.cache/launch-control/environment.txt')
 if p.exists():
  for line in p.read_text().splitlines():
-  if any(x in line for x in ['qemu','abilist','ro.build.version.sdk','ro.hardware']):print('::notice title=ARM_ENVIRONMENT::'+line)
+  if any(line.startswith('['+x+']') for x in ['ro.kernel.qemu','ro.boot.qemu','ro.product.cpu.abilist','ro.product.cpu.abilist64','ro.dalvik.vm.native.bridge','ro.ndk_translation.version','ro.build.version.sdk','ro.hardware']):print('::notice title=ARM_ENVIRONMENT::'+line)
 PYERROR
 fi
 exit "$result"

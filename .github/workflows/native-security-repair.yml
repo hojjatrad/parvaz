@@ -46,6 +46,11 @@ jobs:
           include-hidden-files: true
           retention-days: 7
   arm-launch-control:
+    strategy:
+      fail-fast: false
+      matrix: {api: [31, 32]}
+    env:
+      PARVAZ_LAUNCH_API: ${{ matrix.api }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -65,7 +70,7 @@ jobs:
           sudo udevadm trigger --name-match=kvm
       - uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
         with:
-          api-level: 33
+          api-level: ${{ matrix.api }}
           arch: x86_64
           target: google_apis
           disable-animations: true
@@ -74,7 +79,78 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
-          name: arm33-immutable-launch-control
+          name: arm${{ matrix.api }}-immutable-launch-control
           path: .cache/launch-control/
+          include-hidden-files: true
+          retention-days: 7
+  xray-rebuild-probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: {persist-credentials: false}
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with: {go-version: '1.27.1', cache: false}
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with: {distribution: temurin, java-version: '17'}
+      - name: Build a review-only patched AAR from the pinned wrapper source
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-34' 'ndk;29.0.14206865'
+          bash tools/release/fetch_core.sh
+          mkdir -p .cache/xray-security-review
+          if ! python3 tools/native/rebuild_xray_probe.py >.cache/xray-security-review/build.log 2>&1; then
+            tail -60 .cache/xray-security-review/build.log
+            python3 - <<'PYERROR'
+          from pathlib import Path
+          text=Path('.cache/xray-security-review/build.log').read_text(errors='replace')[-3500:]
+          print('::error title=XRAY_REBUILD_PROBE::'+text.replace('%','%25').replace('\n','%0A'))
+          PYERROR
+            exit 1
+          fi
+          tail -15 .cache/xray-security-review/build.log
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: xray-source-rebuild-review
+          path: |
+            .cache/xray-security-review/*.json
+            .cache/xray-security-review/*.jsons
+            .cache/xray-security-review/*.log
+            .cache/xray-security-review/go.*
+          include-hidden-files: true
+          retention-days: 7
+  patched-android-build:
+    needs: source-compatibility
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: {persist-credentials: false}
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with: {go-version: '1.27.1', cache: false}
+      - name: Compile both Android ABIs and bind complete package lists to outputs
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'ndk;27.2.12479018'
+          mkdir -p .cache/native/security-review
+          if ! python3 tools/native/build.py >.cache/native/security-review/android-build.log 2>&1; then
+            tail -60 .cache/native/security-review/android-build.log
+            python3 - <<'PYERROR'
+          from pathlib import Path
+          text=Path('.cache/native/security-review/android-build.log').read_text(errors='replace')[-3500:]
+          print('::error title=PATCHED_ANDROID_BUILD::'+text.replace('%','%25').replace('\n','%0A'))
+          PYERROR
+            exit 1
+          fi
+          python3 - <<'PYREPORT'
+          import json,pathlib
+          for p in sorted(pathlib.Path('.cache/native/security-review').glob('*.json')):
+              r=json.loads(p.read_text());packages=r['package_inventory']['packages']
+              print('::notice title=PATCHED_ANDROID_BINARY::'+json.dumps({'engine':r['engine'],'abi':r['abi'],'sha256':r['sha256'],'package_count':len(packages),'openpgp_packages':[p for p in packages if p.startswith('golang.org/x/crypto/openpgp')],'resolved_floors':r['dependency_patch']['resolved_floors']}))
+          PYREPORT
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: patched-android-build-evidence
+          path: .cache/native/security-review/
           include-hidden-files: true
           retention-days: 7
