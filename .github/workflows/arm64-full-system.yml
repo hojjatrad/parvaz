@@ -17,7 +17,7 @@ jobs:
           trap 'rc=$?; if [ "$rc" -ne 0 ]; then python3 -c "import pathlib; print(\"::error title=ARM64_PREPARATION::\"+pathlib.Path(\"evidence/preparation.log\").read_text(errors=\"replace\")[-3500:].replace(\"%\",\"%25\").replace(\"\\n\",\"%0A\"))"; fi' EXIT
           sudo apt-get update -qq
           sudo apt-get install -y libpulse0 libnss3 libx11-6 libxcb1 libgl1 libasound2t64
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'emulator' 'platform-tools' 'system-images;android-30;google_apis;arm64-v8a'
+          (set +o pipefail; yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'emulator' 'platform-tools' 'system-images;android-30;google_apis;arm64-v8a')
           echo no | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd -n parvaz_arm64 -k 'system-images;android-30;google_apis;arm64-v8a' --device pixel_2 --force
           echo 'hw.ramSize=4096' >> "$HOME/.android/avd/parvaz_arm64.avd/config.ini"
           echo 'hw.cpu.ncore=2' >> "$HOME/.android/avd/parvaz_arm64.avd/config.ini"
@@ -53,6 +53,14 @@ jobs:
               print('::error title=FULL_ARM64_BOOT_LOG::'+text.replace('%','%25').replace('\n','%0A'))
           if not booted or summary['architecture']!='aarch64' or summary['selinux']!='Enforcing' or summary['native_bridge'] not in ('','0'):raise SystemExit(2)
           PY
+      - name: Print bounded diagnostics after log writers have closed
+        if: failure()
+        run: |
+          python3 - <<'PYDIAG'
+          import pathlib
+          for p in pathlib.Path('evidence').glob('*.log'):
+              print('::error title=ARM64_ENVIRONMENT::'+(p.name+'\n'+p.read_text(errors='replace')[-3200:]).replace('%','%25').replace('\n','%0A'))
+          PYDIAG
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
