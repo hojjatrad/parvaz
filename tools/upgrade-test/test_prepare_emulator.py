@@ -3,7 +3,7 @@ import os,pathlib,runpy,subprocess,sys,tempfile,unittest
 from unittest.mock import patch
 HELPER=pathlib.Path(__file__).with_name('prepare_emulator.py')
 class EmulatorBoundaryTest(unittest.TestCase):
- def run_helper(self,serial='emulator-5554',qemu='1',sdk='30',abis='x86_64,arm64-v8a',permission='1',mutations_allowed=False,bad_staging=False,bad_readback=False):
+ def run_helper(self,serial='emulator-5554',qemu='1',sdk='30',abis='x86_64,arm64-v8a',permission='1',mutations_allowed=False,bad_staging=False,bad_readback=False,hash_collision=False,enforcing=True):
   self.mutations=[];self.commands=[]
   def fake(cmd,**kwargs):
    self.commands.append(cmd)
@@ -18,6 +18,8 @@ class EmulatorBoundaryTest(unittest.TestCase):
    if not mutations_allowed:raise AssertionError('An unapproved device mutation was attempted')
    self.assertTrue(bound,'Every mutation must stay bound to the verified emulator')
    if args[:2]==['shell','mktemp']:return '/unsafe' if bad_staging else '/data/local/tmp/parvaz-ca.ABC123'
+   if args==['shell','getenforce']:return 'Enforcing' if enforcing else 'Permissive'
+   if args[:2]==['shell','ls']:return '1234abcd.0' if hash_collision else ''
    if 'cat' in args:return 'wrong' if bad_readback else 'synthetic fixture, not a certificate'
    return ''
   with tempfile.TemporaryDirectory() as temp:
@@ -54,6 +56,18 @@ class EmulatorBoundaryTest(unittest.TestCase):
   with self.assertRaises(SystemExit):self.run_helper(mutations_allowed=True,bad_readback=True)
   self.assertIn(['shell','start'],self.mutations)
   self.assertFalse(any('http_proxy' in c for c in self.mutations))
+ def test_setup_restores_enforcing_before_framework_start(self):
+  self.run_helper(mutations_allowed=True)
+  self.assertLess(self.mutations.index(['shell','setenforce','1']),self.mutations.index(['shell','start']))
+ def test_readback_failure_also_restores_enforcement(self):
+  with self.assertRaises(SystemExit):self.run_helper(mutations_allowed=True,bad_readback=True)
+  self.assertIn(['shell','setenforce','1'],self.mutations)
+ def test_existing_root_hash_slot_is_preserved(self):
+  self.run_helper(mutations_allowed=True,hash_collision=True)
+  pushed=next(c for c in self.mutations if c[0]=='push');self.assertTrue(pushed[-1].endswith('/1234abcd.1'))
+ def test_initially_permissive_device_cannot_be_used(self):
+  with self.assertRaises(SystemExit):self.run_helper(mutations_allowed=True,enforcing=False)
+  self.assertNotIn(['shell','stop'],self.mutations)
 class RunnerCleanupBoundaryTest(unittest.TestCase):
  def test_refused_physical_target_is_not_mutated_by_exit_trap(self):
   import shutil
