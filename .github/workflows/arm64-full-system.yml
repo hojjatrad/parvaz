@@ -9,6 +9,8 @@ jobs:
   boot:
     runs-on: ubuntu-24.04
     timeout-minutes: 28
+    env:
+      ANDROID_AVD_HOME: ${{ runner.temp }}/parvaz-arm64-avd
     steps:
       - name: Install official ARM64 system image and host renderer dependencies
         run: |
@@ -18,9 +20,10 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y libpulse0 libnss3 libx11-6 libxcb1 libgl1 libasound2t64
           (set +o pipefail; yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'emulator' 'platform-tools' 'system-images;android-30;google_apis;arm64-v8a')
+          mkdir -p "$ANDROID_AVD_HOME"
           echo no | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd -n parvaz_arm64 -k 'system-images;android-30;google_apis;arm64-v8a' --device pixel_2 --force
-          echo 'hw.ramSize=4096' >> "$HOME/.android/avd/parvaz_arm64.avd/config.ini"
-          echo 'hw.cpu.ncore=2' >> "$HOME/.android/avd/parvaz_arm64.avd/config.ini"
+          echo 'hw.ramSize=4096' >> "$ANDROID_AVD_HOME/parvaz_arm64.avd/config.ini"
+          echo 'hw.cpu.ncore=2' >> "$ANDROID_AVD_HOME/parvaz_arm64.avd/config.ini"
       - name: Start the actual bundled ARM64 backend with a real AVD and software acceleration
         run: |
           mkdir -p evidence
