@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 28
     env:
-      QT_QPA_PLATFORM: offscreen
+      QT_QPA_PLATFORM: xcb
       ANDROID_AVD_HOME: ${{ github.workspace }}/.cache/parvaz-arm64-avd
     steps:
       - name: Install official ARM64 system image and host renderer dependencies
@@ -19,7 +19,7 @@ jobs:
           exec > >(tee evidence/preparation.log) 2>&1
           trap 'rc=$?; if [ "$rc" -ne 0 ]; then python3 -c "import pathlib; print(\"::error title=ARM64_PREPARATION::\"+pathlib.Path(\"evidence/preparation.log\").read_text(errors=\"replace\")[-3500:].replace(\"%\",\"%25\").replace(\"\\n\",\"%0A\"))"; fi' EXIT
           sudo apt-get update -qq
-          sudo apt-get install -y libpulse0 libnss3 libx11-6 libxcb1 libgl1 libasound2t64
+          sudo apt-get install -y libpulse0 libnss3 libx11-6 libxcb1 libgl1 libasound2t64 xvfb xauth libxcb-cursor0
           (set +o pipefail; yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'emulator' 'platform-tools' 'system-images;android-30;google_apis;arm64-v8a')
           mkdir -p "$ANDROID_AVD_HOME"
           echo no | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd -n parvaz_arm64 -k 'system-images;android-30;google_apis;arm64-v8a' --device pixel_2 --force
@@ -32,15 +32,18 @@ jobs:
           export PATH="$ANDROID_HOME/platform-tools:$PATH"
           export LD_LIBRARY_PATH="$ANDROID_HOME/emulator/lib64:$ANDROID_HOME/emulator/lib64/qt/lib:${LD_LIBRARY_PATH:-}"
           QEMU="$ANDROID_HOME/emulator/qemu/linux-x86_64/qemu-system-aarch64"
+          if [ -x "${QEMU}-headless" ]; then QEMU="${QEMU}-headless"; fi
+          ulimit -c 0 # no host memory dump collection
+          echo "Selected official backend: $QEMU"
           cp "$ANDROID_HOME/system-images/android-30/google_apis/arm64-v8a/source.properties" evidence/image.properties
           sha256sum "$QEMU" > evidence/emulator-backend.sha256
           adb start-server
           # Upstream selects virt on AArch64 hosts, but ranchu on x86 hosts.
           # API30 audio requires PCI; no-audio only mutes the backend, not HDA.
           # Select the official ARM64 virt machine explicitly; no image/APK modification.
-          "$QEMU" -avd parvaz_arm64 -port 5554 -no-window -no-metrics -no-audio -no-snapshot -no-boot-anim -gpu swiftshader -accel off -qemu -machine type=virt >evidence/emulator.log 2>&1 &
+          setsid xvfb-run -a -s "-screen 0 1280x1024x24" "$QEMU" -avd parvaz_arm64 -port 5554 -no-window -no-metrics -no-audio -no-snapshot -no-boot-anim -gpu swiftshader -accel off -qemu -machine type=virt >evidence/emulator.log 2>&1 &
           export QEMU_PID=$!
-          trap 'kill "$QEMU_PID" 2>/dev/null || true' EXIT
+          trap 'kill -- "-$QEMU_PID" 2>/dev/null || true' EXIT
           python3 - <<'PY'
           import os,pathlib,subprocess,time,json
           def adb(*args):
