@@ -66,11 +66,16 @@ jobs:
       - name: Inspect official SDK QEMU capabilities without downloading a system image
         run: |
           set -u
+          sudo apt-get update -qq
+          sudo apt-get install -y libpulse0 libnss3 libx11-6 libxcb1 libgl1 libasound2t64
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'emulator' >/dev/null
           find "$ANDROID_HOME/emulator/qemu" -maxdepth 2 -type f -name '*aarch64*' -print
           export LD_LIBRARY_PATH="$ANDROID_HOME/emulator/lib64:$ANDROID_HOME/emulator/lib64/qt/lib:${LD_LIBRARY_PATH:-}"
           QEMU="$ANDROID_HOME/emulator/qemu/linux-x86_64/qemu-system-aarch64"
           if [ -x "$QEMU" ]; then
+            ldd "$QEMU" | grep "not found" || true
+            timeout 20 "$QEMU" -fuchsia -machine help > "$RUNNER_TEMP/fuchsia-machines.txt" 2>&1 || true
+            timeout 20 "$QEMU" -fuchsia -accel help > "$RUNNER_TEMP/fuchsia-accel.txt" 2>&1 || true
             timeout 20 "$QEMU" -machine help > "$RUNNER_TEMP/machines.txt" 2>&1 || true
             timeout 20 "$QEMU" -accel help > "$RUNNER_TEMP/accel.txt" 2>&1 || true
             timeout 20 "$QEMU" -help > "$RUNNER_TEMP/help.txt" 2>&1 || true
@@ -79,9 +84,22 @@ jobs:
           fi
           python3 - <<'PY'
           import pathlib,os
-          for n in ['machines.txt','accel.txt','help.txt']:
+          for n in ['machines.txt','accel.txt','fuchsia-machines.txt','fuchsia-accel.txt','help.txt']:
               p=pathlib.Path(os.environ['RUNNER_TEMP'])/n
               if p.exists():
                   text=p.read_text(errors='replace')[:3000]
                   print('::notice title=ARM_LAB_CAPABILITY::'+text.replace('%','%25').replace('\n','%0A'))
           PY
+  native-arm-host:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 4
+    steps:
+      - name: Check actual native ARM runner KVM availability, no Android or APK installation
+        run: |
+          uname -m
+          sudo modprobe kvm || true
+          if [ -c /dev/kvm ]; then
+            echo '::notice title=ARM_HOST_CAPABILITY::ARM host has a KVM character device; guest acceleration still requires a real boot test.'
+          else
+            echo '::notice title=ARM_HOST_CAPABILITY::ARM host has no KVM device. Native ARM Android VM installation has NOT been demonstrated.'
+          fi
