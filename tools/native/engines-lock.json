@@ -11,7 +11,14 @@
     "tags": "with_quic,with_utls,with_wireguard,with_gvisor",
     "patches": [
       "sing-box-optional-interface-monitor.patch"
-    ]
+    ],
+    "version_suffix": "+parvaz.security.1",
+    "dependency_floors": {
+      "github.com/go-chi/chi/v5": "v5.3.0",
+      "golang.org/x/crypto": "v0.56.0",
+      "golang.org/x/mod": "v0.40.0",
+      "google.golang.org/grpc": "v1.83.2"
+    }
   },
   {
     "name": "mihomo",
@@ -22,6 +29,15 @@
     "sha256": "971dd4533e4e2c3dad7473e8115200da8c0d7471b4b61da54da896345c5b3850",
     "package": ".",
     "patchdir": ".",
-    "tags": ""
+    "tags": "",
+    "version_suffix": "+parvaz.security.1",
+    "dependency_floors": {
+      "github.com/insomniacslk/dhcp": "v0.0.0-20260719225207-c76316d4aa82",
+      "github.com/klauspost/compress": "v1.18.7",
+      "golang.org/x/crypto": "v0.56.0",
+      "golang.org/x/net": "v0.56.0",
+      "golang.org/x/sys": "v0.44.0",
+      "golang.org/x/text": "v0.39.0"
+    }
   }
 ]

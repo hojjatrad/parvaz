@@ -1,0 +1,80 @@
+name: Targeted native dependency repair and immutable ARM launch controls
+on:
+  push:
+    branches: ['security/native-dependency-repair']
+    paths: ['tools/native/**', 'tools/upgrade-test/launch_control.py', '.github/workflows/native-security-repair.yml']
+concurrency:
+  group: native-security-repair-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+  actions: read
+jobs:
+  source-compatibility:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: {persist-credentials: false}
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with: {go-version: '1.27.1', cache: false}
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with: {distribution: temurin, java-version: '17'}
+      - name: Test floor selection then compile the patched pinned sources
+        run: |
+          python3 -m unittest discover -s tools/native -p 'test_*.py'
+          mkdir -p .cache/native/security-review
+          if ! python3 tools/native/build.py --host >.cache/native/security-review/build.log 2>&1; then
+            tail -80 .cache/native/security-review/build.log
+            python3 - <<'PY'
+          from pathlib import Path
+          text=Path('.cache/native/security-review/build.log').read_text(errors='replace')[-3500:]
+          print('::error title=NATIVE_PATCH_BUILD::'+text.replace('%','%25').replace('\n','%0A'))
+          PY
+            exit 1
+          fi
+          tail -30 .cache/native/security-review/build.log
+      - name: Real loopback protocol regression, not Android installation
+        run: |
+          bash tools/audit/run.sh
+          python3 tools/native/protocol_smoke.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: native-security-source-compatibility
+          path: .cache/native/security-review/
+          include-hidden-files: true
+          retention-days: 7
+  arm-launch-control:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: {persist-credentials: false}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: signed-apks-for-upgrade-test
+          path: release-artifacts
+          run-id: 36311876249
+          github-token: ${{ github.token }}
+      - name: Prepare reviewed tools and emulator acceleration
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'build-tools;34.0.0'
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: 33
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
+          script: python3 tools/upgrade-test/launch_control.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: arm33-immutable-launch-control
+          path: .cache/launch-control/
+          include-hidden-files: true
+          retention-days: 7
