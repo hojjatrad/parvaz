@@ -2,6 +2,7 @@ name: Owner-requested TEST APK — NOT approved for stable updates
 on:
   push:
     branches: ['qa/install-preview-v3']
+    paths: ['app/**', 'tools/**']
 concurrency:
   group: parvaz-owner-install-preview-v3
   cancel-in-progress: true
@@ -228,6 +229,8 @@ jobs:
           include-hidden-files: true
           retention-days: 5
   publish-test:
+    # Owner chose complete security/install gates, not an unverified manual handoff.
+    if: ${{ false }}
     needs: [sign-prebuilt, install-upgrade]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
