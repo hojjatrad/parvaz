@@ -1,0 +1,44 @@
+name: Read immutable ARM control crash evidence only
+on:
+  push:
+    branches: ['ci/arm-crash-inspection']
+    paths: ['.github/workflows/arm-crash-inspection.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: arm*-immutable-launch-control
+          path: evidence
+          run-id: 36317318046
+          github-token: ${{ github.token }}
+      - name: Report synthetic control summaries and bounded crash headers, no memory dumps
+        run: |
+          python3 - <<'PY'
+          import pathlib,json,hashlib,re
+          root=pathlib.Path('evidence');seen=set()
+          def notice(kind,text):print('::notice title='+kind+'::'+text.replace('%','%25').replace('\r','%0D').replace('\n','%0A')[:6000])
+          for p in sorted(root.rglob('summary.json')):notice('IMMUTABLE_CONTROL_RESULTS',p.as_posix()+'\n'+p.read_text())
+          for p in sorted(root.rglob('tombstone_*')):
+              if p.suffix=='.pb' or not p.is_file() or p.stat().st_size>4*1024*1024:continue
+              data=p.read_bytes();digest=hashlib.sha256(data).hexdigest()
+              if digest in seen:continue
+              seen.add(digest)
+              text=data.decode(errors='replace')
+              if 'com.parvaz.tunnel' not in text[:3000]:continue
+              lines=[]
+              for line in text.splitlines()[:70]:
+                  if re.search(r'memory near|memory map|stack:',line,re.I):break
+                  lines.append(line)
+              notice('ARM_TOMBSTONE_HEADER',p.as_posix()+'\n'+'\n'.join(lines)[:4800])
+          for p in sorted(root.rglob('device.log')):
+              lines=p.read_text(errors='replace').splitlines()
+              patterns=r'fatal error:|runtime:|unsupported instruction|unimplemented|SIGILL:|signal arrived|Abort message'
+              hits=[i for i,l in enumerate(lines) if re.search(patterns,l,re.I)]
+              for i in hits[:2]:notice('ARM_RUNTIME_CONTEXT',p.as_posix()+'\n'+'\n'.join(lines[max(0,i-4):i+10])[:3500])
+          PY
