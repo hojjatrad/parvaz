@@ -92,9 +92,10 @@ jobs:
           cat .cache/android-unit.log
       - name: Build pinned engines and prepare corresponding source after fast checks
         run: |
-          sdkmanager 'ndk;27.2.12479018'
+          sdkmanager 'ndk;27.2.12479018' 'ndk;29.0.14206865'
           python3 tools/native/build.py
-          python3 tools/native/source_bundle.py
+          python3 tools/native/xray_candidate.py build
+          python3 tools/native/source_bundle.py --candidate-xray
       - name: Inventory and audit resolved Java and native Go dependencies
         run: |
           ./gradlew --no-daemon --max-workers=2 :app:writeRuntimeInventory
@@ -229,8 +230,8 @@ jobs:
           include-hidden-files: true
           retention-days: 5
   publish-test:
-    # Owner chose complete security/install gates, not an unverified manual handoff.
-    if: ${{ false }}
+    # Publication stays bound to evidence: both real installation fixtures must
+    # succeed first, and bind_installation.py rechecks the published bytes.
     needs: [sign-prebuilt, install-upgrade]
     runs-on: ubuntu-24.04
     timeout-minutes: 15

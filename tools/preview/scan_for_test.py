@@ -5,7 +5,7 @@ Inventory, scan transport/parser errors and all stable-release gates remain fata
 import json,pathlib,subprocess,sys
 root=pathlib.Path(__file__).resolve().parents[2]
 subprocess.run([sys.executable,str(root/'tools/preview/guard.py')],check=True)
-run=subprocess.run([sys.executable,str(root/'tools/security/dependency_audit.py'),'--native'],cwd=root,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+run=subprocess.run([sys.executable,str(root/'tools/security/dependency_audit.py'),'--native','--candidate-xray'],cwd=root,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
 (root/'.cache/preview-scan.log').write_text(run.stdout)
 if run.returncode not in (0,2):
  print(run.stdout[-4000:]);raise SystemExit(run.returncode)
