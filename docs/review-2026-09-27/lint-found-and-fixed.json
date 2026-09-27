@@ -1,0 +1,7 @@
+{
+  "run_id": 36309429502,
+  "commit": "c6a42b6",
+  "scope": "582 unit tests passed; the overall job failed on a newly introduced AppCompat tint lint error. Not a successful final CI run.",
+  "new_lint_error": "UseAppTint in item_server.xml",
+  "fix": "Explicit AppCompatImageView with app:tint; no lint baseline changes."
+}
