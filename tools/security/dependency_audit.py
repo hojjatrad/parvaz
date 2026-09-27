@@ -35,16 +35,9 @@ def components(native):
   (OUT/'binary-runtime.json').write_text(json.dumps(binaries,indent=2)+'\n')
   for binary in binaries:
    evidence={'binary':binary['binary'],'abi':binary['abi'],'sha256':binary['sha256'],'goos':binary.get('goos')}
-   def package_scope(module_name,uncertain=False):
-    result=dict(evidence)
-    if 'compiled_packages' in binary and not uncertain:
-     packages=binary['compiled_packages']
-     subset=[p for p in packages if ('.' not in p.split('/')[0] if module_name=='stdlib' else (p==module_name or p.startswith(module_name+'/')))]
-     result.update(package_coverage_verified=True,compiled_packages=subset,package_proof_sha256=binary['package_proof_sha256'])
-    return result
-   add('Go','stdlib',binary['go_version'],package_scope('stdlib'))
+   add('Go','stdlib',binary['go_version'],compiled_package_evidence(binary,'stdlib'))
    for module in binary['modules']:
-    add('Go',module['name'],module['version'],package_scope(module['name'],bool(module.get('upstream_baseline'))))
+    add('Go',module['name'],module['version'],compiled_package_evidence(binary,module['name'],bool(module.get('upstream_baseline'))))
     upstream=module.get('upstream_baseline')
     if upstream:
      add('Go',upstream['name'],upstream['version'],dict(evidence,fork_target=module['name']+'@'+module['version'],scope='conservative upstream baseline; fork patch applicability requires review'))
@@ -65,6 +58,14 @@ def components(native):
    add('Go','stdlib',version,{'engine':lock['name'],'scope':'source toolchain; verify binary compiler separately'})
    add('Git',lock['repository'],lock['commit'],{'tag':lock['tag'],'source_archive_sha256':lock['sha256']})
  return list(result.values())
+
+def compiled_package_evidence(binary,module_name,uncertain=False):
+ result={'binary':binary['binary'],'abi':binary['abi'],'sha256':binary['sha256'],'goos':binary.get('goos')}
+ if 'compiled_packages' in binary and not uncertain:
+  packages=binary['compiled_packages']
+  subset=[p for p in packages if ('.' not in p.split('/')[0] if module_name=='stdlib' else (p==module_name or p.startswith(module_name+'/')))]
+  result.update(package_coverage_verified=True,compiled_packages=subset,package_proof_sha256=binary['package_proof_sha256'])
+ return result
 
 def request(path,payload=None):
  req=urllib.request.Request('https://api.osv.dev/v1/'+path,data=None if payload is None else json.dumps(payload).encode(),headers={'Content-Type':'application/json','User-Agent':'Parvaz-public-dependency-review'})

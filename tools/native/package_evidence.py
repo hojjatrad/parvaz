@@ -20,12 +20,36 @@ def package_names(text):
  if len(set(names))!=len(names):raise ValueError('Duplicate dependency records')
  return sorted(names)
 
-def collect(source,env,core):
+def inventory_command(core,goos):
  cmd=['go','list','-deps','-json','-trimpath','-buildvcs=false']
- if env['GOOS']=='android':cmd+=['-buildmode=pie']
+ if goos=='android':cmd+=['-buildmode=pie']
  if core['tags']:cmd+=['-tags',core['tags']]
- cmd.append(core['package'])
- return {'packages':package_names(subprocess.check_output(cmd,cwd=source,env=env,text=True)),'inventory_command':cmd,'goos':env['GOOS'],'goarch':env['GOARCH'],'cgo_enabled':env['CGO_ENABLED'],'core_spec_sha256':hashlib.sha256(json.dumps(core,sort_keys=True).encode()).hexdigest()}
+ return cmd+[core['package']]
+
+def validate_root(packages,root,core):
+ module='github.com/'+core['repository']
+ suffix=core['package'].removeprefix('./') if core['package']!='.' else ''
+ expected=module+('/'+suffix if suffix else '')
+ if not isinstance(root,dict) or root.get('name')!='main' or root.get('module_main') is not True:raise ValueError('Expected an actual main build root')
+ if not isinstance(root.get('import_path'),str) or root['import_path'].lower()!=expected.lower() or not isinstance(root.get('module_path'),str) or root['module_path'].lower()!=module.lower():raise ValueError('Compiler root is not the pinned target')
+ deps=root.get('dependencies')
+ if not isinstance(deps,list) or not all(isinstance(d,str) and d and not any(c.isspace() for c in d) for d in deps) or len(set(deps))!=len(deps) or 'runtime' not in deps:raise ValueError('Missing full root dependency closure')
+ if root['import_path'] in deps or set(packages)!=set(deps+[root['import_path']]):raise ValueError('Package records do not equal the main root transitive dependency closure')
+
+def closed_graph(text,core):
+ packages=package_names(text);records=list(objects(text))
+ roots=[r for r in records if not r.get('DepOnly',False)]
+ if len(roots)!=1:raise ValueError('Exactly one compiler root is required')
+ r=roots[0];module=r.get('Module',{})
+ root={'import_path':r['ImportPath'],'name':r.get('Name'),'module_path':module.get('Path'),'module_main':module.get('Main'),'dependencies':r.get('Deps')}
+ validate_root(packages,root,core)
+ return {'coverage_schema':2,'packages':packages,'root':root}
+
+def collect(source,env,core):
+ cmd=inventory_command(core,env['GOOS'])
+ result=closed_graph(subprocess.check_output(cmd,cwd=source,env=env,text=True),core)
+ result.update(inventory_command=cmd,goos=env['GOOS'],goarch=env['GOARCH'],cgo_enabled=env['CGO_ENABLED'],core_spec_sha256=hashlib.sha256(json.dumps(core,sort_keys=True).encode()).hexdigest())
+ return result
 
 def verify(proof,core,abi,binary_sha,go_version):
  expected_arch={'arm64-v8a':'arm64','armeabi-v7a':'arm'}
@@ -36,4 +60,6 @@ def verify(proof,core,abi,binary_sha,go_version):
  packages=p.get('packages')
  if not isinstance(packages,list) or not packages or not all(isinstance(x,str) and x and not any(c.isspace() for c in x) for x in packages):raise ValueError('Missing package coverage')
  if len(set(packages))!=len(packages):raise ValueError('Duplicate package inventory')
+ if p.get('coverage_schema')!=2 or p.get('inventory_command')!=inventory_command(core,'android'):raise ValueError('Unknown or incomplete compiler coverage contract')
+ validate_root(packages,p.get('root'),core)
  return packages

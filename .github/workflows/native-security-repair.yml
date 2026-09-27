@@ -1,7 +1,7 @@
 name: Targeted native dependency repair and immutable ARM launch controls
 on:
   push:
-    branches: ['security/native-dependency-repair', 'ci/xray-security-probe']
+    branches: ['security/native-dependency-repair', 'ci/xray-security-probe', 'ci/native-package-proof']
     paths: ['tools/native/**', 'tools/upgrade-test/*launch_control*', '.github/workflows/native-security-repair.yml']
 concurrency:
   group: native-security-repair-${{ github.ref }}
@@ -24,6 +24,7 @@ jobs:
       - name: Test floor selection then compile the patched pinned sources
         run: |
           python3 -m unittest discover -s tools/native -p 'test_*.py'
+          python3 -m unittest discover -s tools/security -p 'test_*.py'
           mkdir -p .cache/native/security-review
           if ! python3 tools/native/build.py --host >.cache/native/security-review/build.log 2>&1; then
             tail -80 .cache/native/security-review/build.log
@@ -146,11 +147,43 @@ jobs:
             exit 1
           fi
           python3 - <<'PYREPORT'
-          import json,pathlib
+          import json,pathlib,sys
+          sys.path.insert(0,'tools/native')
+          from package_evidence import verify
+          locks=json.loads(pathlib.Path('tools/native/engines-lock.json').read_text())
           for p in sorted(pathlib.Path('.cache/native/security-review').glob('*.json')):
-              r=json.loads(p.read_text());packages=r['package_inventory']['packages']
+              r=json.loads(p.read_text());core=next(c for c in locks if c['name']==r['engine']);packages=verify(r,core,r['abi'],r['sha256'],r['go_version'].removeprefix('go'))
               print('::notice title=PATCHED_ANDROID_BINARY::'+json.dumps({'engine':r['engine'],'abi':r['abi'],'sha256':r['sha256'],'package_count':len(packages),'openpgp_packages':[p for p in packages if p.startswith('golang.org/x/crypto/openpgp')],'resolved_floors':r['dependency_patch']['resolved_floors']}))
           PYREPORT
+      - name: Exercise actual binary-to-proof consumer; original Xray remains unmodified
+        run: |
+          bash tools/release/fetch_core.sh
+          python3 - <<'PYCONSUMER'
+          import pathlib,sys,json
+          sys.path.insert(0,'tools/security')
+          import binary_inventory,dependency_audit
+          rows=binary_inventory.scan(pathlib.Path.cwd())
+          covered=[b for b in rows if 'compiled_packages' in b]
+          if len(rows)!=6 or len(covered)!=4:raise ValueError('Expected four validated repaired outputs and two unchanged Xray outputs')
+          advisory=dependency_audit.request('vulns/GO-2026-5932')
+          components={}
+          for binary in rows:
+              for module in binary['modules']:
+                  if module['name']!='golang.org/x/crypto':continue
+                  c=components.setdefault(module['version'],{'ecosystem':'Go','name':module['name'],'sources':[]})
+                  c['sources'].append(dependency_audit.compiled_package_evidence(binary,module['name']))
+          results=[{'version':v,'binaries':c['sources'],'excluded_by_actual_compiler_package_scope':dependency_audit.excludes_verified_compiled_packages(c,advisory)} for v,c in components.items()]
+          report={'release_status':'BLOCKED','scope':'Actual binary/proof consumer and one-advisory applicability check only; not full SCA or a combined APK; Xray is still the original AAR','results':results,'advisory':advisory}
+          pathlib.Path('.cache/native/consumer-review.json').write_text(json.dumps(report,indent=2)+'\n')
+          print('::notice title=NATIVE_PACKAGE_CONSUMER::'+json.dumps({'validated_outputs':len(covered),'results':[{'version':r['version'],'excluded':r['excluded_by_actual_compiler_package_scope'],'binaries':len(r['binaries'])} for r in results]}))
+          PYCONSUMER
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: native-package-consumer-proof
+          path: .cache/native/consumer-review.json
+          include-hidden-files: true
+          retention-days: 7
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
