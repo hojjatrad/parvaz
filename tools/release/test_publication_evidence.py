@@ -31,4 +31,20 @@ class PublicationEvidenceTest(unittest.TestCase):
   for tests in [[],[{'tests':1,'failures':0,'errors':0,'skipped':1}]]:
    self.proof['tests']=tests;self.save()
    with self.assertRaises(SystemExit):gate.verify(self.root,'1.28.6','commit')
+
+ def _compiled_graph_finding(self,advisory='NOT_IN_VERIFIED_COMPILED_PACKAGE_GRAPH',coverage=True,goos='android'):
+  return {'disposition':'NOT_APPLICABLE_TO_VERIFIED_BINARY_SCOPE','advisory_dispositions':{'GO-0000-0001':advisory},
+          'component':{'ecosystem':'Go','sources':[{'binary':'libgojni.so','goos':goos,'package_coverage_verified':coverage}]}}
+ def test_compiled_package_graph_exclusion_accepted(self):
+  self.review.update(status='NO_APPLICABLE_MATCHES_IN_BUILT_RUNTIME',binary_runtime_verified=True,findings=[self._compiled_graph_finding()]);self.save()
+  gate.verify(self.root,'1.28.6','commit')
+ def test_review_required_advisory_inside_excluded_row_rejected(self):
+  self.review.update(status='NO_APPLICABLE_MATCHES_IN_BUILT_RUNTIME',binary_runtime_verified=True,
+                     findings=[self._compiled_graph_finding(advisory='REVIEW_REQUIRED')]);self.save()
+  with self.assertRaises(SystemExit):gate.verify(self.root,'1.28.6','commit')
+ def test_exclusion_without_verified_android_binary_coverage_rejected(self):
+  for finding in [self._compiled_graph_finding(coverage=False),self._compiled_graph_finding(goos='linux'),
+                  {'disposition':'NOT_APPLICABLE_TO_VERIFIED_BINARY_SCOPE','advisory_dispositions':{},'component':{'sources':[]}}]:
+   self.review.update(status='NO_APPLICABLE_MATCHES_IN_BUILT_RUNTIME',binary_runtime_verified=True,findings=[finding]);self.save()
+   with self.assertRaises(SystemExit):gate.verify(self.root,'1.28.6','commit')
 if __name__=='__main__':unittest.main()
