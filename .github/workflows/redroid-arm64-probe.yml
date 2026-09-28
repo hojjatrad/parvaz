@@ -52,29 +52,34 @@ jobs:
           fi
 
           docker pull -q redroid/redroid:11.0.0-latest
-          docker run -itd --privileged --name redroid -p 5555:5555 \
-            -v /dev/binderfs:/dev/binderfs \
+          mkdir -p "$HOME/redroid-data"
+          docker run -itd --privileged --security-opt apparmor=unconfined --name redroid -p 5555:5555 \
+            -v "$HOME/redroid-data":/data \
             redroid/redroid:11.0.0-latest \
             androidboot.redroid_width=1080 androidboot.redroid_height=1920 androidboot.redroid_dpi=320 \
-            androidboot.redroid_gpu_mode=guest ro.secure=0 androidboot.selinux=permissive || true
-          sleep 25
+            androidboot.redroid_gpu_mode=guest || true
+          sleep 20
           docker ps -a
-          docker logs redroid 2>&1 | tail -40 > docker.log || true
-          cat docker.log
           note DOCKER "running=$(docker inspect -f '{{.State.Running}}' redroid 2>/dev/null) exit=$(docker inspect -f '{{.State.ExitCode}}' redroid 2>/dev/null)"
 
           sudo apt-get install -y -qq adb || true
           BOOT=0
-          for i in $(seq 1 40); do
+          for i in $(seq 1 60); do
+            IB=$(docker exec redroid /system/bin/getprop sys.boot_completed 2>/dev/null | tr -d '\r')
+            ADBD=$(docker exec redroid /system/bin/getprop init.svc.adbd 2>/dev/null | tr -d '\r')
+            echo "wait $i inner_boot=[$IB] adbd=[$ADBD]"
             adb connect 127.0.0.1:5555 >/dev/null 2>&1 || true
             if [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; then BOOT=1; break; fi
             sleep 10
           done
           adb devices
+          docker exec redroid /system/bin/logcat -d 2>/dev/null | tail -120 > docker.log || true
+          docker logs redroid 2>&1 | tail -60 >> docker.log || true
+          tail -120 docker.log
           note BOOT "boot_completed=$BOOT sdk=$(adb shell getprop ro.build.version.sdk 2>/dev/null | tr -d '\r') abis=$(adb shell getprop ro.product.cpu.abilist 2>/dev/null | tr -d '\r') selinux=$(adb shell getenforce 2>/dev/null | tr -d '\r')"
           if [ "$BOOT" != 1 ]; then
-            docker logs redroid 2>&1 | tail -60
-            printf '::error title=REDROID_NO_BOOT::%s\n' "$(docker logs redroid 2>&1 | tail -40 | esc)"
+            printf '::error title=REDROID_NO_BOOT::%s\n' "$(tail -60 docker.log | esc)"
+            printf '::error title=REDROID_INIT_STATE::%s\n' "$(docker exec redroid /system/bin/getprop 2>/dev/null | grep -E 'init.svc|sys.boot|ro.build.version.sdk|vold|servicemanager' | tail -40 | esc)"
             exit 0
           fi
 
