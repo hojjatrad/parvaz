@@ -31,8 +31,8 @@ public class PublishedUpgradeTest {
   assertTrue(scroll.scrollIntoView(new UiSelector().resourceId(APP+":id/btn_check_update")));
   // Separate fixture-control socket: no Android cleartext-policy change and no app transport override.
   try(java.net.Socket control=new java.net.Socket()){
-   control.connect(new java.net.InetSocketAddress("10.0.2.2",8766),5000);control.setSoTimeout(5000);
-   control.getOutputStream().write("POST /enable HTTP/1.0\r\nHost: 10.0.2.2\r\nContent-Length: 0\r\n\r\n".getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+   control.connect(new java.net.InetSocketAddress(InstrumentationRegistry.getArguments().getString("hostIp","10.0.2.2"),8766),5000);control.setSoTimeout(5000);
+   control.getOutputStream().write(("POST /enable HTTP/1.0\r\nHost: "+InstrumentationRegistry.getArguments().getString("hostIp","10.0.2.2")+"\r\nContent-Length: 0\r\n\r\n").getBytes(java.nio.charset.StandardCharsets.US_ASCII));
    String status=new java.io.BufferedReader(new java.io.InputStreamReader(control.getInputStream(),java.nio.charset.StandardCharsets.US_ASCII)).readLine();
    assertNotNull(status);assertTrue(status.contains(" 204 "));
   }

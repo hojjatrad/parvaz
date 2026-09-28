@@ -1,0 +1,140 @@
+name: Actual APK upgrade on native ARM64 Android
+# The published APKs contain only armeabi-v7a/arm64-v8a. On x86_64 runners the signed
+# release cannot execute honestly, so the updater fixture could never produce real
+# installation evidence there. This workflow runs the unmodified signed arm64 APKs on
+# an Android 11 (API 30) container that executes them natively on an arm64 runner.
+on:
+  push:
+    branches: [ci/redroid-arm64]
+    paths:
+      - '.github/workflows/arm64-upgrade-evidence.yml'
+      - 'tools/upgrade-test/**'
+      - 'tools/android-probe/**'
+  workflow_dispatch:
+    inputs:
+      signed_run_id:
+        description: Run id holding the signed-apks-for-upgrade-test artifact
+        required: true
+permissions:
+  contents: read
+  actions: read
+env:
+  SIGNED_RUN_ID: ${{ github.event.inputs.signed_run_id || '36378943623' }}
+jobs:
+  build-probe:
+    # The Android SDK build tools have no linux-arm64 binaries, so the probe and
+    # its instrumentation APK are built here and only installed on the arm64 job.
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@v5
+        with: {distribution: temurin, java-version: '17'}
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '8.9', cache-disabled: true}
+      - run: chmod +x gradlew && ./gradlew -p tools/android-probe -PupgradeProbe --no-daemon assembleDebug assembleDebugAndroidTest
+      - name: Collect probe APKs
+        run: |
+          set -x
+          mkdir -p probe-apks
+          find tools/android-probe/build/outputs/apk -name '*.apk' -print
+          cp "$(find tools/android-probe/build/outputs/apk/debug -name '*.apk' | head -1)" probe-apks/probe.apk
+          cp "$(find tools/android-probe/build/outputs/apk/androidTest -name '*.apk' | head -1)" probe-apks/probe-test.apk
+          sha256sum probe-apks/*
+      - uses: actions/upload-artifact@v4
+        with: {name: upgrade-probe-apks, path: probe-apks/, retention-days: 5}
+
+  install-upgrade-arm64:
+    needs: build-probe
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/download-artifact@v4
+        with: {name: upgrade-probe-apks, path: probe-apks}
+      - name: Fetch the signed candidate APKs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -x
+          gh run download "$SIGNED_RUN_ID" -R "$GITHUB_REPOSITORY" -n signed-apks-for-upgrade-test -D release-artifacts
+          ls -l release-artifacts
+          sha256sum release-artifacts/*.apk
+      - name: Boot a native arm64 Android 11 container
+        run: |
+          set -x
+          sudo modprobe binder_linux devices="binder,hwbinder,vndbinder" || true
+          if [ ! -e /dev/binder ] && [ ! -e /dev/binderfs/binder-control ]; then
+            sudo mkdir -p /dev/binderfs && sudo mount -t binder binder /dev/binderfs
+          fi
+          ls -l /dev/binderfs || true
+          docker pull -q redroid/redroid:11.0.0-latest
+          mkdir -p "$HOME/redroid-data"
+          docker run -itd --privileged --security-opt apparmor=unconfined --name redroid -p 5555:5555 \
+            -v "$HOME/redroid-data":/data redroid/redroid:11.0.0-latest \
+            androidboot.redroid_width=1080 androidboot.redroid_height=1920 androidboot.redroid_dpi=320 \
+            androidboot.redroid_gpu_mode=guest
+          sudo apt-get update -qq && sudo apt-get install -y -qq adb
+          for i in $(seq 1 60); do
+            [ "$(docker exec redroid /system/bin/getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ] && break
+            sleep 10
+          done
+          adb start-server; sleep 2
+          docker exec redroid /system/bin/mkdir -p /data/misc/adb
+          docker exec -i redroid /system/bin/sh -c 'cat > /data/misc/adb/adb_keys' < "$HOME/.android/adbkey.pub"
+          docker exec redroid /system/bin/chmod 640 /data/misc/adb/adb_keys
+          docker exec redroid /system/bin/setprop ctl.restart adbd
+          sleep 5
+          CIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' redroid)
+          GW=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.Gateway}}{{end}}' redroid)
+          for i in $(seq 1 24); do
+            adb connect "$CIP:5555" || true
+            [ "$(adb -s "$CIP:5555" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ] && break
+            sleep 10
+          done
+          adb devices -l
+          echo "ANDROID_SERIAL=$CIP:5555" >> "$GITHUB_ENV"
+          echo "PARVAZ_HOST_IP=$GW" >> "$GITHUB_ENV"
+          echo "::notice title=ARM64_DEVICE::serial=$CIP:5555 gateway=$GW sdk=$(adb -s "$CIP:5555" shell getprop ro.build.version.sdk | tr -d '\r') abis=$(adb -s "$CIP:5555" shell getprop ro.product.cpu.abilist | tr -d '\r')"
+      - name: Actual signed-APK upgrade fixture
+        env:
+          PARVAZ_CONTAINER: redroid
+          PARVAZ_UPGRADE_PRIOR: test42
+        run: bash tools/upgrade-test/run_container.sh
+      - name: Report fixture outcome
+        if: always()
+        run: |
+          python3 - <<'PYUPGRADE'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          base=Path('tools/android-probe/build/outputs/androidTest-results')
+          if base.exists():
+              for p in base.rglob('*.xml'):
+                  root=ET.parse(p).getroot()
+                  for f in list(root.iter('failure'))+list(root.iter('error')):
+                      message=(f.get('message') or f.text or 'Upgrade fixture failed')[:2800]
+                      print('::error title=APK upgrade fixture::'+message.replace('%','%25').replace('\n','%0A'))
+          p=Path('.cache/upgrade-evidence/device.log')
+          if p.exists():
+              for line in p.read_text(errors='replace').splitlines():
+                  if 'ACTUAL_SIGNED_APK_UPDATE_BUTTON_OK' in line:
+                      print('::notice title=APK_UPGRADE_EVIDENCE::'+line)
+          s=Path('.cache/upgrade-evidence/summary.json')
+          if s.exists():
+              print('::notice title=UPGRADE_SUMMARY::'+s.read_text()[:900].replace('%','%25').replace('\n','%0A'))
+          t=Path('.cache/upgrade-evidence/transport.log')
+          if t.exists():
+              print('::notice title=TRANSPORT::'+t.read_text()[-800:].replace('%','%25').replace('\n','%0A'))
+          PYUPGRADE
+          docker exec redroid /system/bin/logcat -d 2>/dev/null | tail -60 || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: actual-apk-upgrade-evidence
+          path: |
+            .cache/upgrade-evidence/
+            tools/android-probe/build/outputs/androidTest-results/
+          include-hidden-files: true
+          retention-days: 5
