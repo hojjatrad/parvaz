@@ -49,13 +49,31 @@ jobs:
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'build-tools;34.0.0'
       - name: Enforce exact tested APK bytes, source tree and dependency review
         run: |
-          python3 tools/release/core_candidate_artifacts.py verify "$RELEASE_VERSION"
-          python3 tools/release/verify_publication_evidence.py
-          python3 tools/release/verify_apk.py
+          set -uo pipefail
+          run_gate() {
+            echo "== $*"
+            if ! out=$("$@" 2>&1); then
+              printf '::error title=PUBLISH_GATE_FAILED::%s%%0A%s\n' "$*" "$(printf '%s' "$out" | tail -c 2500 | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')"
+              printf '%s\n' "$out" | tail -60
+              exit 1
+            fi
+            printf '%s\n' "$out" | tail -20
+          }
+          ls -R .cache/upgrade-validated | head -40
+          run_gate python3 tools/release/core_candidate_artifacts.py verify "$RELEASE_VERSION"
+          run_gate python3 tools/release/verify_publication_evidence.py
+          run_gate python3 tools/release/verify_apk.py
           sha256sum release-artifacts/*-source.tar.gz release-artifacts/*-sbom.cdx.json release-artifacts/*-dependency-review.json release-artifacts/*-upgrade-verification.json | sed 's#release-artifacts/##' >> release-artifacts/SHA256SUMS.txt
       - name: Prevent rollback of latest app, versionCode or core
         env: {GH_TOKEN: '${{ github.token }}'}
-        run: python3 tools/release/check_release_order.py
+        run: |
+          set -uo pipefail
+          if ! out=$(python3 tools/release/check_release_order.py 2>&1); then
+            printf '::error title=RELEASE_ORDER_FAILED::%s\n' "$(printf '%s' "$out" | tail -c 2500 | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')"
+            printf '%s\n' "$out" | tail -40
+            exit 1
+          fi
+          printf '%s\n' "$out" | tail -20
       - name: Publish only fully uploaded, tested release assets
         env: {GH_TOKEN: '${{ github.token }}'}
         run: |
