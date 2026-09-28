@@ -63,22 +63,44 @@ jobs:
           note DOCKER "running=$(docker inspect -f '{{.State.Running}}' redroid 2>/dev/null) exit=$(docker inspect -f '{{.State.ExitCode}}' redroid 2>/dev/null)"
 
           sudo apt-get install -y -qq adb || true
-          BOOT=0
+          # Wait for the container's own boot first; only then negotiate adb.
+          INNER=0
           for i in $(seq 1 60); do
             IB=$(docker exec redroid /system/bin/getprop sys.boot_completed 2>/dev/null | tr -d '\r')
-            ADBD=$(docker exec redroid /system/bin/getprop init.svc.adbd 2>/dev/null | tr -d '\r')
-            echo "wait $i inner_boot=[$IB] adbd=[$ADBD]"
-            adb connect 127.0.0.1:5555 >/dev/null 2>&1 || true
-            if [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; then BOOT=1; break; fi
+            echo "wait $i inner_boot=[$IB] adbd=[$(docker exec redroid /system/bin/getprop init.svc.adbd 2>/dev/null | tr -d '\r')]"
+            [ "$IB" = "1" ] && { INNER=1; break; }
             sleep 10
           done
-          adb devices
+          note INNER_BOOT "sys.boot_completed=$INNER sdk=$(docker exec redroid /system/bin/getprop ro.build.version.sdk 2>/dev/null | tr -d '\r') abis=$(docker exec redroid /system/bin/getprop ro.product.cpu.abilist 2>/dev/null | tr -d '\r') selinux=$(docker exec redroid /system/bin/getenforce 2>/dev/null | tr -d '\r')"
+
+          # Authorise this runner's adb key inside the container, then restart adbd.
+          adb start-server >/dev/null 2>&1 || true
+          sleep 2
+          if [ -f "$HOME/.android/adbkey.pub" ]; then
+            docker exec redroid /system/bin/mkdir -p /data/misc/adb || true
+            docker exec -i redroid /system/bin/sh -c 'cat > /data/misc/adb/adb_keys' < "$HOME/.android/adbkey.pub" || true
+            docker exec redroid /system/bin/chmod 640 /data/misc/adb/adb_keys || true
+            docker exec redroid /system/bin/setprop ctl.restart adbd || true
+            sleep 5
+          fi
+          CIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' redroid)
+          echo "container ip=$CIP"
+          BOOT=0
+          for i in $(seq 1 24); do
+            adb connect "$CIP:5555" || true
+            adb connect 127.0.0.1:5555 || true
+            adb devices -l
+            if [ "$(adb -s "$CIP:5555" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; then BOOT=1; export ANDROID_SERIAL="$CIP:5555"; break; fi
+            if [ "$(adb -s 127.0.0.1:5555 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; then BOOT=1; export ANDROID_SERIAL=127.0.0.1:5555; break; fi
+            sleep 10
+          done
+          note ADB "connected=$BOOT serial=${ANDROID_SERIAL:-none} devices=$(adb devices | tr '\n' ' ')"
           docker exec redroid /system/bin/logcat -d 2>/dev/null | tail -120 > docker.log || true
           docker logs redroid 2>&1 | tail -60 >> docker.log || true
           tail -120 docker.log
           note BOOT "boot_completed=$BOOT sdk=$(adb shell getprop ro.build.version.sdk 2>/dev/null | tr -d '\r') abis=$(adb shell getprop ro.product.cpu.abilist 2>/dev/null | tr -d '\r') selinux=$(adb shell getenforce 2>/dev/null | tr -d '\r')"
           if [ "$BOOT" != 1 ]; then
-            printf '::error title=REDROID_NO_BOOT::%s\n' "$(tail -60 docker.log | esc)"
+            printf '::error title=REDROID_NO_ADB::%s\n' "$(tail -40 docker.log | esc)"
             printf '::error title=REDROID_INIT_STATE::%s\n' "$(docker exec redroid /system/bin/getprop 2>/dev/null | grep -E 'init.svc|sys.boot|ro.build.version.sdk|vold|servicemanager' | tail -40 | esc)"
             exit 0
           fi
