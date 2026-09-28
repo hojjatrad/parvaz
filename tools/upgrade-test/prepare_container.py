@@ -83,7 +83,15 @@ def main():
     name = next((digest + "." + str(i) for i in range(100) if digest + "." + str(i) not in existing), None)
     if name is None:
         raise SystemExit("No free CA hash slot; original roots must not be overwritten")
-    adb("push", str(cert), staging + "/" + name)
+    # adb runs as the unprivileged shell user, so the root-owned staging copy is
+    # written through the container itself.
+    with cert.open("rb") as handle:
+        proc = subprocess.run(
+            ["docker", "exec", "-i", args.container, "/system/bin/sh", "-c", "cat > " + staging + "/" + name],
+            stdin=handle, capture_output=True, text=True, timeout=60,
+        )
+    if proc.returncode != 0:
+        raise SystemExit("Temporary CA staging failed: " + (proc.stderr or "")[-800:])
     inside("/system/bin/chmod", "644", staging + "/" + name)
     inside("/system/bin/sh", "-c", "mount --bind %s /system/etc/security/cacerts" % staging)
     readback = inside("/system/bin/cat", "/system/etc/security/cacerts/" + name)
