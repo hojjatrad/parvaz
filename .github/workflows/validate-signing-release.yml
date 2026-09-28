@@ -153,51 +153,116 @@ jobs:
           name: signed-apks-for-upgrade-test
           path: release-artifacts/*.apk
           retention-days: 3
-  install-upgrade:
-    needs: sign-prebuilt
+  probe-apks:
+    # The Android SDK build tools have no linux-arm64 binaries, so the probe and
+    # its instrumentation APK are built here and only installed on the arm64 job.
+    needs: validate
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with: {distribution: temurin, java-version: '17'}
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+        with: {gradle-version: '8.9', cache-disabled: true}
+      - run: chmod +x gradlew && ./gradlew -p tools/android-probe -PupgradeProbe --no-daemon assembleDebug assembleDebugAndroidTest
+      - name: Collect probe APKs
+        run: |
+          set -eux
+          mkdir -p probe-apks
+          cp "$(find tools/android-probe/build/outputs/apk/debug -name '*.apk' | head -1)" probe-apks/probe.apk
+          cp "$(find tools/android-probe/build/outputs/apk/androidTest -name '*.apk' | head -1)" probe-apks/probe-test.apk
+          sha256sum probe-apks/*
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with: {name: upgrade-probe-apks, path: probe-apks/, retention-days: 5}
+  install-upgrade:
+    # The published APKs contain only armeabi-v7a/arm64-v8a. On x86_64 runners the
+    # signed release cannot execute honestly (priors 39/41/42 abort under ARM
+    # translation), and GitHub's arm64 runners expose no /dev/kvm, so the QEMU
+    # emulator is unusable there. The fixture therefore runs the unmodified signed
+    # arm64 APKs natively in a disposable Android 11 (API 30) arm64 container.
+    # Prior = the immutable, owner-installed published TEST 42 build: a real signed
+    # published APK, not a rebuilt fixture.
+    needs: [sign-prebuilt, probe-apks]
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with: {persist-credentials: false}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with: {name: signed-apks-for-upgrade-test, path: release-artifacts}
-      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
-        with: {distribution: temurin, java-version: '17'}
-      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
-        with: {gradle-version: '8.9', cache-disabled: true}
-      - name: Enable emulator acceleration
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with: {name: upgrade-probe-apks, path: probe-apks}
+      - name: Boot a disposable native arm64 Android 11 container
         run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-      # The previously published 39/41 binaries abort under this runner's ARM
-      # translation, so they cannot exercise the updater. The immutable, owner
-      # installed TEST 42 build with the corrected engines is used as the prior
-      # instead; it is a real signed published APK, not a rebuilt fixture.
-      - uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
-        with:
-          api-level: 30
-          arch: x86_64
-          target: google_apis
-          disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -writable-system -no-snapshot
-          script: PARVAZ_UPGRADE_PRIOR=test42 bash tools/upgrade-test/run.sh
+          set -eux
+          sudo apt-get update -qq || true
+          sudo modprobe binder_linux devices="binder,hwbinder,vndbinder" || true
+          if [ ! -e /dev/binder ]; then
+            sudo apt-get install -y -qq "linux-modules-extra-$(uname -r)" || true
+            sudo modprobe binder_linux devices="binder,hwbinder,vndbinder" || true
+          fi
+          if [ ! -e /dev/binder ] && [ ! -e /dev/binderfs/binder-control ]; then
+            sudo mkdir -p /dev/binderfs
+            sudo mount -t binder binder /dev/binderfs || true
+          fi
+          test -e /dev/binder -o -e /dev/binderfs/binder-control
+          docker pull -q redroid/redroid:11.0.0-latest
+          mkdir -p "$HOME/redroid-data"
+          docker run -itd --privileged --security-opt apparmor=unconfined --name redroid -p 5555:5555 \
+            -v "$HOME/redroid-data":/data redroid/redroid:11.0.0-latest \
+            androidboot.redroid_width=1080 androidboot.redroid_height=1920 androidboot.redroid_dpi=320 \
+            androidboot.redroid_gpu_mode=guest
+          sudo apt-get install -y -qq adb
+          for i in $(seq 1 60); do
+            [ "$(docker exec redroid /system/bin/getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ] && break
+            sleep 10
+          done
+          adb start-server; sleep 2
+          docker exec redroid /system/bin/mkdir -p /data/misc/adb
+          docker exec -i redroid /system/bin/sh -c 'cat > /data/misc/adb/adb_keys' < "$HOME/.android/adbkey.pub"
+          docker exec redroid /system/bin/chmod 640 /data/misc/adb/adb_keys
+          docker exec redroid /system/bin/setprop ctl.restart adbd
+          sleep 5
+          CIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' redroid)
+          GW=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.Gateway}}{{end}}' redroid)
+          for i in $(seq 1 24); do
+            adb connect "$CIP:5555" || true
+            [ "$(adb -s "$CIP:5555" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ] && break
+            sleep 10
+          done
+          adb devices -l
+          echo "ANDROID_SERIAL=$CIP:5555" >> "$GITHUB_ENV"
+          echo "PARVAZ_HOST_IP=$GW" >> "$GITHUB_ENV"
+          echo "::notice title=ARM64_DEVICE::serial=$CIP:5555 sdk=$(adb -s "$CIP:5555" shell getprop ro.build.version.sdk | tr -d '\r') abis=$(adb -s "$CIP:5555" shell getprop ro.product.cpu.abilist | tr -d '\r')"
+      - name: Actual signed-APK upgrade fixture
+        env:
+          PARVAZ_CONTAINER: redroid
+          PARVAZ_UPGRADE_PRIOR: test42
+        run: |
+          set -o pipefail
+          mkdir -p .cache
+          bash tools/upgrade-test/run_container.sh 2>&1 | tee .cache/fixture.log
       - name: Report installation fixture outcome
         if: always()
         run: |
           python3 - <<'PYUPGRADE'
           from pathlib import Path
           import xml.etree.ElementTree as ET
-          for p in Path('tools/android-probe/build/outputs/androidTest-results').rglob('*.xml'):
-              root=ET.parse(p).getroot()
-              for f in list(root.iter('failure'))+list(root.iter('error')):
-                  message=(f.get('message') or f.text or 'Upgrade fixture failed')[:2800]
-                  print('::error title=APK upgrade fixture::'+message.replace('%','%25').replace('\n','%0A'))
+          base=Path('tools/android-probe/build/outputs/androidTest-results')
+          if base.exists():
+              for p in base.rglob('*.xml'):
+                  root=ET.parse(p).getroot()
+                  for f in list(root.iter('failure'))+list(root.iter('error')):
+                      message=(f.get('message') or f.text or 'Upgrade fixture failed')[:2800]
+                      print('::error title=APK upgrade fixture::'+message.replace('%','%25').replace('\n','%0A'))
           p=Path('.cache/upgrade-evidence/device.log')
           if p.exists():
               for line in p.read_text(errors='replace').splitlines():
                   if 'ACTUAL_SIGNED_APK_UPDATE_BUTTON_OK' in line:print('::notice title=APK_UPGRADE_EVIDENCE::'+line)
+          s=Path('.cache/upgrade-evidence/summary.json')
+          if s.exists():print('::notice title=UPGRADE_SUMMARY::'+s.read_text()[:900].replace('%','%25').replace('\n','%0A'))
           PYUPGRADE
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()

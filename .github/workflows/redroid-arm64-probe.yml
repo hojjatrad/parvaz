@@ -1,0 +1,134 @@
+name: Native ARM64 Android probe (redroid)
+# Purpose: the published APKs carry only armeabi-v7a/arm64-v8a. On x86_64 runners the
+# prior release cannot run honestly under ARM translation, and GitHub's free arm64
+# runners expose no /dev/kvm, so the QEMU emulator is not usable there either. This
+# probe checks whether redroid (Android running on the host kernel, natively arm64,
+# no KVM) gives a representative device for the real installation/upgrade fixture.
+# Fail-soft by design: every stage reports a notice so the outcome is readable from
+# the run page without downloading artifacts.
+on:
+  push:
+    branches: [ci/redroid-arm64]
+    paths: ['.github/workflows/redroid-arm64-probe.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Probe
+        run: |
+          set -x
+          exec 2>&1
+          note(){ printf '::notice title=%s::%s\n' "$1" "$2"; }
+          esc(){ sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g' | tail -c 3000; }
+
+          uname -a; nproc; free -g; df -h /
+          note HOST "arch=$(uname -m) kernel=$(uname -r) cpus=$(nproc)"
+
+          BINDER=none
+          ls -l /dev/binder /dev/binderfs 2>/dev/null || true
+          sudo modprobe binder_linux devices="binder,hwbinder,vndbinder" 2>&1 || true
+          if [ ! -e /dev/binder ]; then
+            sudo apt-get update -qq || true
+            sudo apt-get install -y -qq "linux-modules-extra-$(uname -r)" 2>&1 | tail -3 || true
+            sudo modprobe binder_linux devices="binder,hwbinder,vndbinder" 2>&1 || true
+          fi
+          [ -e /dev/binder ] && BINDER=devnode
+          if [ "$BINDER" = none ]; then
+            sudo mkdir -p /dev/binderfs
+            sudo mount -t binder binder /dev/binderfs 2>&1 || true
+            [ -e /dev/binderfs/binder-control ] && BINDER=binderfs
+          fi
+          ls -l /dev/binder* 2>/dev/null || true; ls -l /dev/binderfs 2>/dev/null || true
+          note BINDER "mode=$BINDER $(ls /dev/binderfs 2>/dev/null | tr '\n' ' ')"
+
+          if [ "$BINDER" = none ]; then
+            note VERDICT "no binder on this runner kernel; redroid path is not viable"
+            exit 0
+          fi
+
+          docker pull -q redroid/redroid:11.0.0-latest
+          mkdir -p "$HOME/redroid-data"
+          docker run -itd --privileged --security-opt apparmor=unconfined --name redroid -p 5555:5555 \
+            -v "$HOME/redroid-data":/data \
+            redroid/redroid:11.0.0-latest \
+            androidboot.redroid_width=1080 androidboot.redroid_height=1920 androidboot.redroid_dpi=320 \
+            androidboot.redroid_gpu_mode=guest || true
+          sleep 20
+          docker ps -a
+          note DOCKER "running=$(docker inspect -f '{{.State.Running}}' redroid 2>/dev/null) exit=$(docker inspect -f '{{.State.ExitCode}}' redroid 2>/dev/null)"
+
+          sudo apt-get install -y -qq adb || true
+          # Wait for the container's own boot first; only then negotiate adb.
+          INNER=0
+          for i in $(seq 1 60); do
+            IB=$(docker exec redroid /system/bin/getprop sys.boot_completed 2>/dev/null | tr -d '\r')
+            echo "wait $i inner_boot=[$IB] adbd=[$(docker exec redroid /system/bin/getprop init.svc.adbd 2>/dev/null | tr -d '\r')]"
+            [ "$IB" = "1" ] && { INNER=1; break; }
+            sleep 10
+          done
+          note INNER_BOOT "sys.boot_completed=$INNER sdk=$(docker exec redroid /system/bin/getprop ro.build.version.sdk 2>/dev/null | tr -d '\r') abis=$(docker exec redroid /system/bin/getprop ro.product.cpu.abilist 2>/dev/null | tr -d '\r') selinux=$(docker exec redroid /system/bin/getenforce 2>/dev/null | tr -d '\r')"
+
+          # Authorise this runner's adb key inside the container, then restart adbd.
+          adb start-server >/dev/null 2>&1 || true
+          sleep 2
+          if [ -f "$HOME/.android/adbkey.pub" ]; then
+            docker exec redroid /system/bin/mkdir -p /data/misc/adb || true
+            docker exec -i redroid /system/bin/sh -c 'cat > /data/misc/adb/adb_keys' < "$HOME/.android/adbkey.pub" || true
+            docker exec redroid /system/bin/chmod 640 /data/misc/adb/adb_keys || true
+            docker exec redroid /system/bin/setprop ctl.restart adbd || true
+            sleep 5
+          fi
+          CIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' redroid)
+          echo "container ip=$CIP"
+          BOOT=0
+          for i in $(seq 1 24); do
+            adb connect "$CIP:5555" || true
+            adb connect 127.0.0.1:5555 || true
+            adb devices -l
+            if [ "$(adb -s "$CIP:5555" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; then BOOT=1; export ANDROID_SERIAL="$CIP:5555"; break; fi
+            if [ "$(adb -s 127.0.0.1:5555 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; then BOOT=1; export ANDROID_SERIAL=127.0.0.1:5555; break; fi
+            sleep 10
+          done
+          note ADB "connected=$BOOT serial=${ANDROID_SERIAL:-none} devices=$(adb devices | tr '\n' ' ')"
+          docker exec redroid /system/bin/logcat -d 2>/dev/null | tail -120 > docker.log || true
+          docker logs redroid 2>&1 | tail -60 >> docker.log || true
+          tail -120 docker.log
+          note BOOT "boot_completed=$BOOT sdk=$(adb shell getprop ro.build.version.sdk 2>/dev/null | tr -d '\r') abis=$(adb shell getprop ro.product.cpu.abilist 2>/dev/null | tr -d '\r') selinux=$(adb shell getenforce 2>/dev/null | tr -d '\r')"
+          if [ "$BOOT" != 1 ]; then
+            printf '::error title=REDROID_NO_ADB::%s\n' "$(tail -40 docker.log | esc)"
+            printf '::error title=REDROID_INIT_STATE::%s\n' "$(docker exec redroid /system/bin/getprop 2>/dev/null | grep -E 'init.svc|sys.boot|ro.build.version.sdk|vold|servicemanager' | tail -40 | esc)"
+            exit 0
+          fi
+
+          curl -fLsS --max-time 300 -o prior.apk \
+            "https://github.com/hojjatrad/parvaz/releases/download/test%2Fv1.28.8-r1/Parvaz-1.28.8-arm64.apk" || \
+          curl -fLsS --max-time 300 -o prior.apk \
+            "https://github.com/hojjatrad/parvaz/releases/download/test/v1.28.8-r1/Parvaz-1.28.8-arm64.apk"
+          echo "32a58e86ce0a260f7565161e8e65642f726ce4f214cf2f93ab39c5dde885ed3b  prior.apk" | sha256sum -c
+          adb install --no-streaming prior.apk || note INSTALL_FAIL "adb install failed"
+          adb logcat -c || true
+          adb shell am start -W -a android.intent.action.VIEW -d 'vless://11111111-1111-4111-8111-111111111111@192.0.2.1:443#UPGRADE_FIXTURE' -n com.parvaz.tunnel/.MainActivity || true
+          sleep 25
+          PID=$(adb shell pidof com.parvaz.tunnel 2>/dev/null | tr -d '\r' || true)
+          adb logcat -d > device.log || true
+          adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1 || true
+          adb pull /sdcard/ui.xml ui.xml >/dev/null 2>&1 || true
+          DIALOG=no; grep -q 'android:id/button1' ui.xml 2>/dev/null && DIALOG=yes
+          VC=$(adb shell dumpsys package com.parvaz.tunnel 2>/dev/null | grep -o 'versionCode=[0-9]*' | head -1 | tr -d '\r')
+          note APP "pid=[$PID] $VC import_dialog=$DIALOG abi=$(adb shell dumpsys package com.parvaz.tunnel 2>/dev/null | grep -o 'primaryCpuAbi=[a-z0-9-]*' | head -1 | tr -d '\r')"
+          grep -E 'FATAL EXCEPTION|UnsatisfiedLinkError|ANR in' -A6 device.log | head -40 || true
+          printf '::notice title=APP_LOG_TAIL::%s\n' "$(grep -E 'parvaz|AndroidRuntime|UnsatisfiedLinkError|FATAL' device.log | tail -30 | esc)"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: redroid-arm64-probe
+          path: |
+            device.log
+            ui.xml
+            docker.log
+          if-no-files-found: warn
