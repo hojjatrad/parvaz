@@ -109,7 +109,10 @@ jobs:
         env:
           PARVAZ_CONTAINER: redroid
           PARVAZ_UPGRADE_PRIOR: test42
-        run: bash tools/upgrade-test/run_container.sh
+        run: |
+          set -o pipefail
+          mkdir -p .cache
+          bash tools/upgrade-test/run_container.sh 2>&1 | tee .cache/fixture.log
       - name: Report fixture outcome
         if: always()
         run: |
@@ -135,6 +138,13 @@ jobs:
           if t.exists():
               print('::notice title=TRANSPORT::'+t.read_text()[-800:].replace('%','%25').replace('\n','%0A'))
           PYUPGRADE
+          if [ -f .cache/fixture.log ]; then
+            python3 - <<'PYLOG'
+          from pathlib import Path
+          t=Path('.cache/fixture.log').read_text(errors='replace')[-2500:]
+          print('::error title=FIXTURE_LOG::'+t.replace('%','%25').replace('\n','%0A'))
+          PYLOG
+          fi
           docker exec redroid /system/bin/logcat -d 2>/dev/null | tail -60 || true
       - uses: actions/upload-artifact@v4
         if: always()
