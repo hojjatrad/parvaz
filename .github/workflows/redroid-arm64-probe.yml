@@ -1,9 +1,11 @@
 name: Native ARM64 Android probe (redroid)
 # Purpose: the published APKs carry only armeabi-v7a/arm64-v8a. On x86_64 runners the
-# prior release crashes under ARM translation, so the installation/upgrade fixture can
-# never produce honest evidence there. GitHub's free arm64 runners have no /dev/kvm, so
-# the QEMU emulator is not usable either. This probe checks whether redroid (Android in
-# a container on the host kernel, native arm64, no KVM) gives a representative device.
+# prior release cannot run honestly under ARM translation, and GitHub's free arm64
+# runners expose no /dev/kvm, so the QEMU emulator is not usable there either. This
+# probe checks whether redroid (Android running on the host kernel, natively arm64,
+# no KVM) gives a representative device for the real installation/upgrade fixture.
+# Fail-soft by design: every stage reports a notice so the outcome is readable from
+# the run page without downloading artifacts.
 on:
   push:
     branches: [ci/redroid-arm64]
@@ -17,82 +19,83 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
-      - name: Host facts
+      - name: Probe
         run: |
           set -x
-          uname -a
-          nproc; free -g; df -h /
-          ls -l /dev/binder* || true
-          ls /lib/modules/$(uname -r)/kernel/drivers/android/ 2>/dev/null || true
-          zgrep -E 'BINDER|ASHMEM' /boot/config-$(uname -r) 2>/dev/null || true
-      - name: Enable binder
-        run: |
-          set -x
-          sudo modprobe binder_linux devices="binder,hwbinder,vndbinder" || true
+          exec 2>&1
+          note(){ printf '::notice title=%s::%s\n' "$1" "$2"; }
+          esc(){ sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g' | tail -c 3000; }
+
+          uname -a; nproc; free -g; df -h /
+          note HOST "arch=$(uname -m) kernel=$(uname -r) cpus=$(nproc)"
+
+          BINDER=none
+          ls -l /dev/binder /dev/binderfs 2>/dev/null || true
+          sudo modprobe binder_linux devices="binder,hwbinder,vndbinder" 2>&1 || true
           if [ ! -e /dev/binder ]; then
-            sudo mkdir -p /dev/binderfs
-            sudo mount -t binder binder /dev/binderfs || true
-            ls -l /dev/binderfs || true
+            sudo apt-get update -qq || true
+            sudo apt-get install -y -qq "linux-modules-extra-$(uname -r)" 2>&1 | tail -3 || true
+            sudo modprobe binder_linux devices="binder,hwbinder,vndbinder" 2>&1 || true
           fi
-          ls -l /dev/binder* /dev/binderfs/* 2>/dev/null || true
-      - name: Start redroid (Android 11, arm64)
-        run: |
-          set -x
-          docker pull redroid/redroid:11.0.0-latest
-          docker run -itd --rm --privileged --name redroid -p 5555:5555 \
+          [ -e /dev/binder ] && BINDER=devnode
+          if [ "$BINDER" = none ]; then
+            sudo mkdir -p /dev/binderfs
+            sudo mount -t binder binder /dev/binderfs 2>&1 || true
+            [ -e /dev/binderfs/binder-control ] && BINDER=binderfs
+          fi
+          ls -l /dev/binder* 2>/dev/null || true; ls -l /dev/binderfs 2>/dev/null || true
+          note BINDER "mode=$BINDER $(ls /dev/binderfs 2>/dev/null | tr '\n' ' ')"
+
+          if [ "$BINDER" = none ]; then
+            note VERDICT "no binder on this runner kernel; redroid path is not viable"
+            exit 0
+          fi
+
+          docker pull -q redroid/redroid:11.0.0-latest
+          docker run -itd --privileged --name redroid -p 5555:5555 \
             -v /dev/binderfs:/dev/binderfs \
             redroid/redroid:11.0.0-latest \
             androidboot.redroid_width=1080 androidboot.redroid_height=1920 androidboot.redroid_dpi=320 \
-            androidboot.redroid_gpu_mode=guest ro.secure=0 androidboot.selinux=permissive
-          sleep 20
-          docker logs redroid | tail -40
-      - name: Install platform tools and connect
-        run: |
-          set -x
-          sudo apt-get update -qq && sudo apt-get install -y -qq adb
-          adb version
-          for i in $(seq 1 40); do adb connect 127.0.0.1:5555 && sleep 3 && adb devices | grep -q 'device$' && break || sleep 5; done
-          adb devices
-          for i in $(seq 1 60); do [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1" ] && break || sleep 5; done
-          adb shell getprop sys.boot_completed
-          adb shell getprop ro.build.version.sdk
-          adb shell getprop ro.product.cpu.abilist
-          adb shell getenforce || true
-          echo "::notice title=REDROID_DEVICE::sdk=$(adb shell getprop ro.build.version.sdk | tr -d '\r') abis=$(adb shell getprop ro.product.cpu.abilist | tr -d '\r') boot=$(adb shell getprop sys.boot_completed | tr -d '\r')"
-      - name: Install the published ARM64 prior release and launch it
-        run: |
-          set -x
-          curl -fLsS --max-time 300 -o prior.apk \
-            https://github.com/hojjatrad/parvaz/releases/download/test/v1.28.8-r1/Parvaz-1.28.8-arm64.apk || \
-          curl -fLsS --max-time 300 -o prior.apk \
-            "https://github.com/hojjatrad/parvaz/releases/download/test%2Fv1.28.8-r1/Parvaz-1.28.8-arm64.apk"
-          sha256sum prior.apk
-          echo "32a58e86ce0a260f7565161e8e65642f726ce4f214cf2f93ab39c5dde885ed3b  prior.apk" | sha256sum -c
-          adb install --no-streaming prior.apk
-          adb logcat -c
-          adb shell am start -W -n com.parvaz.tunnel/.MainActivity || true
+            androidboot.redroid_gpu_mode=guest ro.secure=0 androidboot.selinux=permissive || true
           sleep 25
-          adb shell dumpsys package com.parvaz.tunnel | grep -E 'versionCode|primaryCpuAbi' || true
-          PID=$(adb shell pidof com.parvaz.tunnel | tr -d '\r' || true)
-          echo "pid=[$PID]"
-          adb logcat -d > device.log
-          tail -c 4000 device.log
-          grep -E 'FATAL EXCEPTION|UnsatisfiedLinkError|Force finishing|ANR in' device.log || true
-          if [ -n "$PID" ]; then
-            echo "::notice title=REDROID_APP_ALIVE::com.parvaz.tunnel running natively on arm64, pid=$PID"
-          else
-            echo "::error title=REDROID_APP_DEAD::prior release did not stay alive$(grep -E 'FATAL EXCEPTION|UnsatisfiedLinkError' -A4 device.log | head -20 | sed 's/%/%25/g;:a;N;$!ba;s/\n/%0A/g')"
+          docker ps -a
+          docker logs redroid 2>&1 | tail -40 > docker.log || true
+          cat docker.log
+          note DOCKER "running=$(docker inspect -f '{{.State.Running}}' redroid 2>/dev/null) exit=$(docker inspect -f '{{.State.ExitCode}}' redroid 2>/dev/null)"
+
+          sudo apt-get install -y -qq adb || true
+          BOOT=0
+          for i in $(seq 1 40); do
+            adb connect 127.0.0.1:5555 >/dev/null 2>&1 || true
+            if [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; then BOOT=1; break; fi
+            sleep 10
+          done
+          adb devices
+          note BOOT "boot_completed=$BOOT sdk=$(adb shell getprop ro.build.version.sdk 2>/dev/null | tr -d '\r') abis=$(adb shell getprop ro.product.cpu.abilist 2>/dev/null | tr -d '\r') selinux=$(adb shell getenforce 2>/dev/null | tr -d '\r')"
+          if [ "$BOOT" != 1 ]; then
+            docker logs redroid 2>&1 | tail -60
+            printf '::error title=REDROID_NO_BOOT::%s\n' "$(docker logs redroid 2>&1 | tail -40 | esc)"
+            exit 0
           fi
-      - name: Deep-link import smoke (same intent the upgrade fixture uses)
-        if: always()
-        run: |
-          set -x
+
+          curl -fLsS --max-time 300 -o prior.apk \
+            "https://github.com/hojjatrad/parvaz/releases/download/test%2Fv1.28.8-r1/Parvaz-1.28.8-arm64.apk" || \
+          curl -fLsS --max-time 300 -o prior.apk \
+            "https://github.com/hojjatrad/parvaz/releases/download/test/v1.28.8-r1/Parvaz-1.28.8-arm64.apk"
+          echo "32a58e86ce0a260f7565161e8e65642f726ce4f214cf2f93ab39c5dde885ed3b  prior.apk" | sha256sum -c
+          adb install --no-streaming prior.apk || note INSTALL_FAIL "adb install failed"
+          adb logcat -c || true
           adb shell am start -W -a android.intent.action.VIEW -d 'vless://11111111-1111-4111-8111-111111111111@192.0.2.1:443#UPGRADE_FIXTURE' -n com.parvaz.tunnel/.MainActivity || true
-          sleep 8
-          adb shell uiautomator dump /sdcard/ui.xml || true
-          adb pull /sdcard/ui.xml ui.xml || true
-          head -c 3000 ui.xml || true
-          grep -o 'android:id/button1' ui.xml && echo "::notice title=REDROID_DIALOG::import dialog button1 present natively" || echo "::warning title=REDROID_DIALOG::button1 not found"
+          sleep 25
+          PID=$(adb shell pidof com.parvaz.tunnel 2>/dev/null | tr -d '\r' || true)
+          adb logcat -d > device.log || true
+          adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1 || true
+          adb pull /sdcard/ui.xml ui.xml >/dev/null 2>&1 || true
+          DIALOG=no; grep -q 'android:id/button1' ui.xml 2>/dev/null && DIALOG=yes
+          VC=$(adb shell dumpsys package com.parvaz.tunnel 2>/dev/null | grep -o 'versionCode=[0-9]*' | head -1 | tr -d '\r')
+          note APP "pid=[$PID] $VC import_dialog=$DIALOG abi=$(adb shell dumpsys package com.parvaz.tunnel 2>/dev/null | grep -o 'primaryCpuAbi=[a-z0-9-]*' | head -1 | tr -d '\r')"
+          grep -E 'FATAL EXCEPTION|UnsatisfiedLinkError|ANR in' -A6 device.log | head -40 || true
+          printf '::notice title=APP_LOG_TAIL::%s\n' "$(grep -E 'parvaz|AndroidRuntime|UnsatisfiedLinkError|FATAL' device.log | tail -30 | esc)"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -100,7 +103,5 @@ jobs:
           path: |
             device.log
             ui.xml
+            docker.log
           if-no-files-found: warn
-      - name: Container logs
-        if: always()
-        run: docker logs redroid 2>&1 | tail -60 || true
