@@ -2,7 +2,7 @@ name: Validate permanent signing and release APKs without publication
 on:
   workflow_call:
   push:
-    branches: ['release/signing-validation-v3', 'release/final-1288']
+    branches: ['release/signing-validation-v3', 'release/final-1288', 'release/final-1289']
 concurrency:
   group: parvaz-candidate-validation-${{ github.ref }}
   cancel-in-progress: true
@@ -30,7 +30,7 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
-        with: {go-version: '1.26.7', cache: false}
+        with: {go-version: '1.27.1', cache: false}  # exactly the reviewed Xray provenance toolchain
       - name: Use runner Android SDK
         run: |
           set -euo pipefail
@@ -86,13 +86,14 @@ jobs:
           cat .cache/android-unit.log
       - name: Build pinned engines and prepare corresponding source after fast checks
         run: |
-          sdkmanager 'ndk;27.2.12479018'
+          sdkmanager 'ndk;27.2.12479018' 'ndk;29.0.14206865'
           python3 tools/native/build.py
-          python3 tools/native/source_bundle.py
+          python3 tools/native/xray_candidate.py build
+          python3 tools/native/source_bundle.py --candidate-xray
       - name: Inventory and audit resolved Java and native Go dependencies
         run: |
           ./gradlew --no-daemon --max-workers=2 :app:writeRuntimeInventory
-          python3 tools/security/dependency_audit.py --native
+          python3 tools/security/dependency_audit.py --native --candidate-xray
       - name: Preserve supply-chain review evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -170,6 +171,10 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+      # The previously published 39/41 binaries abort under this runner's ARM
+      # translation, so they cannot exercise the updater. The immutable, owner
+      # installed TEST 42 build with the corrected engines is used as the prior
+      # instead; it is a real signed published APK, not a rebuilt fixture.
       - uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
         with:
           api-level: 30
@@ -177,7 +182,7 @@ jobs:
           target: google_apis
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -writable-system -no-snapshot
-          script: bash tools/upgrade-test/run.sh
+          script: PARVAZ_UPGRADE_PRIOR=test42 bash tools/upgrade-test/run.sh
       - name: Report installation fixture outcome
         if: always()
         run: |
