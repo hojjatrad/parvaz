@@ -48,7 +48,9 @@ public final class BestServer {
             if (favorites != null && favorites.contains(profile.id)) {
                 score -= FAVORITE_BONUS;
             }
-            if (profile.latency != null && !profile.latency.fresh()) {
+            // A stored number without current process/network proof is history, not a
+            // measurement of now, so it ranks behind anything freshly measured.
+            if (profile.latency == null || !profile.latency.fresh()) {
                 score += STALE_PENALTY;
             }
             int confidence = confidence(memory, context, profile);

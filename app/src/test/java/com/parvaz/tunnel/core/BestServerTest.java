@@ -68,8 +68,10 @@ public class BestServerTest {
 
     @Test
     public void unsupportedProtocolsAreNotChosenEvenWhenFast() {
+        // A custom profile whose raw JSON describes no dialable outbound.
         Profile unsupported = profile("hy", 10);
-        unsupported.protocol = "hysteria2";
+        unsupported.protocol = "custom";
+        unsupported.rawJson = "";
         List<Profile> list = Arrays.asList(unsupported, profile("ok", 700));
         assertEquals("ok", BestServer.choose(list, Collections.<String>emptySet()).id);
     }
