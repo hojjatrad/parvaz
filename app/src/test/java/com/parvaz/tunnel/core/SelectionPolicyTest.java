@@ -1,4 +1,4 @@
-package com.parvaz.tunnel.store;
+package com.parvaz.tunnel.core;
 
 import android.app.Application;
 import android.content.Context;
@@ -6,11 +6,9 @@ import android.content.SharedPreferences;
 
 import androidx.test.core.app.ApplicationProvider;
 
-import com.parvaz.tunnel.core.CoreManager;
-import com.parvaz.tunnel.core.NetworkEpoch;
-import com.parvaz.tunnel.core.StartupDiagnostics;
-import com.parvaz.tunnel.core.TunnelVpnService;
 import com.parvaz.tunnel.model.Profile;
+import com.parvaz.tunnel.store.ProfileStore;
+import com.parvaz.tunnel.store.SelectionPolicy;
 
 import org.junit.After;
 import org.junit.Before;
