@@ -1375,15 +1375,34 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
         ArrayList<Profile> profiles=b0.activeProfiles();
         if(profiles.isEmpty()){refresh.setRefreshing(false);setPingAllBusy(false);return;}
         setPingAllBusy(true);
+        final int total=profiles.size();
+        final java.util.concurrent.atomic.AtomicInteger done=new java.util.concurrent.atomic.AtomicInteger();
+        showPingProgress(0,total);
         K.startBatch(profiles,new PingManager.Listener(){
-            public void onResult(String id){if(!isFinishing()&&!isDestroyed())z.i(id);}
+            public void onResult(String id){
+                if(isFinishing()||isDestroyed())return;
+                z.i(id);showPingProgress(done.incrementAndGet(),total);
+            }
             public void onFinished(boolean cancelled){
                 if(isFinishing()||isDestroyed())return;
                 refresh.setRefreshing(false);setPingAllBusy(false);
-                Snackbar.make(connectButton,cancelled?R.string.ping_cancelled:R.string.ping_done,Snackbar.LENGTH_SHORT).show();
+                if(cancelled){Snackbar.make(connectButton,R.string.ping_cancelled,Snackbar.LENGTH_SHORT).show();return;}
+                // Report how many rows actually produced a number, not just that the run ended.
+                int measured=0;
+                for(Profile profile:b0.activeProfiles())if(profile.ping>0)measured++;
+                Snackbar.make(connectButton,getString(R.string.ping_done_counts,measured,total),Snackbar.LENGTH_LONG).show();
             }
         });
         z.notifyDataSetChanged();
+    }
+
+    /** Live "x / y" progress on the busy indicator, so a long run never looks stuck. */
+    public final void showPingProgress(int done,int total) {
+        ProgressBar progress=this.pingAllProgress;
+        if(progress==null)return;
+        String label=getString(R.string.ping_progress,done,total);
+        progress.setContentDescription(label);
+        androidx.core.view.ViewCompat.setTooltipText(progress,label);
     }
 
     /* renamed from: H */

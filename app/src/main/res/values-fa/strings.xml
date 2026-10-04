@@ -505,4 +505,6 @@
     <string name="best_server_measuring">در حال پینگ گرفتن برای پیدا کردن بهترین سرور…</string>
     <string name="pin_action">این سرور ثابت بماند</string>
     <string name="unpin_action">برداشتن ثابت بودن</string>
+    <string name="ping_progress">پینگ %1$d از %2$d</string>
+    <string name="ping_done_counts">پینگ تمام شد: %1$d از %2$d سرور پاسخ دادند</string>
 </resources>

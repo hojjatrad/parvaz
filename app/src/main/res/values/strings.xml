@@ -523,4 +523,6 @@ Tap + to paste a config link or add a subscription."</string>
     <string name="best_server_measuring">Measuring servers to find the best one…</string>
     <string name="pin_action">Pin this server</string>
     <string name="unpin_action">Remove the pin</string>
+    <string name="ping_progress">Measured %1$d of %2$d</string>
+    <string name="ping_done_counts">Ping finished: %1$d of %2$d servers answered</string>
 </resources>
