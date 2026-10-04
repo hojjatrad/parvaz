@@ -46,7 +46,7 @@ public class SelectionPolicyTest {
     private StartupDiagnostics.Attempt trace;
 
     @Before
-    public void setup() {
+    public void setup() throws Exception {
         app = ApplicationProvider.getApplicationContext();
         ProfileStore.d = null;
         CoreManager.c = null;
