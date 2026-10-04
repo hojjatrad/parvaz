@@ -1,7 +1,7 @@
 import importlib.util,pathlib,unittest
 spec=importlib.util.spec_from_file_location('prior',pathlib.Path(__file__).with_name('prior_release.py'));prior=importlib.util.module_from_spec(spec);spec.loader.exec_module(prior)
 class PriorReleaseTest(unittest.TestCase):
- def test_only_reviewed_priors(self):self.assertEqual(set(prior.PRIORS),{'stable39','test41','test42'})
+ def test_only_reviewed_priors(self):self.assertEqual(set(prior.PRIORS),{'stable39','stable43','test41','test42'})
  def test_owner_installed_test_identity(self):
   p=prior.select('test42');self.assertEqual(p['version_code'],42);self.assertIn('test/v1.28.8-r1/',p['url']);self.assertEqual(p['sha256'],'32a58e86ce0a260f7565161e8e65642f726ce4f214cf2f93ab39c5dde885ed3b')
  def test_stable_identity(self):

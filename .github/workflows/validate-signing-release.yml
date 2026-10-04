@@ -227,19 +227,30 @@ jobs:
           sleep 5
           CIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' redroid)
           GW=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.Gateway}}{{end}}' redroid)
-          for i in $(seq 1 24); do
+          BOOTED=0
+          for i in $(seq 1 48); do
             adb connect "$CIP:5555" || true
-            [ "$(adb -s "$CIP:5555" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ] && break
+            if [ "$(adb -s "$CIP:5555" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ] \
+               && [ -n "$(adb -s "$CIP:5555" shell getprop ro.product.cpu.abilist 2>/dev/null | tr -d '\r')" ]; then
+              BOOTED=1; break
+            fi
             sleep 10
           done
           adb devices -l
+          # Never run the fixture against a half-booted container: that produces an
+          # unreadable failure instead of installation evidence.
+          if [ "$BOOTED" != "1" ]; then
+            echo '::error title=ARM64_DEVICE_NOT_READY::redroid did not report sys.boot_completed with a populated ABI list'
+            docker logs --tail 80 redroid || true
+            exit 1
+          fi
           echo "ANDROID_SERIAL=$CIP:5555" >> "$GITHUB_ENV"
           echo "PARVAZ_HOST_IP=$GW" >> "$GITHUB_ENV"
           echo "::notice title=ARM64_DEVICE::serial=$CIP:5555 sdk=$(adb -s "$CIP:5555" shell getprop ro.build.version.sdk | tr -d '\r') abis=$(adb -s "$CIP:5555" shell getprop ro.product.cpu.abilist | tr -d '\r')"
       - name: Actual signed-APK upgrade fixture
         env:
           PARVAZ_CONTAINER: redroid
-          PARVAZ_UPGRADE_PRIOR: test42
+          PARVAZ_UPGRADE_PRIOR: stable43
         run: |
           set -o pipefail
           mkdir -p .cache
