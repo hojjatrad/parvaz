@@ -39,7 +39,7 @@ public final class NetworkAutomation {
   if(action==AutoProfile.ACTION_DISCONNECT){if(TunnelVpnService.serviceRunning)c.startService(new Intent(c,TunnelVpnService.class).setAction("com.parvaz.tunnel.STOP").putExtra("automatic_network_rule",true));return;}
   if(TunnelVpnService.serviceRunning||TunnelVpnService.currentState==1||TunnelVpnService.currentState==5)return;
   if(AppLock.foreground()&&AppLock.allowed(c)&&VpnService.prepare(c)==null){
-   com.parvaz.tunnel.store.LastConnected.restore(c);
+   com.parvaz.tunnel.store.SelectionPolicy.restore(c);
    try{ContextCompat.startForegroundService(c,new Intent(c,TunnelVpnService.class).setAction("com.parvaz.tunnel.START").putExtra("automatic_network_rule",true));return;}catch(RuntimeException restricted){}
   }
   if(Build.VERSION.SDK_INT>=33&&ContextCompat.checkSelfPermission(c,android.Manifest.permission.POST_NOTIFICATIONS)!=android.content.pm.PackageManager.PERMISSION_GRANTED)return;

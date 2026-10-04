@@ -25,6 +25,8 @@
             <androidx.appcompat.widget.SwitchCompat android:id="@id/ipv6" android:text="@string/ipv6" style="@style/Switch" />
             <androidx.appcompat.widget.SwitchCompat android:id="@id/bypass_lan" android:text="@string/bypass_lan" style="@style/Switch" />
             <androidx.appcompat.widget.SwitchCompat android:id="@id/auto_switch" android:text="@string/auto_switch" style="@style/Switch" />
+            <androidx.appcompat.widget.SwitchCompat android:id="@+id/auto_best_connect" android:text="@string/auto_best" style="@style/Switch" />
+            <TextView android:textSize="12.0sp" android:textColor="?android:textColorSecondary" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginTop="2.0dip" android:text="@string/auto_best_desc" />
             <TextView android:textSize="12.0sp" android:textColor="?android:textColorSecondary" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginTop="2.0dip" android:text="@string/auto_switch_desc" />
             <TextView android:text="@string/ping_threshold" style="@style/Label" />
             <EditText android:id="@id/ping_threshold" android:inputType="number" style="@style/Field" />

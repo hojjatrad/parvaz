@@ -22,7 +22,10 @@ public final class ServerAdapter_3 implements View.OnLongClickListener {
     @Override // android.view.View.OnLongClickListener
     public final boolean onLongClick(View view) {
         MainActivity mainActivity = this.b.d.outer();
-        String[] strArr = {mainActivity.getString(R.string.share_link), mainActivity.getString(R.string.show_qr), mainActivity.getString(R.string.delete), mainActivity.getString(R.string.delete_all)};
+        // Appended last so the existing item indices keep their meaning.
+        boolean pinned = this.f361a.id.equals(
+                com.parvaz.tunnel.store.SelectionPolicy.pinnedId(mainActivity));
+        String[] strArr = {mainActivity.getString(R.string.share_link), mainActivity.getString(R.string.show_qr), mainActivity.getString(R.string.delete), mainActivity.getString(R.string.delete_all), mainActivity.getString(pinned ? R.string.unpin_action : R.string.pin_action)};
         SecureDialogBuilder materialAlertDialogBuilder = new SecureDialogBuilder(mainActivity);
         Profile profile = this.f361a;
         materialAlertDialogBuilder.setTitle(profile.remark);

@@ -797,6 +797,17 @@ public class SettingsActivity extends com.parvaz.tunnel.LockedActivity {
         SwitchCompat switchCompat4 = (SwitchCompat) findViewById(R.id.auto_switch);
         switchCompat4.setChecked(this.C.f343a.getBoolean("auto_switch", true));
         switchCompat4.setOnCheckedChangeListener(new C0032b());
+        SwitchCompat autoBest = (SwitchCompat) findViewById(R.id.auto_best_connect);
+        autoBest.setChecked(this.C.f343a.getBoolean(com.parvaz.tunnel.store.SelectionPolicy.KEY_AUTO_BEST, false));
+        autoBest.setOnCheckedChangeListener((button, checked) -> {
+            // Automatic selection and a fixed pinned server are mutually exclusive;
+            // turning automation on must not leave a stale pin to fight with it.
+            RulesActivity__ExternalSyntheticOutline0.k(SettingsActivity.this.C.f343a,
+                    com.parvaz.tunnel.store.SelectionPolicy.KEY_AUTO_BEST, checked);
+            if (checked) {
+                com.parvaz.tunnel.store.SelectionPolicy.clearPin(SettingsActivity.this);
+            }
+        });
         EditText editText6 = (EditText) findViewById(R.id.ping_threshold);
         editText6.setText(String.valueOf(this.C.f343a.getInt("ping_threshold", 1200)));
         EditText editText7 = (EditText) findViewById(R.id.health_interval);

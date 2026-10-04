@@ -154,6 +154,15 @@ public final class ServerAdapter extends RecyclerView.Adapter<ServerAdapter.b> {
         card.setSelected(selected);
         card.setAlpha(dialable ? 1.0f : 0.55f);
 
+        // A pinned row is the server the app comes back to after a restart. Shown on the
+        // row itself so the durable choice is never invisible; the long-press menu clears it.
+        boolean pinned = profile.id.equals(com.parvaz.tunnel.store.SelectionPolicy.pinnedId(this.f366e));
+        if (pinned) {
+            holder.f369A.setText("\uD83D\uDCCC " + holder.f369A.getText());
+            holder.f369A.setContentDescription(holder.f369A.getText() + ". "
+                    + this.f366e.getString(R.string.pin_badge));
+        }
+
         // ---- ping ----------------------------------------------------------
         TextView pingText = holder.f370B;
         androidx.core.view.ViewCompat.setTooltipText(pingText,this.f366e.getString(R.string.latency_rtt_hint));

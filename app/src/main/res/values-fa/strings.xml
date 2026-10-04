@@ -497,4 +497,12 @@
     <string name="filter_all_servers">نمایش همهٔ سرورها</string>
     <string name="transfer_rate_lines">↓ %1$s\n↑ %2$s</string>
     <string name="transfer_rate_idle">↓ 0 B/s\n↑ 0 B/s</string>
+    <string name="pin_set">ثابت شد. این سرور پس از باز کردن دوبارهٔ برنامه همین می‌ماند.</string>
+    <string name="pin_cleared">ثابت بودن برداشته شد. دوباره آخرین سرور متصل‌شده به کار می‌رود.</string>
+    <string name="pin_badge">سرور ثابت</string>
+    <string name="auto_best">اتصال خودکار به بهترین سرور</string>
+    <string name="auto_best_desc">به جای سرور ثابت، لیست پینگ گرفته می‌شود و به کمترین تاخیر تأییدشده وصل می‌شود.</string>
+    <string name="best_server_measuring">در حال پینگ گرفتن برای پیدا کردن بهترین سرور…</string>
+    <string name="pin_action">این سرور ثابت بماند</string>
+    <string name="unpin_action">برداشتن ثابت بودن</string>
 </resources>

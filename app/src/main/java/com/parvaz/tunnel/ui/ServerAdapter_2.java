@@ -24,7 +24,11 @@ public final class ServerAdapter_2 implements View.OnClickListener {
         MainActivity mainActivity = this.b.d.outer();
         Prefs prefs = mainActivity.L;
         Profile profile = this.f359a;
-        RulesActivity__ExternalSyntheticOutline0.j(prefs.f343a, "selected_profile", profile.id);
+        // Tapping a row is an explicit manual choice: remember it durably so the same
+        // server is still the one used after the app is closed and reopened.
+        if (!com.parvaz.tunnel.store.SelectionPolicy.pin(mainActivity, profile)) {
+            RulesActivity__ExternalSyntheticOutline0.j(prefs.f343a, "selected_profile", profile.id);
+        }
         ServerAdapter serverAdapter = mainActivity.z;
         String str = profile.id;
         serverAdapter.getClass();

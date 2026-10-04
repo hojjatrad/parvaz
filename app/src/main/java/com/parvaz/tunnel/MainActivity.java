@@ -751,6 +751,23 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
             MainActivity mainActivity = MainActivity.this;
             Profile profile = this.f6100a;
             mainActivity.getClass();
+            if (i == 4) {
+                // Pin / unpin: the durable manual choice that survives a restart.
+                boolean pinned = profile.id.equals(
+                        com.parvaz.tunnel.store.SelectionPolicy.pinnedId(mainActivity));
+                if (pinned) {
+                    com.parvaz.tunnel.store.SelectionPolicy.clearPin(mainActivity);
+                } else {
+                    com.parvaz.tunnel.store.SelectionPolicy.pin(mainActivity, profile);
+                    mainActivity.z.f368h = profile.id;
+                }
+                mainActivity.z.notifyDataSetChanged();
+                mainActivity.renderState();
+                Snackbar.make(mainActivity.connectButton,
+                        pinned ? R.string.pin_cleared : R.string.pin_set,
+                        Snackbar.LENGTH_SHORT).show();
+                return;
+            }
             if (i == 0) {
                 Intent intent = new Intent("android.intent.action.SEND");
                 intent.setType("text/plain");
@@ -1878,6 +1895,11 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
         haptic(this.connectButton);
         int i = this.state;
         if (i != 2 && i != 1 && i != 5) {
+            // Automatic mode measures first and connects to the best server itself.
+            if (com.parvaz.tunnel.store.SelectionPolicy.autoBest(this) && !this.K.isBatchBusy()) {
+                autoBestConnect(true);
+                return;
+            }
             String str = "";
             if (this.b0.getActiveById(this.L.f343a.getString("selected_profile", "")) == null) {
                 ArrayList e = this.b0.activeProfiles();
@@ -2184,42 +2206,94 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
     }
 
     public void lambda$onCreate$9(View view) {
-        Iterator it = this.b0.activeProfiles().iterator();
-        Profile profile = null;
-        int i = Integer.MAX_VALUE;
-        while (it.hasNext()) {
-            Profile profile2 = (Profile) it.next();
-            int i2 = profile2.ping;
-            if (i2 > 0) {
-                if (this.L.getFavorites().contains(profile2.id)) {
-                    i2 -= 60;
-                }
-                if (i2 < i) {
-                    profile = profile2;
-                    i = i2;
-                }
-            }
-        }
-        View view2 = this.connectButton;
-        if (profile == null) {
-            Snackbar.make(view2, R.string.best_server_none, 0).show();
-            pingAll();
+        haptic(this.connectButton);
+        autoBestConnect(true);
+    }
+
+    /**
+     * Measures the list when needed, picks the lowest VERIFIED latency and uses it.
+     *
+     * <p>Only a measured value counts; a state label never wins. Nothing here weakens the
+     * connection proof: the tunnel still turns green only after a complete verified
+     * connection, this merely decides which server that attempt uses.
+     *
+     * @param connectAfter true to start the tunnel once a server has been chosen.
+     */
+    public final void autoBestConnect(final boolean connectAfter) {
+        final ArrayList<Profile> profiles = this.b0.activeProfiles();
+        if (profiles.isEmpty()) {
+            Snackbar.make(this.connectButton, R.string.err_no_server, 0).show();
+            showAddDialog();
             return;
         }
-        haptic(view2);
-        RulesActivity__ExternalSyntheticOutline0.j(this.L.f343a, "selected_profile", profile.id);
-        ServerAdapter serverAdapter = this.z;
-        String str = profile.id;
-        serverAdapter.getClass();
-        if (str == null) {
-            str = "";
+        if (!com.parvaz.tunnel.core.BestServer.needsMeasurement(profiles)) {
+            Profile ready = com.parvaz.tunnel.core.BestServer.choose(profiles, this.L.getFavorites(),
+                    new com.parvaz.tunnel.core.ServerMemory(this), getApplicationContext());
+            if (ready != null) {
+                applyBestServer(ready, connectAfter);
+                return;
+            }
         }
-        serverAdapter.f368h = str;
-        serverAdapter.notifyDataSetChanged();
+        if (this.K.isBatchBusy()) {
+            return;
+        }
+        Snackbar.make(this.connectButton, R.string.best_server_measuring, Snackbar.LENGTH_SHORT).show();
+        setPingAllBusy(true);
+        this.K.startBatch(profiles, new PingManager.Listener() {
+            public void onResult(String id) {
+                if (!isFinishing() && !isDestroyed()) {
+                    z.i(id);
+                }
+            }
+
+            public void onFinished(boolean cancelled) {
+                if (isFinishing() || isDestroyed()) {
+                    return;
+                }
+                refresh.setRefreshing(false);
+                setPingAllBusy(false);
+                if (cancelled) {
+                    return;
+                }
+                Profile best = com.parvaz.tunnel.core.BestServer.choose(b0.activeProfiles(),
+                        L.getFavorites(), new com.parvaz.tunnel.core.ServerMemory(MainActivity.this),
+                        getApplicationContext());
+                if (best == null) {
+                    Snackbar.make(connectButton, R.string.best_server_none, 0).show();
+                    return;
+                }
+                applyBestServer(best, connectAfter);
+            }
+        });
+        this.z.notifyDataSetChanged();
+    }
+
+    /** Applies an automatic choice to the UI, the durable selection and, if asked, the tunnel. */
+    public final void applyBestServer(Profile profile, boolean connectAfter) {
+        if (profile == null) {
+            return;
+        }
+        if (com.parvaz.tunnel.store.SelectionPolicy.autoBest(this)) {
+            // Automatic mode re-decides on every run; it must not leave a pin behind.
+            RulesActivity__ExternalSyntheticOutline0.j(this.L.f343a, "selected_profile", profile.id);
+        } else if (!com.parvaz.tunnel.store.SelectionPolicy.pin(this, profile)) {
+            RulesActivity__ExternalSyntheticOutline0.j(this.L.f343a, "selected_profile", profile.id);
+        }
+        this.z.f368h = profile.id == null ? "" : profile.id;
+        this.z.notifyDataSetChanged();
         renderState();
         Snackbar.make(this.connectButton, getString(R.string.best_server_picked, profile.remark), -1).show();
         if (this.state == 2) {
             startVpn("com.parvaz.tunnel.RESTART");
+            return;
+        }
+        if (connectAfter && this.state != 1 && this.state != 5) {
+            Intent prepare = VpnService.prepare(this);
+            if (prepare != null) {
+                this.j0.launch(prepare);
+            } else {
+                startVpn("com.parvaz.tunnel.START");
+            }
         }
     }
 
@@ -2250,7 +2324,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
         this.L = new Prefs(this);
         this.b0 = ProfileStore.f(this);
         this.b0.ensureActiveSubscription(this.L.f343a);
-        if(bundle==null&&!TunnelVpnService.serviceRunning&&TunnelVpnService.currentState!=1&&TunnelVpnService.currentState!=5)com.parvaz.tunnel.store.LastConnected.restore(this);
+        if(bundle==null&&!TunnelVpnService.serviceRunning&&TunnelVpnService.currentState!=1&&TunnelVpnService.currentState!=5)com.parvaz.tunnel.store.SelectionPolicy.restore(this);
         this.K = new PingManager(this);
         this.connectButton = findViewById(R.id.connect_button);
         this.statusText = (TextView) findViewById(R.id.status_text);

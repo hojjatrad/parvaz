@@ -12,6 +12,10 @@ import java.net.*;
 public final class ProxyMeasurement {
  private static final ProbeAdmission CAPACITY=new ProbeAdmission(3);
  private ProxyMeasurement(){}
+ /** Shared native admission, so a shared-core batch competes with per-profile probes
+  *  for the same bounded number of live engine instances instead of ignoring the gate. */
+ static boolean enterNative(boolean wait)throws InterruptedException{return CAPACITY.enter(wait);}
+ static void exitNative(){CAPACITY.exit();}
  public static long measure(Context context,Profile profile,String url)throws Exception {
   return measure(context,profile,url,false);
  }

@@ -13,7 +13,9 @@ import okhttp3.*;
  * success, direct fallback, redirects, permissive trust or best-of sampling. */
 public final class HttpsLatency {
  public static final long FAILED=-1,UNKNOWN=-2,TIMEOUT=-20,TLS_ERROR=-21,HTTP_ERROR=-22,NETWORK_ERROR=-23,BUSY=-24;
- private static final Semaphore SLOTS=new Semaphore(6);
+ // Bounded parallel sockets. Raised with the shared-core batch path: one core now
+ // serves many profiles, so the limit is loopback sockets, not native instances.
+ private static final Semaphore SLOTS=new Semaphore(12);
  private HttpsLatency(){}
  static final class Timing extends okhttp3.EventListener {
   long began=-1,ended=-1;
@@ -33,13 +35,17 @@ public final class HttpsLatency {
   private final AtomicReference<Call> active=new AtomicReference<>();
   private volatile boolean closed;
   public Session(int port){this(port,new OkHttpClient.Builder());}
+  /** Shorter deadlines for list-wide measurement: an unreachable row must not hold a
+   *  slot for twelve seconds. The timing window itself is unchanged. */
+  public static Session fast(int port){return new Session(port,new OkHttpClient.Builder(),true);}
   // Package-private injection is for loopback trust fixtures only, never user settings.
-  Session(int port,OkHttpClient.Builder builder){
+  Session(int port,OkHttpClient.Builder builder){this(port,builder,false);}
+  Session(int port,OkHttpClient.Builder builder,boolean fast){
    this.port=port;
    client=builder.proxy(new Proxy(Proxy.Type.HTTP,new InetSocketAddress("127.0.0.1",Math.max(1,port))))
     .followRedirects(false).followSslRedirects(false).retryOnConnectionFailure(false)
     .protocols(Collections.singletonList(Protocol.HTTP_1_1))
-    .connectTimeout(5,TimeUnit.SECONDS).readTimeout(6,TimeUnit.SECONDS).writeTimeout(5,TimeUnit.SECONDS).callTimeout(12,TimeUnit.SECONDS)
+    .connectTimeout(fast?3:5,TimeUnit.SECONDS).readTimeout(fast?4:6,TimeUnit.SECONDS).writeTimeout(fast?3:5,TimeUnit.SECONDS).callTimeout(fast?6:12,TimeUnit.SECONDS)
     .connectionPool(new ConnectionPool(1,10,TimeUnit.SECONDS)).build();
   }
   public long measure(String configured,int samples)throws InterruptedException {
