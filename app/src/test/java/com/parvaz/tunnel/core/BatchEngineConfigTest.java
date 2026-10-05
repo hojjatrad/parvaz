@@ -125,19 +125,31 @@ public class BatchEngineConfigTest {
     }
 
     @Test
-    public void fullConfigurationsAndXrayProtocolsAreTurnedAway() {
-        Profile vless = profile("x", "vless");
+    public void fullConfigurationsAndEngineIncapableProtocolsAreTurnedAway() {
+        Profile wireguard = profile("x", "wireguard");
         Profile clash = profile("y", "full-clash");
         Profile sing = profile("z", "full-singbox");
-        BatchEngineConfig.Plan plan = plan(vless, clash, sing);
+        BatchEngineConfig.Plan plan = plan(wireguard, clash, sing);
         assertTrue(plan.isEmpty());
         assertEquals(3, plan.rejected.size());
-        assertFalse(BatchEngineConfig.shareable(vless));
+        assertFalse(BatchEngineConfig.shareable(wireguard));
         assertFalse(BatchEngineConfig.shareable(clash));
         assertFalse(BatchEngineConfig.shareable(sing));
         assertFalse(BatchEngineConfig.shareable(null));
         assertTrue(BatchEngineConfig.shareable(profile("a", "snell")));
         assertTrue(FullConfig.isFull("full-clash"));
+    }
+
+    @Test
+    public void aServerMovedToSingBoxByChoiceCanAlsoShareTheEngine() throws Exception {
+        Profile vless = profile("a", "vless");
+        vless.security = "tls";
+        assertTrue(BatchEngineConfig.shareable(vless));
+        JSONObject out = new JSONObject(plan(vless).config)
+                .getJSONArray("outbounds").getJSONObject(0);
+        assertEquals("vless", out.getString("type"));
+        assertEquals(vless.uuid, out.getString("uuid"));
+        assertTrue(out.getJSONObject("tls").getBoolean("enabled"));
     }
 
     @Test

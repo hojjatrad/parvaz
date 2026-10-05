@@ -192,8 +192,38 @@ public final class CoreManager {
     synchronized boolean startOwned(Context context,Profile profile,int tunFd,Runnable failure,java.util.function.BooleanSupplier current) {
         return startInternal(context,profile,tunFd,failure,-1,current);
     }
+    /**
+     * Brings the tunnel up, trying each engine {@link CoreSelection} lists for this server.
+     *
+     * <p>The first entry is the user's own per-server choice when there is one, otherwise the
+     * engine that last worked for it, otherwise the protocol's natural engine. A second entry
+     * exists only when the other engine can dial the very same settings, so a failover changes
+     * which program carries the bytes and nothing about where they go. A working start is
+     * remembered, so a server that only runs on the second engine stops paying for a failed
+     * first attempt on every connect.
+     */
     private boolean startInternal(Context context,Profile profile,int tunFd,Runnable failure,long tunSetupMs,java.util.function.BooleanSupplier current) {
         if(!current.getAsBoolean())return false;
+        java.util.List<String> cores=CoreSelection.order(new Prefs(context).f343a,profile);
+        if(cores.isEmpty())cores=java.util.Collections.singletonList(CoreSelection.natural(profile));
+        RuntimeException lastFailure=null;
+        for(int attempt=0;attempt<cores.size();attempt++){
+            String core=cores.get(attempt);
+            try{
+                boolean started=startOnCore(context,profile,tunFd,failure,tunSetupMs,current,core);
+                if(started)CoreSelection.remember(new Prefs(context).f343a,profile,core);
+                return started;
+            }catch(RuntimeException error){
+                lastFailure=error;
+                if(!current.getAsBoolean())return false;
+                // Try the other capable engine before giving up; the user asked for a
+                // connection, not for a report about which program failed to make one.
+            }
+        }
+        throw lastFailure==null?new IllegalStateException("Core start failed"):lastFailure;
+    }
+
+    private boolean startOnCore(Context context,Profile profile,int tunFd,Runnable failure,long tunSetupMs,java.util.function.BooleanSupplier current,String core) {
         rememberVerifiedDefault(); // Preserve a just-confirmed old session before replacing its diagnostics.
         final StartupDiagnostics.Attempt trace=StartupDiagnostics.begin(System.nanoTime(),tunSetupMs);
         stop();diagnostics=trace;trace.cleanupDone();
@@ -205,7 +235,7 @@ public final class CoreManager {
         try{
             Prefs prefs=new Prefs(context);livePrefs=prefs.f343a;String chainId=prefs.f343a.getString("chain_profile","");
             Profile chain=chainId==null||chainId.isEmpty()||chainId.equals(profile.id)?null:ProfileStore.f(context).getById(chainId);
-            boolean nativeProfile=com.parvaz.tunnel.config.EngineConfig.external(profile.protocol);
+            boolean nativeProfile=!CoreSelection.XRAY.equals(core);
             if(chain!=null&&(nativeProfile||com.parvaz.tunnel.config.FullConfig.isFull(profile.protocol)||com.parvaz.tunnel.config.EngineConfig.external(chain.protocol)))
                 throw new IllegalArgumentException("Use a complete same-engine configuration for a multi-engine chain");
             Profile relay=profile;
@@ -218,7 +248,7 @@ public final class CoreManager {
             }else config=XrayConfigBuilder.b(profile,prefs,chain,true,true);
             int readinessPort;
             try(java.net.ServerSocket reserved=new java.net.ServerSocket(0,1,java.net.InetAddress.getByName("127.0.0.1"))){readinessPort=reserved.getLocalPort();}
-            com.parvaz.tunnel.config.ReadinessConfig.Plan readiness=com.parvaz.tunnel.config.ReadinessConfig.prepare(config,profile,external!=null&&external.readinessRemoteOnly,readinessPort);
+            com.parvaz.tunnel.config.ReadinessConfig.Plan readiness=com.parvaz.tunnel.config.ReadinessConfig.prepare(config,profile,external!=null,external!=null&&external.readinessRemoteOnly,readinessPort);
             config=readiness.config;verifiedPort=readiness.pinned?readinessPort:0;trace.routeConfigured(readiness.pinned);
             trace.configDone();
             if(!current.getAsBoolean()){stop();return false;}

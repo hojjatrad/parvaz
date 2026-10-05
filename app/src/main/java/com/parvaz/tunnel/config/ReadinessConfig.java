@@ -19,8 +19,17 @@ public final class ReadinessConfig {
   Plan(String config,boolean pinned){this.config=config;this.pinned=pinned;}
  }
  public static Plan prepare(String config,Profile profile,boolean nativeRemoteOnly,int port)throws JSONException {
+  return prepare(config,profile,EngineConfig.external(ProtocolNames.canonical(profile.protocol)),nativeRemoteOnly,port);
+ }
+ /**
+  * @param nativeEngine a child engine is carrying this profile right now. That is no
+  *   longer implied by the protocol: a VLESS or Trojan server can be running on sing-box
+  *   by the user's own per-server choice, and its relay outbound tagged "proxy" is not
+  *   proof of anything until the inner engine has been checked too.
+  */
+ public static Plan prepare(String config,Profile profile,boolean nativeEngine,boolean nativeRemoteOnly,int port)throws JSONException {
   JSONObject root=new JSONObject(config);JSONArray outbounds=root.optJSONArray("outbounds");String selected=null;Set<String> tags=new HashSet<>();
-  if(EngineConfig.external(profile.protocol)&&!nativeRemoteOnly)return new Plan(config,false);
+  if(nativeEngine&&!nativeRemoteOnly)return new Plan(config,false);
   if(outbounds!=null)for(int i=0;i<outbounds.length();i++){
    JSONObject out=outbounds.getJSONObject(i);
    String outTag=out.optString("tag");if(!outTag.isEmpty()&&!tags.add(outTag))return new Plan(config,false);

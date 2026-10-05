@@ -80,7 +80,12 @@ public final class BatchEngineConfig {
             return false;
         }
         String protocol = ProtocolNames.canonical(profile.protocol);
-        return EngineConfig.external(protocol) && !FullConfig.isFull(protocol);
+        if (FullConfig.isFull(protocol)) {
+            return false;
+        }
+        // Either a protocol only sing-box speaks, or one it can reproduce exactly - the
+        // latter matters when the user has put an Xray protocol on sing-box by choice.
+        return EngineConfig.external(protocol) || SingBoxOutbound.capable(profile);
     }
 
     public static Plan compose(List<Member> members) {

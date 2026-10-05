@@ -87,9 +87,9 @@ public final class BatchLatency {
             if (profile == null) {
                 continue;
             }
-            if (shareable(profile, chainId)) {
+            if (shareable(prefs.f343a, profile, chainId)) {
                 shared.add(profile);
-            } else if (engineShareable(profile, chainId)) {
+            } else if (engineShareable(prefs.f343a, profile, chainId)) {
                 engineShared.add(profile);
             } else {
                 perProfile.add(profile);
@@ -114,12 +114,13 @@ public final class BatchLatency {
     }
 
     /** True when the profile's own route can be expressed as one outbound inside a shared core. */
-    static boolean shareable(Profile profile, String chainId) {
+    static boolean shareable(android.content.SharedPreferences prefs, Profile profile, String chainId) {
         if (profile == null || profile.protocol == null) {
             return false;
         }
-        if (EngineConfig.external(profile.protocol) || FullConfig.isFull(profile.protocol)) {
-            return false;
+        if (!CoreSelection.XRAY.equals(CoreSelection.active(prefs, profile))
+                || FullConfig.isFull(profile.protocol)) {
+            return false; // Measured on whichever engine will actually carry it.
         }
         if (chainId != null && !chainId.isEmpty() && !chainId.equals(profile.id)) {
             return false; // A chain needs the full per-profile config.
@@ -133,8 +134,10 @@ public final class BatchLatency {
     }
 
     /** True when this profile is one external-engine outbound that can share a child engine. */
-    static boolean engineShareable(Profile profile, String chainId) {
-        if (!BatchEngineConfig.shareable(profile)) {
+    static boolean engineShareable(android.content.SharedPreferences prefs, Profile profile,
+                                   String chainId) {
+        if (!BatchEngineConfig.shareable(profile)
+                || !CoreSelection.SINGBOX.equals(CoreSelection.active(prefs, profile))) {
             return false;
         }
         if (chainId != null && !chainId.isEmpty() && !chainId.equals(profile.id)) {

@@ -35,6 +35,9 @@ public final class EngineConfig {
   */
  public static JSONObject outbound(Profile profile,String tag)throws JSONException {
   String protocol=ProtocolNames.canonical(profile.protocol);
+  // Protocols Xray normally carries are delegated, so one server can be dialled by
+  // either engine with identical settings (see SingBoxOutbound.capable).
+  if(SingBoxOutbound.capable(profile))return SingBoxOutbound.build(profile,tag);
    JSONObject outbound=new JSONObject().put("type",protocol).put("server",profile.address).put("server_port",profile.port);
   JSONObject tls=new JSONObject().put("enabled",true).put("server_name",profile.sni.isEmpty()?profile.address:profile.sni).put("insecure",profile.allowInsecure);
   if(!profile.alpn.isEmpty()){JSONArray alpn=new JSONArray();for(String value:profile.alpn.split(","))if(!value.trim().isEmpty())alpn.put(value.trim());tls.put("alpn",alpn);}

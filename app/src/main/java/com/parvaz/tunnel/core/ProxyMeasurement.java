@@ -38,7 +38,10 @@ public final class ProxyMeasurement {
   if(!CAPACITY.enter(wait))return wait?ProbeAdmission.BUSY:VerifiedProbe.UNKNOWN;
   ExternalCore external=null;CoreController controller=null;
   try{
-   Prefs prefs=snapshot==null?new Prefs(context):snapshot;String config;boolean nativeProfile=EngineConfig.external(profile.protocol);
+   Prefs prefs=snapshot==null?new Prefs(context):snapshot;String config;
+   // Measure the server on the engine it will actually connect with, including a
+   // per-server choice the user made; a ping through the other engine is not proof.
+   boolean nativeProfile=CoreSelection.external(prefs.f343a,profile);
    String chainId=prefs.f343a.getString("chain_profile","");Profile chain=chainId==null||chainId.isEmpty()||chainId.equals(profile.id)?null:ProfileStore.f(context).getById(chainId);
    if(chain!=null&&(nativeProfile||FullConfig.isFull(profile.protocol)||EngineConfig.external(chain.protocol)))return wait?VerifiedProbe.ROUTE_UNVERIFIED:VerifiedProbe.UNKNOWN;
    if(nativeProfile){
@@ -49,7 +52,7 @@ public final class ProxyMeasurement {
    }else config=XrayConfigBuilder.b(profile,prefs,chain,false,false);
    JSONObject root=new JSONObject(config);root.put("inbounds",new JSONArray());
    int port;try(ServerSocket socket=new ServerSocket(0,1,InetAddress.getByName("127.0.0.1"))){port=socket.getLocalPort();}
-   ReadinessConfig.Plan plan=ReadinessConfig.prepare(root.toString(),profile,external!=null&&external.readinessRemoteOnly,port);
+   ReadinessConfig.Plan plan=ReadinessConfig.prepare(root.toString(),profile,external!=null,external!=null&&external.readinessRemoteOnly,port);
    if(!plan.pinned)return wait?VerifiedProbe.ROUTE_UNVERIFIED:VerifiedProbe.UNKNOWN;
    if(Thread.currentThread().isInterrupted())throw new InterruptedException();
    controller=Libv2ray.newCoreController(new CoreCallbackHandler(){public long startup(){return 0;}public long shutdown(){return 0;}public long onEmitStatus(long code,String message){return 0;}});

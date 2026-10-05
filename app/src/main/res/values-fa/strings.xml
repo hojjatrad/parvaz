@@ -508,6 +508,11 @@
     <string name="filter_protocol">گروه پروتکل</string>
     <string name="filter_protocol_all">همهٔ پروتکل‌ها  (%1$d)</string>
     <string name="best_server_measuring">در حال پینگ گرفتن برای پیدا کردن بهترین سرور…</string>
+    <string name="core_action">هستهٔ این سرور</string>
+    <string name="core_auto">خودکار (%1$s)</string>
+    <string name="core_set">این سرور با %1$s وصل می‌شود.</string>
+    <string name="core_auto_set">انتخاب خودکار هسته برای این سرور برگشت.</string>
+    <string name="core_single">با این تنظیمات فقط %1$s می‌تواند این سرور را بگیرد.</string>
     <string name="pin_action">این سرور ثابت بماند</string>
     <string name="unpin_action">برداشتن ثابت بودن</string>
     <string name="ping_progress">پینگ %1$d از %2$d</string>

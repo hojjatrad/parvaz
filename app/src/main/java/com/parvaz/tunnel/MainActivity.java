@@ -762,6 +762,11 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
             MainActivity mainActivity = MainActivity.this;
             Profile profile = this.f6100a;
             mainActivity.getClass();
+            if (i == 5) {
+                // Per-server engine choice. Appended last so existing indices keep meaning.
+                mainActivity.chooseCore(profile);
+                return;
+            }
             if (i == 4) {
                 // Pin / unpin: the durable manual choice that survives a restart.
                 boolean pinned = profile.id.equals(
@@ -1701,6 +1706,50 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
                 })
                 .setNegativeButton(R.string.cancel, null)
                 .show();
+    }
+
+    /**
+     * Lets one server be moved between the bundled engines by hand.
+     *
+     * <p>Only engines that can dial this exact server are offered, so the choice can change
+     * which program carries the bytes but never the destination, the TLS settings or the
+     * route. "Automatic" gives the decision back to {@link com.parvaz.tunnel.core.CoreSelection}.
+     */
+    public void chooseCore(final Profile profile) {
+        final java.util.List<String> options = com.parvaz.tunnel.core.CoreSelection.options(profile);
+        final android.content.SharedPreferences preferences =
+                new com.parvaz.tunnel.store.Prefs(this).f343a;
+        if (options.size() < 2) {
+            String only = com.parvaz.tunnel.core.CoreSelection.label(options.isEmpty()
+                    ? com.parvaz.tunnel.core.CoreSelection.natural(profile) : options.get(0));
+            Snackbar.make(this.connectButton, getString(R.string.core_single, only),
+                    Snackbar.LENGTH_LONG).show();
+            return;
+        }
+        final String[] labels = new String[options.size() + 1];
+        labels[0] = getString(R.string.core_auto,
+                com.parvaz.tunnel.core.CoreSelection.label(
+                        com.parvaz.tunnel.core.CoreSelection.natural(profile)));
+        for (int i = 0; i < options.size(); i++) {
+            labels[i + 1] = com.parvaz.tunnel.core.CoreSelection.label(options.get(i));
+        }
+        SecureDialogBuilder builder = new SecureDialogBuilder(this);
+        builder.setTitle(R.string.core_action);
+        builder.setItems(labels, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                String core = which == 0 ? com.parvaz.tunnel.core.CoreSelection.AUTO
+                        : options.get(which - 1);
+                com.parvaz.tunnel.core.CoreSelection.choose(preferences, profile, core);
+                Snackbar.make(MainActivity.this.connectButton,
+                        which == 0 ? getString(R.string.core_auto_set)
+                                : getString(R.string.core_set,
+                                        com.parvaz.tunnel.core.CoreSelection.label(core)),
+                        Snackbar.LENGTH_SHORT).show();
+                MainActivity.this.z.notifyDataSetChanged();
+            }
+        });
+        builder.show();
     }
 
     public final void renderState() {
