@@ -68,13 +68,27 @@ public final class ClashParser {
         return result;
     }
 
+    /** Clash writes bandwidth either as a bare number or as "100 Mbps"; keep the digits. */
+    private static String speed(JSONObject o,String key,String alternative) throws JSONException {
+        String value=text(o,key,text(o,alternative,""));
+        StringBuilder kept=new StringBuilder();
+        for(int i=0;i<value.length()&&kept.length()<6;i++){
+            char c=value.charAt(i);
+            if(c>='0'&&c<='9')kept.append(c);
+            else if(kept.length()>0)break;
+        }
+        return kept.toString();
+    }
+
     private static Profile map(JSONObject o) throws JSONException {
         String protocol=ProtocolNames.canonical(required(o,"type"));
         String allowed="name type server port udp";
         if("wireguard".equals(protocol)) allowed+=" private-key public-key pre-shared-key preshared-key ip ipv6 reserved mtu";
         else {
             allowed+=" tls servername sni skip-cert-verify alpn";
-            if(!"hysteria2".equals(protocol)&&!"tuic".equals(protocol)) allowed+=" network client-fingerprint fingerprint fp ws-opts grpc-opts h2-opts http-upgrade-opts";
+            if(!"hysteria2".equals(protocol)&&!"tuic".equals(protocol)&&!"hysteria".equals(protocol)
+                    &&!"anytls".equals(protocol)&&!"snell".equals(protocol))
+                allowed+=" network client-fingerprint fingerprint fp ws-opts grpc-opts h2-opts http-upgrade-opts";
             switch(protocol) {
                 case "vless":allowed+=" uuid encryption flow reality-opts";break;
                 case "vmess":allowed+=" uuid cipher encryption alterId alterid";break;
@@ -84,6 +98,9 @@ public final class ClashParser {
                 case "http":allowed+=" username password";break;
                 case "hysteria2":allowed+=" password obfs obfs-password";break;
                 case "tuic":allowed+=" uuid password congestion-controller udp-relay-mode";break;
+                case "hysteria":allowed+=" auth-str auth_str auth up down up-speed down-speed obfs protocol";break;
+                case "anytls":allowed+=" password";break;
+                case "snell":allowed+=" psk version obfs-opts";break;
                 default:throw new Invalid("UNSUPPORTED_PROTOCOL");
             }
         }
@@ -97,7 +114,8 @@ public final class ClashParser {
         p.encryption=text(o,"cipher",text(o,"encryption","none"));
         p.alterId=integer(o,o.has("alterId")?"alterId":"alterid",0,0,65535);
         p.network=text(o,"network","tcp").toLowerCase(Locale.US);
-        p.security=bool(o,"tls","trojan".equals(p.protocol)||"hysteria2".equals(p.protocol)||"tuic".equals(p.protocol))?"tls":"";
+        p.security=bool(o,"tls","trojan".equals(p.protocol)||"hysteria2".equals(p.protocol)||"tuic".equals(p.protocol)
+                ||"hysteria".equals(p.protocol)||"anytls".equals(p.protocol))?"tls":"";
         p.sni=text(o,"servername",text(o,"sni",p.address));
         p.path="/";p.host=p.sni;
         p.allowInsecure=bool(o,"skip-cert-verify",false);
@@ -133,6 +151,24 @@ public final class ClashParser {
             p.security="";p.network="";
         } else if("hysteria2".equals(p.protocol)) {
             p.network="udp";p.mode=text(o,"obfs","");p.host=text(o,"obfs-password","");
+        } else if("hysteria".equals(p.protocol)) {
+            // Hysteria v1: UDP only, its own obfuscation word, and the two bandwidth hints
+            // the protocol requires, carried together in `seed` as "up,down" megabits.
+            p.network="udp";p.uuid=text(o,"auth-str",text(o,"auth_str",text(o,"auth","")));
+            p.host=text(o,"obfs","");
+            p.seed=speed(o,"up","up-speed")+","+speed(o,"down","down-speed");
+            if(o.has("protocol")&&!text(o,"protocol","udp").equalsIgnoreCase("udp"))
+                throw new Invalid("HYSTERIA_TRANSPORT_UNSUPPORTED");
+        } else if("anytls".equals(p.protocol)) {
+            p.network="tcp";p.uuid=required(o,"password");
+        } else if("snell".equals(p.protocol)) {
+            // Snell brings its own obfuscation layer and never negotiates TLS.
+            p.network="tcp";p.security="";p.uuid=required(o,"psk");
+            p.mode=String.valueOf(integer(o,"version",4,1,4));
+            if(o.has("obfs-opts")) {
+                JSONObject obfs=object(o,"obfs-opts");keys(obfs,"mode host");
+                p.host=text(obfs,"mode","");
+            }
         } else if("tuic".equals(p.protocol)) {
             p.network="udp";p.quicKey=required(o,"password");p.mode=text(o,"congestion-controller","bbr");p.headerType=text(o,"udp-relay-mode","native");
         }

@@ -85,6 +85,7 @@ final class ConfigFields {
                 if ("tuic".equals(p.protocol) && p.quicKey.isEmpty()) throw new Invalid("MISSING_PASSWORD");
                 break;
             case "trojan": case "shadowsocks": case "hysteria2":
+            case "hysteria": case "anytls": case "snell":
                 if(p.uuid.isEmpty()) throw new Invalid("MISSING_PASSWORD");
                 if ("shadowsocks".equals(p.protocol) && (p.encryption.isEmpty() || "none".equals(p.encryption))) throw new Invalid("MISSING_CIPHER");
                 break;

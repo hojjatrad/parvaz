@@ -186,6 +186,11 @@ public final class LinkParser {
             profile = parseHysteria2(text);
         } else if (lower.startsWith("tuic://")) {
             profile = parseTuic(text);
+        } else if (lower.startsWith("hysteria://") || lower.startsWith("hy://")
+                || lower.startsWith("hy1://")) {
+            profile = parseHysteria(text);
+        } else if (lower.startsWith("anytls://")) {
+            profile = parseAnyTls(text);
         } else if (lower.startsWith("socks://") || lower.startsWith("socks5://")) {
             profile = parseSocks(text);
         } else if (lower.startsWith("wg://") || lower.startsWith("wireguard://")) {
@@ -542,6 +547,77 @@ public final class LinkParser {
             return null;
         }
         return F;
+    }
+
+    /**
+     * Hysteria version 1 share link, e.g.
+     * {@code hysteria://host:443?auth=secret&upmbps=20&downmbps=100&obfs=word&peer=sni#name}.
+     *
+     * <p>Version 1 is a different protocol from Hysteria2 and keeps its own scheme. The two
+     * bandwidth hints the protocol insists on are stored together in {@code seed} as
+     * "up,down" megabits, because the model has no dedicated field for them.
+     */
+    public static Profile parseHysteria(String str) throws JSONException {
+        Uri parse = Uri.parse(str);
+        Profile F = newProfile();
+        F.protocol = "hysteria";
+        F.address = parse.getHost() == null ? "" : parse.getHost();
+        F.port = parse.getPort() > 0 ? parse.getPort() : 443;
+        String userInfo = parse.getEncodedUserInfo();
+        F.uuid = firstNonEmpty(q(parse, "auth", ""), q(parse, "auth_str", ""),
+                userInfo == null ? "" : Uri.decode(userInfo));
+        F.security = "tls";
+        F.network = "udp";
+        F.encryption = "none";
+        F.sni = firstNonEmpty(q(parse, "sni", ""), q(parse, "peer", ""), F.address);
+        F.alpn = q(parse, "alpn", "");
+        F.host = q(parse, "obfs", "");
+        F.seed = digits(q(parse, "upmbps", q(parse, "up", ""))) + ","
+                + digits(q(parse, "downmbps", q(parse, "down", "")));
+        String insecure = firstNonEmpty(q(parse, "insecure", ""), q(parse, "allowInsecure", "0"));
+        F.allowInsecure = "1".equals(insecure) || "true".equalsIgnoreCase(insecure);
+        String fragment = parse.getFragment();
+        F.remark = fragment != null && !fragment.isEmpty() ? urlDecode(fragment) : F.address;
+        return valid(F) ? F : null;
+    }
+
+    /** AnyTLS share link: {@code anytls://password@host:port?sni=example.com#name}. */
+    public static Profile parseAnyTls(String str) throws JSONException {
+        Uri parse = Uri.parse(str);
+        Profile F = newProfile();
+        F.protocol = "anytls";
+        F.address = parse.getHost() == null ? "" : parse.getHost();
+        F.port = parse.getPort() > 0 ? parse.getPort() : 443;
+        String userInfo = parse.getEncodedUserInfo();
+        F.uuid = firstNonEmpty(userInfo == null ? "" : Uri.decode(userInfo),
+                q(parse, "password", ""));
+        F.security = "tls";
+        F.network = "tcp";
+        F.encryption = "none";
+        F.sni = firstNonEmpty(q(parse, "sni", ""), q(parse, "servername", ""), F.address);
+        F.alpn = q(parse, "alpn", "");
+        String insecure = firstNonEmpty(q(parse, "insecure", ""), q(parse, "allowInsecure", "0"));
+        F.allowInsecure = "1".equals(insecure) || "true".equalsIgnoreCase(insecure);
+        String fragment = parse.getFragment();
+        F.remark = fragment != null && !fragment.isEmpty() ? urlDecode(fragment) : F.address;
+        return valid(F) ? F : null;
+    }
+
+    /** Keeps only leading digits of a bandwidth value, so "20 Mbps" and "20" agree. */
+    private static String digits(String value) {
+        if (value == null) {
+            return "";
+        }
+        StringBuilder kept = new StringBuilder();
+        for (int i = 0; i < value.length() && kept.length() < 6; i++) {
+            char c = value.charAt(i);
+            if (c >= '0' && c <= '9') {
+                kept.append(c);
+            } else if (kept.length() > 0) {
+                break;
+            }
+        }
+        return kept.toString();
     }
 
     public static Profile parseTuic(String str) throws JSONException {

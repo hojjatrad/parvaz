@@ -55,6 +55,9 @@ public final class ProtocolGroups {
             case "trojan":
             case "shadowsocks":
             case "hysteria2":
+            case "hysteria":
+            case "anytls":
+            case "snell":
             case "tuic":
             case "wireguard":
             case "socks":
@@ -76,6 +79,9 @@ public final class ProtocolGroups {
             case "trojan": return "Trojan";
             case "shadowsocks": return "Shadowsocks";
             case "hysteria2": return "Hysteria2";
+            case "hysteria": return "Hysteria";
+            case "anytls": return "AnyTLS";
+            case "snell": return "Snell";
             case "tuic": return "TUIC";
             case "wireguard": return "WireGuard";
             case "socks": return "SOCKS";

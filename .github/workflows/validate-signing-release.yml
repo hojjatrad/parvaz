@@ -250,7 +250,7 @@ jobs:
       - name: Actual signed-APK upgrade fixture
         env:
           PARVAZ_CONTAINER: redroid
-          PARVAZ_UPGRADE_PRIOR: stable45
+          PARVAZ_UPGRADE_PRIOR: stable46
         run: |
           set -o pipefail
           mkdir -p .cache

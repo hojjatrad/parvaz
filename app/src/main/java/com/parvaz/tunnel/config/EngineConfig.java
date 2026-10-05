@@ -5,10 +5,25 @@ import java.util.*;
 
 public final class EngineConfig {
  private EngineConfig(){}
- public static boolean external(String p){return Arrays.asList("hysteria2","hy2","tuic","full-singbox","full-clash").contains(p);}
+ public static boolean external(String p){return Arrays.asList("hysteria2","hy2","tuic","hysteria","hy","hy1","hysteria1","anytls","snell","full-singbox","full-clash").contains(p);}
  /** Android JSON escapes solidus; Mihomo's YAML reader rejects that JSON escape. */
  public static String serialize(JSONObject root,String protocol){
   String text=root.toString();return ProtocolNames.canonical(protocol).equals("full-clash")?text.replace("\\/","/"):text;
+ }
+
+ /** Megabit hint for Hysteria v1, stored as "up,down". Defaults stay modest on purpose. */
+ static int bandwidth(String seed,boolean up){
+  int fallback=up?20:100;
+  if(seed==null)return fallback;
+  String[] parts=seed.split(",");int index=up?0:1;
+  if(parts.length<=index)return fallback;
+  try{int value=Integer.parseInt(parts[index].trim());return value>0&&value<=100000?value:fallback;}
+  catch(NumberFormatException invalid){return fallback;}
+ }
+ /** Snell protocol revision; only v3 and v4 are current, anything else becomes v4. */
+ static int snellVersion(String mode){
+  try{int value=Integer.parseInt(mode==null?"":mode.trim());return value==3||value==4?value:4;}
+  catch(NumberFormatException invalid){return 4;}
  }
  public static JSONObject build(Profile profile,int port,int dnsPort,String user,String password)throws JSONException {
   String protocol=ProtocolNames.canonical(profile.protocol);
@@ -42,6 +57,19 @@ public final class EngineConfig {
     if(!profile.mode.isEmpty())outbound.put("obfs",new JSONObject().put("type",profile.mode).put("password",profile.host));
    }else if(protocol.equals("tuic")){
     outbound.put("uuid",profile.uuid).put("password",profile.quicKey).put("congestion_control",profile.mode.isEmpty()?"bbr":profile.mode).put("udp_relay_mode",profile.headerType.isEmpty()?"native":profile.headerType);
+   }else if(protocol.equals("hysteria")){
+    // Hysteria v1. The protocol requires both bandwidth hints; they travel in `seed`
+    // as "up,down" megabits because the model has no dedicated field, and a missing or
+    // unparsable value falls back to a conservative default instead of failing the dial.
+    outbound.put("auth_str",profile.uuid).put("up_mbps",bandwidth(profile.seed,true)).put("down_mbps",bandwidth(profile.seed,false));
+    if(!profile.host.isEmpty())outbound.put("obfs",profile.host);
+   }else if(protocol.equals("anytls")){
+    outbound.put("password",profile.uuid);
+   }else if(protocol.equals("snell")){
+    // Snell carries its own obfuscation and has no TLS layer of its own.
+    outbound.remove("tls");
+    outbound.put("psk",profile.uuid).put("version",snellVersion(profile.mode));
+    if(!profile.host.isEmpty())outbound.put("network","tcp");
    }else throw new IllegalArgumentException("Unsupported engine protocol");
    root.put("outbounds",new JSONArray().put(outbound));
    root.put("dns",new JSONObject().put("servers",new JSONArray().put(new JSONObject().put("type","https").put("tag","bootstrap").put("server","1.1.1.1").put("path","/dns-query"))));
