@@ -812,9 +812,18 @@ public class SettingsActivity extends com.parvaz.tunnel.LockedActivity {
         // with automatic selection, so it follows that switch and is cleared with it.
         SwitchCompat autoBestLaunch = (SwitchCompat) findViewById(R.id.auto_best_launch);
         autoBestLaunch.setChecked(this.C.f343a.getBoolean("auto_best_launch", false));
-        autoBestLaunch.setOnCheckedChangeListener((button, checked) ->
-                RulesActivity__ExternalSyntheticOutline0.k(SettingsActivity.this.C.f343a,
-                        "auto_best_launch", checked));
+        // Written as an explicit listener, not a lambda. This decompiled class already
+        // declares synthetic-looking lambda helper methods by hand, so a second compiler
+        // generated lambda in onCreate collides with one of them at class generation time.
+        autoBestLaunch.setOnCheckedChangeListener(
+                new android.widget.CompoundButton.OnCheckedChangeListener() {
+                    @Override
+                    public void onCheckedChanged(android.widget.CompoundButton button,
+                                                 boolean checked) {
+                        RulesActivity__ExternalSyntheticOutline0.k(SettingsActivity.this.C.f343a,
+                                "auto_best_launch", checked);
+                    }
+                });
         EditText editText6 = (EditText) findViewById(R.id.ping_threshold);
         editText6.setText(String.valueOf(this.C.f343a.getInt("ping_threshold", 1200)));
         EditText editText7 = (EditText) findViewById(R.id.health_interval);
