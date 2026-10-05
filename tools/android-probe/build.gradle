@@ -31,6 +31,7 @@ def prepareProbeSources=tasks.register('prepareProbeSources',Sync){
             include 'com/parvaz/tunnel/core/HttpsLatency.java'
             include 'com/parvaz/tunnel/core/ChildProcessReaper.java'
             include 'com/parvaz/tunnel/config/EngineConfig.java'
+            include 'com/parvaz/tunnel/config/SingBoxOutbound.java'
             include 'com/parvaz/tunnel/config/ReadinessConfig.java'
             include 'com/parvaz/tunnel/config/ProtocolNames.java'
             include 'com/parvaz/tunnel/model/Profile.java'
