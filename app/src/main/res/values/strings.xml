@@ -520,6 +520,10 @@ Tap + to paste a config link or add a subscription."</string>
     <string name="pin_badge">Pinned server</string>
     <string name="auto_best">Auto-connect to the best server</string>
     <string name="auto_best_desc">Measure the list and connect to the lowest verified latency, instead of a fixed server.</string>
+    <string name="auto_best_launch">Also do it when the app opens</string>
+    <string name="auto_best_launch_desc">With automatic selection on, measure and connect as soon as the app is opened. Needs VPN permission to have been granted already.</string>
+    <string name="filter_protocol">Protocol group</string>
+    <string name="filter_protocol_all">All protocols  (%1$d)</string>
     <string name="best_server_measuring">Measuring servers to find the best one…</string>
     <string name="pin_action">Pin this server</string>
     <string name="unpin_action">Remove the pin</string>

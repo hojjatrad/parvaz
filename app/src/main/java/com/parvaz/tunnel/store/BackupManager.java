@@ -53,7 +53,7 @@ public final class BackupManager {
         // Explicit allowlist; keys controlling credentials, LAN exposure and update verification never come from a backup.
         for(String key:new String[]{"routing_mode","remote_dns","direct_dns","log_level","domain_strategy","ping_url","lang","per_app_mode","fragment_packets","fragment_length","fragment_interval","custom_rules","domains_direct","domains_proxy","domains_block","auto_wifi","auto_cell","trusted_wifi","chain_profile","selected_profile"})
             if(settings.has(key))edit.putString(key,settings.getString(key));
-        for(String key:new String[]{"mux_enabled","ipv6_enabled","bypass_lan","auto_switch","fragment_enabled","kill_switch","haptics","shake_to_switch"})if(settings.has(key))edit.putBoolean(key,settings.getBoolean(key));
+        for(String key:new String[]{"mux_enabled","ipv6_enabled","bypass_lan","auto_switch","fragment_enabled","kill_switch","haptics","shake_to_switch","auto_best_connect","auto_best_launch"})if(settings.has(key))edit.putBoolean(key,settings.getBoolean(key));
         for(String key:new String[]{"mux_concurrency","vpn_mtu","ping_threshold","health_interval","sub_auto_hours","buffer_size_kb","health_strikes"})if(settings.has(key))edit.putInt(key,settings.getInt(key));
         if(settings.has("data_limit_gb")){double v=settings.getDouble("data_limit_gb");if(!Double.isFinite(v)||v<0)throw new IllegalArgumentException("Invalid quota");edit.putFloat("data_limit_gb",(float)v);}
         for(String key:new String[]{"favorites","per_app_list"})if(settings.has(key)){
@@ -203,6 +203,10 @@ public final class BackupManager {
         jSONObject2.put("auto_cell", sharedPreferences.getString("auto_cell", "none"));
         jSONObject2.put("trusted_wifi", sharedPreferences.getString("trusted_wifi", ""));
         jSONObject2.put("shake_to_switch", sharedPreferences.getBoolean("shake_to_switch", false));
+        // Automatic-selection preferences are part of how the user expects the app to
+        // behave, so a restore that forgets them silently changes behaviour.
+        jSONObject2.put("auto_best_connect", sharedPreferences.getBoolean("auto_best_connect", false));
+        jSONObject2.put("auto_best_launch", sharedPreferences.getBoolean("auto_best_launch", false));
         jSONObject2.put("chain_profile", sharedPreferences.getString("chain_profile", ""));
         JSONArray jSONArray3 = new JSONArray();
         Iterator it3 = prefs.getFavorites().iterator();

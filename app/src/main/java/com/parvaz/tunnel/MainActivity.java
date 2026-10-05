@@ -202,6 +202,17 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
     /* renamed from: m0 */
     public boolean favOnly = false;
 
+    /**
+     * Protocol group currently shown, e.g. {@code vless}; empty means every protocol.
+     * Persisted under {@code protocol_filter} so a user who works with one family keeps
+     * that view across launches, and sanitised on load so a vanished group cannot leave
+     * the list permanently empty.
+     */
+    public String protocolFilter = "";
+
+    /** Launch automation runs once per Activity instance, never again on every resume. */
+    private boolean launchAutomationDone = false;
+
     /* renamed from: n0 */
 
     /* renamed from: o0 */
@@ -1357,6 +1368,15 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
             return;
         }
         applyAutoProfile();
+        if (!this.launchAutomationDone) {
+            this.launchAutomationDone = true;
+            this.connectButton.post(new Runnable() {
+                @Override
+                public void run() {
+                    autoConnectOnLaunch();
+                }
+            });
+        }
     }
 
     /**
@@ -1390,6 +1410,9 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
                 // Report how many rows actually produced a number, not just that the run ended.
                 int measured=0;
                 for(Profile profile:b0.activeProfiles())if(profile.ping>0)measured++;
+                // Fresh numbers are useless in a stale order: re-apply the chosen sort so the
+                // fastest row is on top the moment the run ends.
+                resort();
                 Snackbar.make(connectButton,getString(R.string.ping_done_counts,measured,total),Snackbar.LENGTH_LONG).show();
             }
         });
@@ -1416,8 +1439,11 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
         com.parvaz.tunnel.store.ProfileDuplicates.Grouped group=com.parvaz.tunnel.store.ProfileDuplicates.group(this.b0.activeProfiles(),this.L.f343a.getString("selected_profile",""),this.L.getFavorites());
         ArrayList<Profile> e=group.profiles;this.z.visibleFavorites=group.favoriteIds;
         ArrayList<Profile> arrayList=new ArrayList<>();
+        protocolFilter=com.parvaz.tunnel.core.ProtocolGroups.sanitize(
+                L.f343a.getString("protocol_filter",""),e);
         for(Profile profile:e) {
             if(favOnly&&!group.favoriteIds.contains(profile.id))continue;
+            if(!com.parvaz.tunnel.core.ProtocolGroups.matches(profile,protocolFilter))continue;
             if(!query.isEmpty()&&!profile.remark.toLowerCase(Locale.ROOT).contains(query)&&!profile.address.toLowerCase(Locale.ROOT).contains(query)&&!profile.protocol.toLowerCase(Locale.ROOT).contains(query))continue;
             arrayList.add(profile);
         }
@@ -2049,7 +2075,8 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
                 getString(R.string.sort_country),
                 getString(R.string.bypass_test),
                 getString(R.string.clean_dead_nodes),
-                getString(R.string.clean_ip_title)
+                getString(R.string.clean_ip_title),
+                getString(R.string.filter_protocol)
         };
         int current = this.L.f343a.getInt("sort_mode", 0);
         if (current < 0 || current >= 5) {
@@ -2072,6 +2099,8 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
                             MainActivity.this.cleanDeadNodes();
                         } else if (which == 7) {
                             MainActivity.this.startActivity(new Intent(MainActivity.this, CleanIpActivity.class));
+                        } else if (which == 8) {
+                            MainActivity.this.showProtocolFilter(view);
                         }
                     }
                 })
@@ -2198,6 +2227,97 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
         }
     }
 
+
+    /** Re-applies the saved sort order without asking the user again. */
+    public final void resort() {
+        int mode = this.L.f343a.getInt("sort_mode", 0);
+        if (mode < 0 || mode >= 5) {
+            mode = 0;
+        }
+        applySort(mode);
+        reload();
+    }
+
+    /**
+     * Group picker: every protocol family present in the list, with its row count, plus
+     * an "all" entry. Choosing a group narrows the list and, because the automatic choice
+     * runs over the visible rows, also turns the best-server button into "best server of
+     * this group".
+     */
+    public final void showProtocolFilter(final View anchor) {
+        final java.util.ArrayList<Profile> active = this.b0.activeProfiles();
+        final java.util.Map<String, Integer> counts =
+                com.parvaz.tunnel.core.ProtocolGroups.counts(active);
+        final java.util.ArrayList<String> keys = new java.util.ArrayList<>();
+        final java.util.ArrayList<String> labels = new java.util.ArrayList<>();
+        keys.add(com.parvaz.tunnel.core.ProtocolGroups.ALL);
+        labels.add(getString(R.string.filter_protocol_all, active.size()));
+        for (java.util.Map.Entry<String, Integer> entry : counts.entrySet()) {
+            keys.add(entry.getKey());
+            labels.add(com.parvaz.tunnel.core.ProtocolGroups.labelOf(entry.getKey())
+                    + "  (" + entry.getValue() + ")");
+        }
+        int current = Math.max(0, keys.indexOf(this.protocolFilter));
+        new SecureDialogBuilder(this)
+                .setTitle(R.string.filter_protocol)
+                .setSingleChoiceItems(labels.toArray(new String[0]), current,
+                        new android.content.DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(android.content.DialogInterface d, int which) {
+                                d.dismiss();
+                                String chosen = keys.get(which);
+                                MainActivity.this.L.f343a.edit()
+                                        .putString("protocol_filter", chosen).apply();
+                                MainActivity.this.protocolFilter = chosen;
+                                MainActivity.this.reload();
+                                Snackbar.make(anchor, labels.get(which), -1).show();
+                            }
+                        })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    /**
+     * The servers an automatic decision may choose from: the active list narrowed to the
+     * protocol group the user is looking at. Measuring and ranking only what is on screen
+     * is both faster and less surprising than silently jumping to a hidden row.
+     */
+    public final ArrayList<Profile> candidateProfiles() {
+        ArrayList<Profile> active = this.b0.activeProfiles();
+        String filter = com.parvaz.tunnel.core.ProtocolGroups.sanitize(
+                this.L.f343a.getString("protocol_filter", ""), active);
+        if (filter.isEmpty()) {
+            return active;
+        }
+        return new ArrayList<>(com.parvaz.tunnel.core.ProtocolGroups.filter(active, filter));
+    }
+
+    /**
+     * Cold-start automation. With automatic mode on, opening the app used to do nothing
+     * until the user pressed something; the measurement and the choice only happened on
+     * demand. When the extra "connect on launch" preference is on as well, and VPN consent
+     * has already been granted, the app now measures and connects by itself. Consent is
+     * never requested silently and nothing starts while a tunnel is already up.
+     */
+    public final void autoConnectOnLaunch() {
+        try {
+            if (!com.parvaz.tunnel.store.SelectionPolicy.autoBest(this)
+                    || !this.L.f343a.getBoolean("auto_best_launch", false)) {
+                return;
+            }
+            if (TunnelVpnService.serviceRunning || this.state == 1 || this.state == 2
+                    || this.state == 5 || this.K.isBatchBusy()) {
+                return;
+            }
+            if (this.b0.activeProfiles().isEmpty() || VpnService.prepare(this) != null) {
+                return;
+            }
+            autoBestConnect(true);
+        } catch (Throwable ignored) {
+            // Launch automation is a convenience; it must never break opening the app.
+        }
+    }
+
     public void lambda$onCreate$7(View view) {
         this.favOnly = !this.favOnly;
         haptic(view);
@@ -2239,7 +2359,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
      * @param connectAfter true to start the tunnel once a server has been chosen.
      */
     public final void autoBestConnect(final boolean connectAfter) {
-        final ArrayList<Profile> profiles = this.b0.activeProfiles();
+        final ArrayList<Profile> profiles = candidateProfiles();
         if (profiles.isEmpty()) {
             Snackbar.make(this.connectButton, R.string.err_no_server, 0).show();
             showAddDialog();
@@ -2274,7 +2394,8 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
                 if (cancelled) {
                     return;
                 }
-                Profile best = com.parvaz.tunnel.core.BestServer.choose(b0.activeProfiles(),
+                resort();
+                Profile best = com.parvaz.tunnel.core.BestServer.choose(candidateProfiles(),
                         L.getFavorites(), new com.parvaz.tunnel.core.ServerMemory(MainActivity.this),
                         getApplicationContext());
                 if (best == null) {

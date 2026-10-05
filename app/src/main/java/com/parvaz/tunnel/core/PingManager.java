@@ -44,7 +44,11 @@ public final class PingManager implements AutoCloseable {
  /** List-wide measurement. Uses the shared-core batch path so the whole list is measured
   *  in parallel behind ONE engine instance per group instead of one instance per row. */
  public synchronized boolean startBatch(List<Profile> profiles,Listener listener){
-  if(!sharedBatch)return startBatch(profiles,listener,measurer);
+  return startShared(profiles,listener,app.getSharedPreferences("parvaz_prefs",0).getString("ping_url","https://www.gstatic.com/generate_204"),false,measurer);
+ }
+ /** Shared-core batch against one target. {@code strict} forbids the endpoint fallback list. */
+ private synchronized boolean startShared(List<Profile> profiles,Listener listener,String url,boolean strict,Measurer fallback){
+  if(!sharedBatch)return startBatch(profiles,listener,fallback);
   if(closed||batch!=null)return false;
   Batch owner=new Batch(listener);batch=owner;owner.remaining=profiles.size();
   if(profiles.isEmpty()){handler.post(()->finishBatch(owner));return true;}
@@ -54,14 +58,13 @@ public final class PingManager implements AutoCloseable {
   for(Profile profile:snapshot){
    Job job=register(profile,owner,listener);job.observedNetwork=network;created.put(profile.id,job);
   }
-  String url=app.getSharedPreferences("parvaz_prefs",0).getString("ping_url","https://www.gstatic.com/generate_204");
-  try{COORDINATOR.execute(()->runSharedBatch(snapshot,created,owner,url));}
+  try{COORDINATOR.execute(()->runSharedBatch(snapshot,created,owner,url,strict));}
   catch(RejectedExecutionException rejected){for(Job job:created.values())job.finish(LatencyResult.BUSY);}
   return true;
  }
- private void runSharedBatch(List<Profile> profiles,Map<String,Job> created,Batch owner,String url){
+ private void runSharedBatch(List<Profile> profiles,Map<String,Job> created,Batch owner,String url,boolean strict){
   try{
-   BatchLatency.measure(app,profiles,url,new BatchLatency.Sink(){
+   BatchLatency.measure(app,profiles,url,strict,new BatchLatency.Sink(){
     @Override public void result(String id,long raw,String target){
      Job job=created.get(id);if(job==null)return;
      job.target=target;job.finish(LatencyResult.measured(raw));
@@ -77,7 +80,14 @@ public final class PingManager implements AutoCloseable {
    for(Job job:created.values())job.finish(LatencyResult.CANCELLED);
   }
  }
- public synchronized boolean startBypassBatch(List<Profile> profiles,Listener listener){return startBatch(profiles,listener,p->ProxyMeasurement.measureStrictTarget(app,p,RealBypassTester.FILTERED_PROBE_URL));}
+ /** Real-bypass test. It used to crawl: one isolated core per row behind the 3 permit gate.
+  *  It now rides the same shared-core batch as the normal measurement, only with strict
+  *  targeting, so the evidence is unchanged - a 2xx from the filtered host itself over this
+  *  profile's own outbound - while a fifty row list no longer takes minutes. */
+ public synchronized boolean startBypassBatch(List<Profile> profiles,Listener listener){
+  return startShared(profiles,listener,RealBypassTester.FILTERED_PROBE_URL,true,
+    p->ProxyMeasurement.measureStrictTarget(app,p,RealBypassTester.FILTERED_PROBE_URL));
+ }
  private boolean startBatch(List<Profile> profiles,Listener listener,Measurer selected){
   if(closed||batch!=null)return false;
   Batch owner=new Batch(listener);batch=owner;owner.remaining=profiles.size();

@@ -124,8 +124,34 @@ public final class SelectionPolicy {
                 if (pinned != null) {
                     return prefs.edit().putString("selected_profile", pinned.id).commit();
                 }
+            } else {
+                // Automatic mode used to fall through to the last verified connection on a
+                // cold start, a boot restore or a network rule, so the "best server" promise
+                // only held while the user was looking at the list. Reuse the measurements
+                // already on record instead: no probe is started here, which keeps a boot or
+                // a background network change cheap, and an empty or fully stale list still
+                // falls back to the old behaviour below.
+                Profile best = bestMeasured(context, store);
+                if (best != null) {
+                    return prefs.edit().putString("selected_profile", best.id).commit();
+                }
             }
         }
         return LastConnected.restore(context);
+    }
+
+    /**
+     * Lowest measured latency among the active servers, or null when nothing on record is
+     * usable. Ranking, freshness penalty and favourite handling all come from
+     * {@link com.parvaz.tunnel.core.BestServer}, so the automatic choice made here is the
+     * same one the button makes.
+     */
+    static Profile bestMeasured(Context context, ProfileStore store) {
+        try {
+            java.util.Set<String> favorites = new Prefs(context).getFavorites();
+            return com.parvaz.tunnel.core.BestServer.choose(store.activeProfiles(), favorites);
+        } catch (Throwable unavailable) {
+            return null;
+        }
     }
 }

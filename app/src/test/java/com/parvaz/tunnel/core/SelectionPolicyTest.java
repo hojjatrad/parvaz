@@ -189,6 +189,42 @@ public class SelectionPolicyTest {
     }
 
     @Test
+    public void automaticModeRestoresTheBestMeasuredServerNotTheLastConnectedOne() {
+        connected(a);
+        a.ping = 420;
+        a.latency = LatencyStamp.manual("Google");
+        b.ping = 90;
+        b.latency = LatencyStamp.manual("Google");
+        prefs.edit().putBoolean(SelectionPolicy.KEY_AUTO_BEST, true)
+                .putString("selected_profile", "").commit();
+        assertTrue(SelectionPolicy.restore(app));
+        assertEquals("b", prefs.getString("selected_profile", ""));
+    }
+
+    @Test
+    public void automaticModeFallsBackToTheLastConnectionWhenNothingIsMeasured() {
+        connected(a);
+        a.ping = -1;
+        b.ping = -1;
+        prefs.edit().putBoolean(SelectionPolicy.KEY_AUTO_BEST, true)
+                .putString("selected_profile", "b").commit();
+        assertTrue(SelectionPolicy.restore(app));
+        assertEquals("a", prefs.getString("selected_profile", ""));
+    }
+
+    @Test
+    public void manualModeStillPrefersThePinOverAFasterServer() {
+        a.ping = 50;
+        a.latency = LatencyStamp.manual("Google");
+        b.ping = 900;
+        b.latency = LatencyStamp.manual("Google");
+        SelectionPolicy.pin(app, b);
+        prefs.edit().putString("selected_profile", "").commit();
+        assertTrue(SelectionPolicy.restore(app));
+        assertEquals("b", prefs.getString("selected_profile", ""));
+    }
+
+    @Test
     public void networkChangeDoesNotDropTheManualChoice() {
         SelectionPolicy.pin(app, b);
         NetworkEpoch.changed();

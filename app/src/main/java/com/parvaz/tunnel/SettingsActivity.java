@@ -808,6 +808,13 @@ public class SettingsActivity extends com.parvaz.tunnel.LockedActivity {
                 com.parvaz.tunnel.store.SelectionPolicy.clearPin(SettingsActivity.this);
             }
         });
+        // Measure and connect by itself when the app is opened. Only meaningful together
+        // with automatic selection, so it follows that switch and is cleared with it.
+        SwitchCompat autoBestLaunch = (SwitchCompat) findViewById(R.id.auto_best_launch);
+        autoBestLaunch.setChecked(this.C.f343a.getBoolean("auto_best_launch", false));
+        autoBestLaunch.setOnCheckedChangeListener((button, checked) ->
+                RulesActivity__ExternalSyntheticOutline0.k(SettingsActivity.this.C.f343a,
+                        "auto_best_launch", checked));
         EditText editText6 = (EditText) findViewById(R.id.ping_threshold);
         editText6.setText(String.valueOf(this.C.f343a.getInt("ping_threshold", 1200)));
         EditText editText7 = (EditText) findViewById(R.id.health_interval);

@@ -19,11 +19,15 @@ final class VerifiedProbe {
  /** One authenticated HTTPS round trip with list-wide deadlines, for shared-core batches.
   *  Same proof as the slow path - 2xx response headers over the pinned route - but a single
   *  sample and shorter timeouts, because the list is measured in parallel. */
- static long measureFast(int port,String configured)throws InterruptedException {
+ static long measureFast(int port,String configured)throws InterruptedException {return measureFast(port,configured,false);}
+ /** @param strictTarget true to accept ONLY the configured endpoint, with no fallback list.
+  *  The real-bypass test depends on this: proving a filtered host answered is the whole
+  *  point of that run, so silently succeeding against a neutral endpoint would be a lie. */
+ static long measureFast(int port,String configured,boolean strictTarget)throws InterruptedException {
   clearTarget();if(port<=0)return UNKNOWN;
   long last=UNKNOWN;
   try(HttpsLatency.Session probe=HttpsLatency.Session.fast(port)){
-   for(String endpoint:endpoints(configured,false)){
+   for(String endpoint:endpoints(configured,strictTarget)){
     if(Thread.currentThread().isInterrupted())throw new InterruptedException();
     last=probe.measure(endpoint,1);
     if(last>0){TARGET.set(targetName(endpoint));return last;}

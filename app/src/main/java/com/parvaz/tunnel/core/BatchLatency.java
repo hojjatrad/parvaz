@@ -60,6 +60,16 @@ public final class BatchLatency {
     }
 
     public static void measure(Context context, List<Profile> profiles, String url, Sink sink) {
+        measure(context, profiles, url, false, sink);
+    }
+
+    /**
+     * @param strictTarget accept only {@code url} itself, with no fallback endpoint list.
+     *                     The real-bypass test runs this way: it must prove that one
+     *                     specific filtered host answered through this profile's route.
+     */
+    public static void measure(Context context, List<Profile> profiles, String url,
+                               boolean strictTarget, Sink sink) {
         if (profiles == null || profiles.isEmpty() || sink == null) {
             return;
         }
@@ -83,9 +93,9 @@ public final class BatchLatency {
                 return;
             }
             List<Profile> group = shared.subList(from, Math.min(shared.size(), from + GROUP));
-            perProfile.addAll(runGroup(app, prefs, group, url, sink));
+            perProfile.addAll(runGroup(app, prefs, group, url, strictTarget, sink));
         }
-        runPerProfile(app, perProfile, url, sink);
+        runPerProfile(app, perProfile, url, strictTarget, sink);
     }
 
     /** True when the profile's own route can be expressed as one outbound inside a shared core. */
@@ -109,7 +119,7 @@ public final class BatchLatency {
 
     /** @return the profiles of this group that still need the per-profile path. */
     private static List<Profile> runGroup(Context app, Prefs prefs, List<Profile> group,
-                                          String url, Sink sink) {
+                                          String url, boolean strictTarget, Sink sink) {
         List<Profile> leftovers = new ArrayList<>();
         Map<String, Profile> byId = new LinkedHashMap<>();
         List<BatchProbeConfig.Member> members = new ArrayList<>();
@@ -176,7 +186,7 @@ public final class BatchLatency {
                 leftovers.addAll(byId.values());
                 return leftovers;
             }
-            probeAll(plan, byId, url, sink);
+            probeAll(plan, byId, url, strictTarget, sink);
             return leftovers;
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
@@ -200,7 +210,7 @@ public final class BatchLatency {
     }
 
     private static void probeAll(BatchProbeConfig.Plan plan, Map<String, Profile> byId,
-                                 String url, Sink sink) {
+                                 String url, boolean strictTarget, Sink sink) {
         ExecutorService pool = Executors.newFixedThreadPool(Math.min(PARALLEL, plan.ports.size()),
                 runnable -> {
                     Thread thread = new Thread(runnable, "Parvaz batch latency");
@@ -219,7 +229,7 @@ public final class BatchLatency {
                     long value;
                     String target = null;
                     try {
-                        value = VerifiedProbe.measureFast(port, url);
+                        value = VerifiedProbe.measureFast(port, url, strictTarget);
                         target = VerifiedProbe.lastTarget();
                     } catch (InterruptedException cancelled) {
                         Thread.currentThread().interrupt();
@@ -250,7 +260,8 @@ public final class BatchLatency {
         }
     }
 
-    private static void runPerProfile(Context app, List<Profile> profiles, String url, Sink sink) {
+    private static void runPerProfile(Context app, List<Profile> profiles, String url,
+                                      boolean strictTarget, Sink sink) {
         if (profiles.isEmpty()) {
             return;
         }
@@ -271,7 +282,9 @@ public final class BatchLatency {
                     String target = null;
                     VerifiedProbe.clearTarget();
                     try {
-                        value = ProxyMeasurement.measureQueued(app, profile, url);
+                        value = strictTarget
+                                ? ProxyMeasurement.measureStrictTarget(app, profile, url)
+                                : ProxyMeasurement.measureQueued(app, profile, url);
                         target = VerifiedProbe.lastTarget();
                     } catch (InterruptedException cancelled) {
                         Thread.currentThread().interrupt();
