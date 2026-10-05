@@ -87,6 +87,11 @@ android {
         abortOnError true
         checkReleaseBuilds true
         baseline file('lint-baseline.xml')
+        // ar/ru/tr are deliberately partial: the high-traffic screens are translated and
+        // every other string falls back to English, which is Android's documented
+        // behaviour. Persian and English remain complete, so a missing ar/ru/tr string is
+        // information, not a defect. Nothing else about lint is relaxed.
+        informational 'MissingTranslation'
     }
 
     testOptions {
