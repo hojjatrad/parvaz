@@ -355,6 +355,48 @@ public final class LinkParser {
         return null;
     }
 
+    /**
+     * Shadowsocks links carry ShadowTLS as a plugin string, e.g.
+     * {@code plugin=shadow-tls;host=www.microsoft.com;password=secret;version=3}.
+     *
+     * <p>The node becomes a ShadowTLS profile: the Shadowsocks cipher and password stay
+     * where they are, the plugin's own password moves to the ShadowTLS hop, and the
+     * handshake host becomes the SNI. Any other plugin is left untouched, because
+     * pretending to support obfs would produce a tunnel that silently cannot connect.
+     */
+    static void shadowTlsPlugin(Profile profile, String plugin) {
+        if (plugin == null || plugin.trim().isEmpty()) {
+            return;
+        }
+        String[] parts = plugin.split(";");
+        String name = parts[0].trim().toLowerCase(java.util.Locale.US);
+        if (!name.equals("shadow-tls") && !name.equals("shadowtls")) {
+            return;
+        }
+        String host = "", password = "", version = "3";
+        for (int i = 1; i < parts.length; i++) {
+            String option = parts[i].trim();
+            int equals = option.indexOf(61);
+            if (equals <= 0) {
+                continue;
+            }
+            String key = option.substring(0, equals).trim().toLowerCase(java.util.Locale.US);
+            String value = option.substring(equals + 1).trim();
+            if (key.equals("host")) host = value;
+            else if (key.equals("password")) password = value;
+            else if (key.equals("version")) version = value;
+        }
+        profile.protocol = "shadowtls";
+        profile.quicKey = password;
+        profile.mode = version;
+        profile.network = "tcp";
+        profile.security = "tls";
+        if (!host.isEmpty()) {
+            profile.sni = host;
+            profile.host = host;
+        }
+    }
+
     public static void applyQuery(Profile profile, Uri uri) throws JSONException {
         boolean z;
         String P = q(uri, "type", "tcp");
@@ -390,6 +432,7 @@ public final class LinkParser {
             z = true;
         }
         profile.allowInsecure = z;
+        shadowTlsPlugin(profile, q(uri, "plugin", ""));
         if (profile.sni.isEmpty()) {
             profile.sni = profile.host;
         }

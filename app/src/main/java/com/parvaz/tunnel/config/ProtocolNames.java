@@ -14,11 +14,12 @@ public final class ProtocolNames {
             case "wg": return "wireguard";
             case "hy2": return "hysteria2";
             case "hy": case "hy1": case "hysteria1": return "hysteria";
+            case "shadow-tls": case "shadowtls2": case "stls": return "shadowtls";
             default: return value;
         }
     }
 
-    public static boolean hasEngine(String name){String p=canonical(name);return hasBuilder(p)||p.equals("hysteria2")||p.equals("tuic")||p.equals("hysteria")||p.equals("anytls")||p.equals("snell")||p.equals("full-xray")||p.equals("full-singbox")||p.equals("full-clash");}
+    public static boolean hasEngine(String name){String p=canonical(name);return hasBuilder(p)||p.equals("hysteria2")||p.equals("tuic")||p.equals("hysteria")||p.equals("anytls")||p.equals("snell")||p.equals("shadowtls")||p.equals("full-xray")||p.equals("full-singbox")||p.equals("full-clash");}
 
     /** Protocol-level support only. Transport/credentials still need validation by Xray. */
     public static boolean hasBuilder(String name) {

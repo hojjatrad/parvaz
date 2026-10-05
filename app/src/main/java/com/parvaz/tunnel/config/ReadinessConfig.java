@@ -13,7 +13,7 @@ public final class ReadinessConfig {
   * names and sing-box outbound types share this list; a name present in only one
   * engine is simply never seen by the other. Every engine protocol must appear
   * here or its tunnel can never be pinned, measured or shown as verified. */
- private static boolean remote(String type){return Arrays.asList("vmess","vless","trojan","shadowsocks","socks","http","wireguard","hysteria2","tuic","hysteria","anytls","snell").contains(type);}
+ private static boolean remote(String type){return Arrays.asList("vmess","vless","trojan","shadowsocks","socks","http","wireguard","hysteria2","tuic","hysteria","anytls","snell","shadowtls").contains(type);}
  public static final class Plan {
   public final String config;public final boolean pinned;
   Plan(String config,boolean pinned){this.config=config;this.pinned=pinned;}
@@ -53,8 +53,16 @@ public final class ReadinessConfig {
  /** Verify the INNER engine too. A loopback relay tagged 'proxy' is not proof. */
  public static boolean nativeRemoteOnly(JSONObject root,String protocol){
   if(protocol.equals("full-clash"))return clashRemoteOnly(root);
-  JSONArray outs=root.optJSONArray("outbounds");if(outs==null||outs.length()!=1)return false;
-  JSONObject out=outs.optJSONObject(0);if(out==null||!remote(out.optString("type"))||out.has("detour"))return false;
+  JSONArray outs=root.optJSONArray("outbounds");if(outs==null||outs.length()<1||outs.length()>2)return false;
+  JSONObject out=outs.optJSONObject(0);if(out==null||!remote(out.optString("type")))return false;
+  if(outs.length()==2){
+   // The only accepted chain is ShadowTLS: the dialling outbound detours through one
+   // ShadowTLS hop that itself reaches the server. Anything else stays unproven.
+   JSONObject hop=outs.optJSONObject(1);
+   if(hop==null||!hop.optString("type").equals("shadowtls")||hop.has("detour"))return false;
+   if(!out.optString("detour").equals(hop.optString("tag"))||hop.optString("tag").isEmpty())return false;
+   if(hop.optString("server").isEmpty())return false;
+  }else if(out.has("detour"))return false;
   JSONObject route=root.optJSONObject("route");if(route==null)return true;
   String destination=route.optString("final");if(!destination.isEmpty()&&!destination.equals(out.optString("tag")))return false;
   JSONArray rules=route.optJSONArray("rules");if(rules==null)return true;

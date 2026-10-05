@@ -71,6 +71,9 @@ public final class SingBoxParser {
                 case "http":allowed+=" username password";break;
                 case "hysteria2":allowed+=" password obfs";break;
                 case "tuic":allowed+=" uuid password congestion_control udp_relay_mode";break;
+                case "hysteria":allowed+=" auth_str up_mbps down_mbps up down obfs";break;
+                case "anytls":allowed+=" password";break;
+                case "snell":allowed+=" psk version";break;
                 default:throw new Invalid("UNSUPPORTED_PROTOCOL");
             }
         }
@@ -121,6 +124,16 @@ public final class SingBoxParser {
             }
             if("tuic".equals(type)){p.network="udp";p.quicKey=required(o,"password");p.mode=text(o,"congestion_control","bbr");p.headerType=text(o,"udp_relay_mode","native");}
             if("hysteria2".equals(type)){p.network="udp";JSONObject obfs=object(o,"obfs");keys(obfs,"type password");p.mode=text(obfs,"type","");p.host=text(obfs,"password","");}
+            // Hysteria v1 keeps its two bandwidth hints together in `seed` as "up,down"
+            // megabits, exactly as the link importer and the outbound builder expect.
+            if("hysteria".equals(type)){
+                p.network="udp";p.uuid=required(o,"auth_str");
+                int up=integer(o,o.has("up_mbps")?"up_mbps":"up",0,0,100000),down=integer(o,o.has("down_mbps")?"down_mbps":"down",0,0,100000);
+                p.seed=(up>0?String.valueOf(up):"")+","+(down>0?String.valueOf(down):"");
+                p.host=text(o,"obfs","");
+            }
+            if("snell".equals(type)){p.network="tcp";p.uuid=required(o,"psk");p.mode=String.valueOf(integer(o,"version",4,1,4));p.security="";}
+            if("anytls".equals(type))p.network="tcp";
         }
         p.remark=text(o,"tag",p.address);transport(p);credentials(p);return p.normalize();
     }

@@ -52,8 +52,32 @@ public final class BatchLatency {
 
     /** Profiles per shared core. Small enough that one bad config costs little. */
     static final int GROUP = 12;
-    /** Parallel HTTPS probes inside a group. */
+    /** Upper bound for parallel HTTPS probes inside a group. */
     static final int PARALLEL = 6;
+    /** Lower bound: even a small, struggling device keeps two probes in flight. */
+    static final int MIN_PARALLEL = 2;
+
+    /**
+     * How many probes to run at once.
+     *
+     * <p>A fixed six was wrong at both ends: a two-core phone spent its time context
+     * switching, and a list of three servers started a six thread pool to run three
+     * tasks. Parallelism now follows the device and the work in front of it, and backs
+     * off while consecutive groups are failing - when a network is dropping probes,
+     * adding more concurrent ones only produces more timeouts.
+     *
+     * @param cpus     available processors, as reported by the runtime
+     * @param pending  how many servers this group still has to measure
+     * @param failures consecutive fully failed groups observed in this run
+     */
+    static int parallelism(int cpus, int pending, int failures) {
+        int byDevice = Math.max(MIN_PARALLEL, Math.min(PARALLEL, Math.max(1, cpus)));
+        int wanted = Math.min(byDevice, Math.max(1, pending));
+        for (int i = 0; i < Math.max(0, failures); i++) {
+            wanted = Math.max(MIN_PARALLEL, wanted / 2);
+        }
+        return Math.max(1, Math.min(wanted, Math.max(1, pending)));
+    }
     /** Parallel per-profile fallback probes; bounded by the native admission gate anyway. */
     static final int FALLBACK_PARALLEL = 3;
     /** Profiles per shared external engine. Smaller than the Xray group: one child process
@@ -95,12 +119,17 @@ public final class BatchLatency {
                 perProfile.add(profile);
             }
         }
+        // Consecutive dead groups mean the network, not the servers, is the problem;
+        // the next group then probes more gently instead of piling on timeouts.
+        int failures = 0;
         for (int from = 0; from < shared.size(); from += GROUP) {
             if (sink.cancelled()) {
                 return;
             }
             List<Profile> group = shared.subList(from, Math.min(shared.size(), from + GROUP));
-            perProfile.addAll(runGroup(app, prefs, group, url, strictTarget, sink));
+            List<Profile> leftovers = runGroup(app, prefs, group, url, strictTarget, sink, failures);
+            failures = leftovers.size() >= group.size() ? failures + 1 : 0;
+            perProfile.addAll(leftovers);
         }
         for (int from = 0; from < engineShared.size(); from += ENGINE_GROUP) {
             if (sink.cancelled()) {
@@ -108,7 +137,9 @@ public final class BatchLatency {
             }
             List<Profile> group = engineShared.subList(from,
                     Math.min(engineShared.size(), from + ENGINE_GROUP));
-            perProfile.addAll(runEngineGroup(app, group, url, strictTarget, sink));
+            List<Profile> leftovers = runEngineGroup(app, group, url, strictTarget, sink, failures);
+            failures = leftovers.size() >= group.size() ? failures + 1 : 0;
+            perProfile.addAll(leftovers);
         }
         runPerProfile(app, perProfile, url, strictTarget, sink);
     }
@@ -154,7 +185,7 @@ public final class BatchLatency {
      * @return the profiles of this group that still need the per-profile path.
      */
     private static List<Profile> runEngineGroup(Context app, List<Profile> group, String url,
-                                                boolean strictTarget, Sink sink) {
+                                                boolean strictTarget, Sink sink, int failures) {
         List<Profile> leftovers = new ArrayList<>();
         Map<String, Profile> byId = new LinkedHashMap<>();
         List<BatchEngineConfig.Member> members = new ArrayList<>();
@@ -189,7 +220,7 @@ public final class BatchLatency {
         try {
             engine = ExternalCore.startComposed(app, plan.config,
                     plan.ports.values().iterator().next());
-            probePorts(plan.ports, url, strictTarget, sink);
+            probePorts(plan.ports, url, strictTarget, sink, failures);
             return leftovers;
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
@@ -208,7 +239,8 @@ public final class BatchLatency {
 
     /** @return the profiles of this group that still need the per-profile path. */
     private static List<Profile> runGroup(Context app, Prefs prefs, List<Profile> group,
-                                          String url, boolean strictTarget, Sink sink) {
+                                          String url, boolean strictTarget, Sink sink,
+                                          int failures) {
         List<Profile> leftovers = new ArrayList<>();
         Map<String, Profile> byId = new LinkedHashMap<>();
         List<BatchProbeConfig.Member> members = new ArrayList<>();
@@ -275,7 +307,7 @@ public final class BatchLatency {
                 leftovers.addAll(byId.values());
                 return leftovers;
             }
-            probePorts(plan.ports, url, strictTarget, sink);
+            probePorts(plan.ports, url, strictTarget, sink, failures);
             return leftovers;
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
@@ -300,8 +332,9 @@ public final class BatchLatency {
 
     /** Measures every (profile, loopback port) pair in parallel through the shared engine. */
     private static void probePorts(Map<String, Integer> ports, String url,
-                                   boolean strictTarget, Sink sink) {
-        ExecutorService pool = Executors.newFixedThreadPool(Math.min(PARALLEL, ports.size()),
+                                   boolean strictTarget, Sink sink, int failures) {
+        ExecutorService pool = Executors.newFixedThreadPool(
+                parallelism(Runtime.getRuntime().availableProcessors(), ports.size(), failures),
                 runnable -> {
                     Thread thread = new Thread(runnable, "Parvaz batch latency");
                     thread.setDaemon(true);

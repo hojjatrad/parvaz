@@ -115,7 +115,10 @@ public final class BatchEngineConfig {
                 String outTag = OUT_PREFIX + index;
                 String inTag = IN_PREFIX + index;
                 try {
-                    outbounds.put(EngineConfig.outbound(member.profile, outTag));
+                    JSONArray produced = EngineConfig.outbounds(member.profile, outTag);
+                    for (int i = 0; i < produced.length(); i++) {
+                        outbounds.put(produced.getJSONObject(i));
+                    }
                     inbounds.put(new JSONObject()
                             .put("type", "http")
                             .put("tag", inTag)

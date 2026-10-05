@@ -93,7 +93,7 @@ public final class ClashParser {
                 case "vless":allowed+=" uuid encryption flow reality-opts";break;
                 case "vmess":allowed+=" uuid cipher encryption alterId alterid";break;
                 case "trojan":allowed+=" password flow reality-opts";break;
-                case "shadowsocks":allowed+=" password cipher encryption";break;
+                case "shadowsocks":allowed+=" password cipher encryption plugin plugin-opts";break;
                 case "socks":allowed+=" username password version";break;
                 case "http":allowed+=" username password";break;
                 case "hysteria2":allowed+=" password obfs obfs-password";break;
@@ -124,6 +124,18 @@ public final class ClashParser {
         p.alpn=list(o,"alpn","");
         p.flow=text(o,"flow","");
         if(o.has("udp")&&!bool(o,"udp",true)) throw new Invalid("UDP_DISABLE_NOT_MAPPED");
+        if(o.has("plugin")||o.has("plugin-opts")) {
+            // Only the ShadowTLS plugin is mapped; obfs and friends would import as a
+            // node that can never connect, so they are rejected instead.
+            String plugin=text(o,"plugin","").trim().toLowerCase(Locale.US);
+            if(!plugin.equals("shadow-tls")&&!plugin.equals("shadowtls")) throw new Invalid("PLUGIN_NOT_MAPPED");
+            JSONObject opts=object(o,"plugin-opts");keys(opts,"host password version");
+            p.protocol="shadowtls";
+            p.quicKey=required(opts,"password");
+            p.mode=String.valueOf(integer(opts,"version",3,1,3));
+            p.sni=text(opts,"host",p.sni);p.host=p.sni;
+            p.network="tcp";p.security="tls";
+        }
         if(o.has("reality-opts")) {
             if(!bool(o,"tls",true)) throw new Invalid("REALITY_TLS_MISMATCH");
             JSONObject r=object(o,"reality-opts");keys(r,"public-key short-id");

@@ -84,6 +84,13 @@ final class ConfigFields {
                 if (!p.uuid.matches("(?i)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")) throw new Invalid("INVALID_UUID");
                 if ("tuic".equals(p.protocol) && p.quicKey.isEmpty()) throw new Invalid("MISSING_PASSWORD");
                 break;
+            case "shadowtls":
+                // A ShadowTLS node is a Shadowsocks node behind a TLS hop: both the
+                // Shadowsocks secret and the ShadowTLS secret must be present.
+                if(p.uuid.isEmpty()) throw new Invalid("MISSING_PASSWORD");
+                if(p.quicKey.isEmpty()) throw new Invalid("MISSING_SHADOWTLS_PASSWORD");
+                if(p.encryption.isEmpty()||"none".equals(p.encryption)) throw new Invalid("MISSING_CIPHER");
+                break;
             case "trojan": case "shadowsocks": case "hysteria2":
             case "hysteria": case "anytls": case "snell":
                 if(p.uuid.isEmpty()) throw new Invalid("MISSING_PASSWORD");
