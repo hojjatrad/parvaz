@@ -204,14 +204,19 @@ public final class CoreManager {
      */
     private boolean startInternal(Context context,Profile profile,int tunFd,Runnable failure,long tunSetupMs,java.util.function.BooleanSupplier current) {
         if(!current.getAsBoolean())return false;
-        java.util.List<String> cores=CoreSelection.order(new Prefs(context).f343a,profile);
+        java.util.List<String> cores;
+        // Reading the choice must never be the thing that fails a start: an unusable
+        // context or store falls back to the protocol's natural engine, exactly as before.
+        try{cores=CoreSelection.order(new Prefs(context).f343a,profile);}
+        catch(RuntimeException unavailable){cores=java.util.Collections.<String>emptyList();}
         if(cores.isEmpty())cores=java.util.Collections.singletonList(CoreSelection.natural(profile));
         RuntimeException lastFailure=null;
         for(int attempt=0;attempt<cores.size();attempt++){
             String core=cores.get(attempt);
             try{
                 boolean started=startOnCore(context,profile,tunFd,failure,tunSetupMs,current,core);
-                if(started)CoreSelection.remember(new Prefs(context).f343a,profile,core);
+                if(started){try{CoreSelection.remember(new Prefs(context).f343a,profile,core);}
+                    catch(RuntimeException ignored){/* The tunnel is up; the memory is a hint. */}}
                 return started;
             }catch(RuntimeException error){
                 lastFailure=error;
