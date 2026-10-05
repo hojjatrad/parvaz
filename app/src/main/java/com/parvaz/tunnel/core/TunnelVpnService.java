@@ -1270,6 +1270,47 @@ public class TunnelVpnService extends VpnService {
         this.handler.post(new l(next, getString(R.string.state_switching)));
     }
 
+    /**
+     * Swiping the app away must not quietly end a connection the user asked for.
+     *
+     * <p>Aggressive vendor builds (MIUI, EMUI and friends) kill the whole process when the
+     * task is removed, and a plain START_STICKY service often does not come back. If the
+     * tunnel is up when that happens, re-issue our own START intent so the system restarts
+     * the foreground service immediately. If the user had already stopped the tunnel, this
+     * does nothing: nothing is resurrected behind their back.
+     */
+    @Override // android.app.Service
+    public void onTaskRemoved(Intent rootIntent) {
+        try {
+            if (serviceRunning) {
+                Intent restart = new Intent(getApplicationContext(), TunnelVpnService.class)
+                        .setAction("com.parvaz.tunnel.START")
+                        .putExtra("automatic_network_rule", true);
+                int flags = android.app.PendingIntent.FLAG_ONE_SHOT
+                        | android.app.PendingIntent.FLAG_IMMUTABLE;
+                // A plain background service start is refused on modern Android; the
+                // restart must be requested as the foreground service it really is.
+                android.app.PendingIntent pending = Build.VERSION.SDK_INT >= 26
+                        ? android.app.PendingIntent.getForegroundService(
+                                getApplicationContext(), 1, restart, flags)
+                        : android.app.PendingIntent.getService(
+                                getApplicationContext(), 1, restart, flags);
+                android.app.AlarmManager alarms =
+                        (android.app.AlarmManager) getSystemService(ALARM_SERVICE);
+                if (alarms != null && pending != null) {
+                    // One second later: long enough for the task teardown to finish,
+                    // short enough that the tunnel is back before traffic notices.
+                    alarms.set(android.app.AlarmManager.RTC_WAKEUP,
+                            System.currentTimeMillis() + 1000L, pending);
+                    LogBuffer.listener("task removed while connected; restart scheduled");
+                }
+            }
+        } catch (Throwable ignored) {
+            // A missing alarm manager must never crash the service teardown.
+        }
+        super.onTaskRemoved(rootIntent);
+    }
+
     @Override // android.app.Service
     public final int onStartCommand(Intent intent, int flags, int startId) {
         try{ProfileStore.recoverBeforeUse(this);}catch(RuntimeException unavailable){

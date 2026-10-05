@@ -517,4 +517,8 @@
     <string name="unpin_action">برداشتن ثابت بودن</string>
     <string name="ping_progress">پینگ %1$d از %2$d</string>
     <string name="ping_done_counts">پینگ تمام شد: %1$d از %2$d سرور پاسخ دادند</string>
+    <string name="battery_opt_title">اتصال را پایدار نگه دار</string>
+    <string name="battery_opt_body">اندروید برنامه‌های پس‌زمینه را محدود می‌کند و ممکن است تونل را قطع کند. پرواز را از بهینه‌سازی باتری مستثنا کنید تا اتصال باقی بماند.</string>
+    <string name="battery_opt_open">باز کردن تنظیمات</string>
+    <string name="battery_opt_later">بعداً</string>
 </resources>

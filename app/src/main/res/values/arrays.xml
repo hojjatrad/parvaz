@@ -3,6 +3,9 @@
     <string-array name="language_labels">
         <item>فارسی</item>
         <item>English</item>
+        <item>العربية</item>
+        <item>Русский</item>
+        <item>Türkçe</item>
     </string-array>
     <string-array name="log_labels">
         <item>none</item>

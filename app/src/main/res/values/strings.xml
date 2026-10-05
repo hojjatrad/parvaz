@@ -535,4 +535,8 @@ Tap + to paste a config link or add a subscription."</string>
     <string name="unpin_action">Remove the pin</string>
     <string name="ping_progress">Measured %1$d of %2$d</string>
     <string name="ping_done_counts">Ping finished: %1$d of %2$d servers answered</string>
+    <string name="battery_opt_title">Keep the connection alive</string>
+    <string name="battery_opt_body">Android restricts background apps and can tear the tunnel down. Exclude Parvaz from battery optimisation so the connection survives.</string>
+    <string name="battery_opt_open">Open settings</string>
+    <string name="battery_opt_later">Later</string>
 </resources>

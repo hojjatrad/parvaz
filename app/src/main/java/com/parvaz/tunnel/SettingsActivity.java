@@ -56,7 +56,7 @@ public class SettingsActivity extends com.parvaz.tunnel.LockedActivity {
     public static final String[] g = {"AsIs", "IPIfNonMatch", "IPOnDemand"};
 
     /* renamed from: G */
-    public static final String[] f6158h = {"fa", "en"};
+    public static final String[] f6158h = {"fa", "en", "ar", "ru", "tr"};
 
     /* renamed from: H */
     public static final int[] f6159i = {0, 6, 12, 24};

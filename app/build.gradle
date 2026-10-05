@@ -15,7 +15,7 @@ android {
         applicationId "com.parvaz.tunnel"
         minSdk 24
         targetSdk 34
-        resourceConfigurations += ['en', 'fa'] // The two languages actually offered by Settings.
+        resourceConfigurations += ['en', 'fa', 'ar', 'ru', 'tr'] // The languages offered by Settings; ar/ru/tr cover the main screens and fall back to English elsewhere.
         versionCode 49
         versionName "1.33.0"
         resValue "string", "bundled_core_version", new groovy.json.JsonSlurper().parse(rootProject.file('tools/release/core-lock.json')).tag

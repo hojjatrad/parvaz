@@ -62,7 +62,10 @@ public final class EngineConfig {
    // through it with `detour`. Both halves are produced by outbounds(...) below.
    outbound.remove("tls");
    outbound.put("type","shadowsocks").put("method",profile.encryption.isEmpty()?"aes-128-gcm":profile.encryption)
-    .put("password",profile.uuid).put("detour",detourTag(tag)).remove("server").remove("server_port");
+    .put("password",profile.uuid).put("detour",detourTag(tag));
+   // The address belongs to the ShadowTLS hop; the dialler must not repeat it.
+   outbound.remove("server");
+   outbound.remove("server_port");
   }else if(protocol.equals("snell")){
    // Snell carries its own obfuscation and has no TLS layer of its own.
    outbound.remove("tls");

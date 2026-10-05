@@ -1918,6 +1918,53 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
         ContextCompat.startForegroundService(this, intent);
         this.state = 1;
         renderState();
+        maybeOfferBatteryExemption();
+    }
+
+    /**
+     * Offers, exactly once, to exclude the app from battery optimisation.
+     *
+     * <p>A doze-restricted app is the most common reason a tunnel dies while the screen is
+     * off, and no amount of foreground-service bookkeeping fixes it from inside. The prompt
+     * only appears the first time the user connects while still restricted, it is dismissible,
+     * and it opens the standard system screen rather than asking for a special permission.
+     */
+    public final void maybeOfferBatteryExemption() {
+        try {
+            final Prefs prefs = this.L;
+            if (prefs == null || android.os.Build.VERSION.SDK_INT < 23) {
+                return;
+            }
+            if (prefs.f343a.getBoolean("battery_opt_asked", false)) {
+                return;
+            }
+            android.os.PowerManager power =
+                    (android.os.PowerManager) getSystemService(POWER_SERVICE);
+            if (power == null || power.isIgnoringBatteryOptimizations(getPackageName())) {
+                return;
+            }
+            prefs.f343a.edit().putBoolean("battery_opt_asked", true).apply();
+            SecureDialogBuilder dialog = new SecureDialogBuilder(this);
+            dialog.setTitle(R.string.battery_opt_title);
+            dialog.setMessage(R.string.battery_opt_body);
+            dialog.setNegativeButton(R.string.battery_opt_later, null);
+            dialog.setPositiveButton(R.string.battery_opt_open,
+                    new android.content.DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(android.content.DialogInterface d, int which) {
+                            try {
+                                MainActivity.this.startActivity(new Intent(
+                                        android.provider.Settings
+                                                .ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS));
+                            } catch (Throwable missing) {
+                                // Some builds hide the screen; the connection still works.
+                            }
+                        }
+                    });
+            dialog.show();
+        } catch (Throwable ignored) {
+            // Never let an advisory prompt interfere with connecting.
+        }
     }
 
     /** Records the pre-connect public IP in prefs, off the UI thread. */
