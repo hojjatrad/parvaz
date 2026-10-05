@@ -2,6 +2,7 @@ package com.parvaz.tunnel.core;
 
 import android.content.Context;
 
+import com.parvaz.tunnel.config.BatchEngineConfig;
 import com.parvaz.tunnel.config.EngineConfig;
 import com.parvaz.tunnel.config.FullConfig;
 import com.parvaz.tunnel.config.XrayConfigBuilder;
@@ -55,6 +56,9 @@ public final class BatchLatency {
     static final int PARALLEL = 6;
     /** Parallel per-profile fallback probes; bounded by the native admission gate anyway. */
     static final int FALLBACK_PARALLEL = 3;
+    /** Profiles per shared external engine. Smaller than the Xray group: one child process
+     *  carries them all, and a smaller blast radius keeps one bad config cheap. */
+    static final int ENGINE_GROUP = 8;
 
     private BatchLatency() {
     }
@@ -77,6 +81,7 @@ public final class BatchLatency {
         Prefs prefs = new Prefs(app);
         String chainId = prefs.f343a.getString("chain_profile", "");
         List<Profile> shared = new ArrayList<>();
+        List<Profile> engineShared = new ArrayList<>();
         List<Profile> perProfile = new ArrayList<>();
         for (Profile profile : profiles) {
             if (profile == null) {
@@ -84,6 +89,8 @@ public final class BatchLatency {
             }
             if (shareable(profile, chainId)) {
                 shared.add(profile);
+            } else if (engineShareable(profile, chainId)) {
+                engineShared.add(profile);
             } else {
                 perProfile.add(profile);
             }
@@ -94,6 +101,14 @@ public final class BatchLatency {
             }
             List<Profile> group = shared.subList(from, Math.min(shared.size(), from + GROUP));
             perProfile.addAll(runGroup(app, prefs, group, url, strictTarget, sink));
+        }
+        for (int from = 0; from < engineShared.size(); from += ENGINE_GROUP) {
+            if (sink.cancelled()) {
+                return;
+            }
+            List<Profile> group = engineShared.subList(from,
+                    Math.min(engineShared.size(), from + ENGINE_GROUP));
+            perProfile.addAll(runEngineGroup(app, group, url, strictTarget, sink));
         }
         runPerProfile(app, perProfile, url, strictTarget, sink);
     }
@@ -115,6 +130,77 @@ public final class BatchLatency {
         // The live profile is measured through its existing pinned listener, never by a
         // second engine instance started next to the running tunnel.
         return CoreManager.b().liveProbe(profile) == null;
+    }
+
+    /** True when this profile is one external-engine outbound that can share a child engine. */
+    static boolean engineShareable(Profile profile, String chainId) {
+        if (!BatchEngineConfig.shareable(profile)) {
+            return false;
+        }
+        if (chainId != null && !chainId.isEmpty() && !chainId.equals(profile.id)) {
+            return false; // A chain needs the full per-profile configuration.
+        }
+        // The live profile keeps its own pinned listener; never start a second engine
+        // beside the running tunnel for it.
+        return CoreManager.b().liveProbe(profile) == null;
+    }
+
+    /**
+     * Measures a group of external-engine profiles behind ONE sing-box child process.
+     *
+     * @return the profiles of this group that still need the per-profile path.
+     */
+    private static List<Profile> runEngineGroup(Context app, List<Profile> group, String url,
+                                                boolean strictTarget, Sink sink) {
+        List<Profile> leftovers = new ArrayList<>();
+        Map<String, Profile> byId = new LinkedHashMap<>();
+        List<BatchEngineConfig.Member> members = new ArrayList<>();
+        for (Profile profile : group) {
+            if (byId.containsKey(profile.id)) {
+                continue;
+            }
+            try {
+                members.add(new BatchEngineConfig.Member(profile, freePort()));
+                byId.put(profile.id, profile);
+            } catch (Throwable unusable) {
+                leftovers.add(profile);
+            }
+        }
+        if (members.isEmpty()) {
+            return leftovers;
+        }
+        BatchEngineConfig.Plan plan = BatchEngineConfig.compose(members);
+        for (String rejected : plan.rejected) {
+            Profile profile = byId.remove(rejected);
+            if (profile != null) {
+                leftovers.add(profile);
+            }
+        }
+        if (plan.isEmpty()) {
+            return leftovers;
+        }
+        if (sink.cancelled()) {
+            return leftovers;
+        }
+        ExternalCore engine = null;
+        try {
+            engine = ExternalCore.startComposed(app, plan.config,
+                    plan.ports.values().iterator().next());
+            probePorts(plan.ports, url, strictTarget, sink);
+            return leftovers;
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            return leftovers;
+        } catch (Throwable failure) {
+            // One shared engine failing must not fail every row in it: re-measure them
+            // individually, where a single bad configuration only costs itself.
+            leftovers.addAll(byId.values());
+            return leftovers;
+        } finally {
+            if (engine != null) {
+                engine.close();
+            }
+        }
     }
 
     /** @return the profiles of this group that still need the per-profile path. */
@@ -186,7 +272,7 @@ public final class BatchLatency {
                 leftovers.addAll(byId.values());
                 return leftovers;
             }
-            probeAll(plan, byId, url, strictTarget, sink);
+            probePorts(plan.ports, url, strictTarget, sink);
             return leftovers;
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
@@ -209,9 +295,10 @@ public final class BatchLatency {
         }
     }
 
-    private static void probeAll(BatchProbeConfig.Plan plan, Map<String, Profile> byId,
-                                 String url, boolean strictTarget, Sink sink) {
-        ExecutorService pool = Executors.newFixedThreadPool(Math.min(PARALLEL, plan.ports.size()),
+    /** Measures every (profile, loopback port) pair in parallel through the shared engine. */
+    private static void probePorts(Map<String, Integer> ports, String url,
+                                   boolean strictTarget, Sink sink) {
+        ExecutorService pool = Executors.newFixedThreadPool(Math.min(PARALLEL, ports.size()),
                 runnable -> {
                     Thread thread = new Thread(runnable, "Parvaz batch latency");
                     thread.setDaemon(true);
@@ -219,7 +306,7 @@ public final class BatchLatency {
                 });
         List<Future<?>> running = new ArrayList<>();
         try {
-            for (Map.Entry<String, Integer> entry : plan.ports.entrySet()) {
+            for (Map.Entry<String, Integer> entry : ports.entrySet()) {
                 String id = entry.getKey();
                 int port = entry.getValue();
                 running.add(pool.submit(() -> {

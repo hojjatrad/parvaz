@@ -9,7 +9,11 @@ import java.util.*;
  * Ambiguous full profiles fail closed for readiness, not for user traffic. */
 public final class ReadinessConfig {
  private ReadinessConfig(){}
- private static boolean remote(String type){return Arrays.asList("vmess","vless","trojan","shadowsocks","socks","http","wireguard","hysteria2","tuic").contains(type);}
+ /** Outbound kinds that reach the remote server directly. Xray outbound protocol
+  * names and sing-box outbound types share this list; a name present in only one
+  * engine is simply never seen by the other. Every engine protocol must appear
+  * here or its tunnel can never be pinned, measured or shown as verified. */
+ private static boolean remote(String type){return Arrays.asList("vmess","vless","trojan","shadowsocks","socks","http","wireguard","hysteria2","tuic","hysteria","anytls","snell").contains(type);}
  public static final class Plan {
   public final String config;public final boolean pinned;
   Plan(String config,boolean pinned){this.config=config;this.pinned=pinned;}

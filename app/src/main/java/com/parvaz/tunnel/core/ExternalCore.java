@@ -48,6 +48,43 @@ public final class ExternalCore implements AutoCloseable {
    Thread monitor=new Thread(()->{try{session.process.waitFor();if(!session.closed.get()){session.close();if(failure!=null)failure.run();}}catch(InterruptedException ignored){Thread.currentThread().interrupt();}},"parvaz-engine-exit");monitor.setDaemon(true);monitor.start();return session;
   }catch(Exception e){session.close();throw e;}
  }
+/**
+  * Starts the sing-box engine on an already composed, multi-inbound configuration.
+  *
+  * <p>Used only by the shared measurement batch: one child process carries one loopback
+  * HTTP inbound per profile, so a list of external-engine servers costs one engine start
+  * instead of one per row. Readiness is a plain loopback connect to the first inbound,
+  * because these inbounds carry no credentials - they exist for the lifetime of the batch,
+  * listen on 127.0.0.1 only, and are torn down with the process.
+  *
+  * @param readyPort one of the composed inbound ports, used to detect startup.
+  */
+ public static ExternalCore startComposed(Context context,String configText,int readyPort)throws Exception {
+  ExternalCore session=new ExternalCore();
+  try{
+   if(!CAPACITY.tryAcquire(30,TimeUnit.SECONDS))throw new IOException("Engine capacity reached");session.permit=true;
+   session.port=readyPort;session.password=UUID.randomUUID().toString();
+   session.directory=new File(context.getNoBackupFilesDir(),"engine-session-"+UUID.randomUUID());if(!session.directory.mkdir())throw new IOException("Private runtime unavailable");
+   File executable=new File(context.getApplicationInfo().nativeLibraryDir,"libsingbox.so");if(!executable.isFile()||!executable.canExecute())throw new IOException("Bundled engine unavailable");
+   ProcessBuilder builder=new ProcessBuilder(Arrays.asList(executable.toString(),"run","-D",session.directory.toString(),"-c","stdin")).directory(session.directory).redirectErrorStream(true);
+   builder.environment().keySet().removeIf(k->k.startsWith("CLASH_")||k.startsWith("SING_BOX_")||k.startsWith("SSL_CERT_"));builder.environment().put("GOMAXPROCS","2");
+   configureSystemTrust(builder,session.directory);
+   LAUNCHER.submit(()->{session.launch(builder);return null;}).get();
+   Thread drain=new Thread(()->{try(InputStream in=session.process.getInputStream()){byte[] buffer=new byte[4096];while(in.read(buffer)!=-1){/* Private engine logs are deliberately not published. */}}catch(IOException ignored){}},"parvaz-engine-output");drain.setDaemon(true);drain.start();
+   try(OutputStream input=session.process.getOutputStream()){input.write(configText.getBytes(StandardCharsets.UTF_8));}
+   long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(20);boolean ready=false;
+   while(System.nanoTime()<deadline){if(!session.alive())throw new IOException("Native configuration rejected (exit "+session.process.exitValue()+")");
+    if(session.listening()){ready=true;break;}Thread.sleep(100);
+   }
+   if(!ready||!session.alive())throw new IOException("Native engine startup timeout");
+   return session;
+  }catch(Exception e){session.close();throw e;}
+ }
+ /** Loopback reachability of the composed inbound; no credentials are exchanged. */
+ private boolean listening(){
+  try(Socket probe=new Socket()){probe.connect(new InetSocketAddress("127.0.0.1",port),250);return true;}
+  catch(IOException notYet){return false;}
+ }
  // Coordinate an interrupted caller's close() with a queued/in-flight launch:
  // no child may be created after session cleanup, and a completed fork is owned
  // by this session even if the caller never receives its Future result.

@@ -20,7 +20,7 @@ public class PublishedUpgradeTest {
  @Test public void updateButtonInstallsPermanentCandidateAndKeepsProfile()throws Exception{
   device=UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());device.wakeUp();device.pressHome();
   String priorCode=InstrumentationRegistry.getArguments().getString("priorCode", "39");
-  assertTrue("Reviewed prior required", priorCode.equals("39") || priorCode.equals("41") || priorCode.equals("42") || priorCode.equals("43") || priorCode.equals("44") || priorCode.equals("45") || priorCode.equals("46"));
+  assertTrue("Reviewed prior required", priorCode.equals("39") || priorCode.equals("41") || priorCode.equals("42") || priorCode.equals("43") || priorCode.equals("44") || priorCode.equals("45") || priorCode.equals("46") || priorCode.equals("47"));
   assertTrue(device.executeShellCommand("dumpsys package "+APP).contains("versionCode="+priorCode+" "));
   device.executeShellCommand("am start -W -a android.intent.action.VIEW -d vless://11111111-1111-4111-8111-111111111111@192.0.2.1:443#UPGRADE_FIXTURE -n "+APP+"/.MainActivity");
   waitFor(By.res("android","button1"),30000).click();
