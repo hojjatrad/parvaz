@@ -16,7 +16,7 @@ public final class NetworkAutomation {
  }
  private static Runnable pending;
  private static synchronized void schedule(Context c){if(pending!=null)MAIN.removeCallbacks(pending);pending=()->{synchronized(NetworkAutomation.class){pending=null;}evaluate(c);};MAIN.postDelayed(pending,1200);}
- static String key(Context c){try{
+ public static String key(Context c){try{
   ConnectivityManager cm=(ConnectivityManager)c.getSystemService(Context.CONNECTIVITY_SERVICE);if(cm==null)return "";
   Network n=cm.getActiveNetwork();NetworkCapabilities caps=n==null?null:cm.getNetworkCapabilities(n);
   if(caps!=null&&caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)){

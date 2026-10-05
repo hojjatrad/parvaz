@@ -67,12 +67,26 @@ public class ParvazWidget extends AppWidgetProvider {
         Intent intent = new Intent(context, (Class<?>) ParvazWidget.class);
         intent.setAction("com.parvaz.tunnel.WIDGET_TOGGLE");
         remoteViews.setOnClickPendingIntent(R.id.widget_root, PendingIntent.getBroadcast(context, 0, intent, (android.app.PendingIntent.FLAG_UPDATE_CURRENT | android.app.PendingIntent.FLAG_IMMUTABLE)));
+        // Second action: measure and connect to the fastest server, instead of reconnecting
+        // to whatever happens to be selected. The widget itself never probes; it hands the
+        // request to the UI, which owns the measurement and the VPN consent.
+        Intent best = new Intent(context, (Class<?>) ParvazWidget.class);
+        best.setAction("com.parvaz.tunnel.WIDGET_BEST");
+        remoteViews.setOnClickPendingIntent(R.id.widget_best, PendingIntent.getBroadcast(context, 1, best, (android.app.PendingIntent.FLAG_UPDATE_CURRENT | android.app.PendingIntent.FLAG_IMMUTABLE)));
         appWidgetManager.updateAppWidget(i, remoteViews);
     }
 
     @Override // android.appwidget.AppWidgetProvider, android.content.BroadcastReceiver
     public final void onReceive(Context context, Intent intent) {
         super.onReceive(context, intent);
+        if (intent != null && "com.parvaz.tunnel.WIDGET_BEST".equals(intent.getAction())) {
+            Intent best = new Intent(context, (Class<?>) MainActivity.class);
+            best.setFlags((android.content.Intent.FLAG_ACTIVITY_NEW_TASK | android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP));
+            best.putExtra("com.parvaz.tunnel.BEST_SERVER", true);
+            context.startActivity(best);
+            a(context);
+            return;
+        }
         if (intent != null && "com.parvaz.tunnel.WIDGET_TOGGLE".equals(intent.getAction())) {
             if (TunnelVpnService.serviceRunning) {
                 Intent intent2 = new Intent(context, (Class<?>) TunnelVpnService.class);

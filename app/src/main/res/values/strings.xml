@@ -23,6 +23,7 @@
 
 
     <string name="best_server">Best server</string>
+    <string name="widget_best">BEST</string>
     <string name="best_server_none">Run a ping test first</string>
 
     <string name="bypass_lan">Bypass LAN addresses</string>

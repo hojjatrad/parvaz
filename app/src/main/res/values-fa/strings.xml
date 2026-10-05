@@ -23,6 +23,7 @@
 
 
     <string name="best_server">بهترین سرور</string>
+    <string name="widget_best">بهترین</string>
     <string name="best_server_none">ابتدا تست پینگ بگیرید</string>
 
     <string name="bypass_lan">عبور مستقیم آدرس‌های محلی</string>

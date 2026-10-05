@@ -1359,6 +1359,20 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
             launchIntent.setAction(null);
             launchIntent.putExtra("com.parvaz.tunnel.AUTO_CONNECT", true);
         }
+        Intent bestIntent = getIntent();
+        if (!SafeMode.sTrippedThisRun && bestIntent != null
+                && bestIntent.getBooleanExtra("com.parvaz.tunnel.BEST_SERVER", false)) {
+            // Widget shortcut: measure what is needed and connect to the fastest server.
+            bestIntent.removeExtra("com.parvaz.tunnel.BEST_SERVER");
+            this.launchAutomationDone = true;
+            this.connectButton.post(new Runnable() {
+                @Override
+                public void run() {
+                    autoBestConnect(true);
+                }
+            });
+            return;
+        }
         if (!SafeMode.sTrippedThisRun && !getApplicationContext().getSharedPreferences("parvaz_safemode", 0).getBoolean("safe_active", false) && (intent = getIntent()) != null && intent.getBooleanExtra("com.parvaz.tunnel.AUTO_CONNECT", false)) {
             intent.removeExtra("com.parvaz.tunnel.AUTO_CONNECT");
             if (TunnelVpnService.serviceRunning) {
@@ -1412,6 +1426,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
                 for(Profile profile:b0.activeProfiles())if(profile.ping>0)measured++;
                 // Fresh numbers are useless in a stale order: re-apply the chosen sort so the
                 // fastest row is on top the moment the run ends.
+                rememberMeasurementScope();
                 resort();
                 Snackbar.make(connectButton,getString(R.string.ping_done_counts,measured,total),Snackbar.LENGTH_LONG).show();
             }
@@ -2228,6 +2243,35 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
     }
 
 
+
+    /**
+     * True when every candidate already carries a stored measurement that is young enough
+     * and was taken on this very network, so automatic mode can decide without probing.
+     * This is what makes "open the app and connect" instant on a second launch.
+     */
+    public final boolean cacheCoversEveryRow(java.util.List<Profile> profiles) {
+        try {
+            boolean changed = com.parvaz.tunnel.core.LatencyCache.scopeChanged(
+                    this.L.f343a.getString(com.parvaz.tunnel.core.LatencyCache.KEY_SCOPE, ""),
+                    com.parvaz.tunnel.core.NetworkAutomation.key(this));
+            return com.parvaz.tunnel.core.LatencyCache.complete(profiles,
+                    System.currentTimeMillis(),
+                    com.parvaz.tunnel.core.LatencyCache.DEFAULT_TTL_MS, changed);
+        } catch (Throwable unavailable) {
+            return false;
+        }
+    }
+
+    /** Records which network the numbers just measured belong to. */
+    public final void rememberMeasurementScope() {
+        try {
+            this.L.f343a.edit().putString(com.parvaz.tunnel.core.LatencyCache.KEY_SCOPE,
+                    com.parvaz.tunnel.core.NetworkAutomation.key(this)).apply();
+        } catch (Throwable ignored) {
+            // Without a scope the cache simply counts as invalid next time.
+        }
+    }
+
     /** Re-applies the saved sort order without asking the user again. */
     public final void resort() {
         int mode = this.L.f343a.getInt("sort_mode", 0);
@@ -2365,7 +2409,8 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
             showAddDialog();
             return;
         }
-        if (!com.parvaz.tunnel.core.BestServer.needsMeasurement(profiles)) {
+        if (!com.parvaz.tunnel.core.BestServer.needsMeasurement(profiles)
+                || cacheCoversEveryRow(profiles)) {
             Profile ready = com.parvaz.tunnel.core.BestServer.choose(profiles, this.L.getFavorites(),
                     new com.parvaz.tunnel.core.ServerMemory(this), getApplicationContext());
             if (ready != null) {
@@ -2394,6 +2439,7 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
                 if (cancelled) {
                     return;
                 }
+                rememberMeasurementScope();
                 resort();
                 Profile best = com.parvaz.tunnel.core.BestServer.choose(candidateProfiles(),
                         L.getFavorites(), new com.parvaz.tunnel.core.ServerMemory(MainActivity.this),
