@@ -419,6 +419,8 @@ public final class LinkParser {
         profile.publicKey = q(uri, "pbk", "");
         profile.shortId = q(uri, "sid", "");
         profile.spiderX = q(uri, "spx", "");
+        // TLS Encrypted Client Hello; the standard share-link name is "ech".
+        profile.ech = q(uri, "ech", "");
         profile.serviceName = q(uri, "serviceName", "");
         profile.headerType = q(uri, "headerType", "none");
         profile.seed = q(uri, "seed", "");

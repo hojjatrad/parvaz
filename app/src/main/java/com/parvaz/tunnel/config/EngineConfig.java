@@ -37,6 +37,9 @@ public final class EngineConfig {
   */
  public static JSONObject outbound(Profile profile,String tag)throws JSONException {
   String protocol=ProtocolNames.canonical(profile.protocol);
+  // Encrypted Client Hello has no faithful equivalent in this engine; dialling without it
+  // would send the plaintext SNI the profile explicitly asked to hide.
+  if(profile.ech!=null&&!profile.ech.isEmpty())throw new IllegalArgumentException("ECH requires the Xray engine");
   // Protocols Xray normally carries are delegated, so one server can be dialled by
   // either engine with identical settings (see SingBoxOutbound.capable).
   if(SingBoxOutbound.capable(profile))return SingBoxOutbound.build(profile,tag);

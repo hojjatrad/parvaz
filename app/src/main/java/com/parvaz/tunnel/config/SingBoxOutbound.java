@@ -57,6 +57,12 @@ public final class SingBoxOutbound {
                 && (!protocol.equals("vless") || blank(profile.publicKey))) {
             return false; // REALITY is a VLESS feature and needs the server's public key.
         }
+        if (!blank(profile.ech)) {
+            // sing-box 1.13 removed the legacy ECH outbound options, so the Encrypted
+            // Client Hello of this profile cannot be reproduced exactly. Dialling it
+            // without ECH would leak the very SNI the server asked us to hide.
+            return false;
+        }
         String network = or(profile.network, "tcp");
         if (!Arrays.asList("tcp", "ws", "grpc", "h2", "http", "httpupgrade").contains(network)) {
             return false; // mKCP, QUIC transport and XHTTP have no sing-box equivalent.

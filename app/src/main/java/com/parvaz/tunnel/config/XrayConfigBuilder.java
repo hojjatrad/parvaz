@@ -78,6 +78,12 @@ public final class XrayConfigBuilder {
                     tls.put("alpn", alpn);
                 }
             }
+            // Encrypted Client Hello. Xray treats a non-empty value as "enable ECH";
+            // it is either a base64 ECHConfigList or a DNS query spec, and it belongs
+            // directly under tlsSettings, never nested deeper.
+            if (profile.ech != null && !profile.ech.isEmpty()) {
+                tls.put("echConfigList", profile.ech);
+            }
             stream.put("tlsSettings", tls);
         } else if ("reality".equals(security)) {
             stream.put("security", "reality");

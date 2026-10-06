@@ -31,6 +31,14 @@ public class Profile {
     public String quicSecurity = "none";
     public String quicKey = "";
     public String mode = "";
+    /**
+     * TLS Encrypted Client Hello configuration (Xray `tlsSettings.echConfigList`).
+     *
+     * <p>Either a base64 ECHConfigList or a DNS query spec such as
+     * {@code udp://1.1.1.1}, {@code https://1.1.1.1/dns-query} or {@code domain+udp://1.1.1.1}.
+     * Empty means the server published no ECH and plain TLS is used, exactly as before.
+     */
+    public String ech = "";
     public boolean allowInsecure = false;
     public String subscriptionId = "";
     public String rawLink = "";
@@ -70,6 +78,7 @@ public class Profile {
         profile.quicSecurity = jSONObject.optString("quicSecurity", "none");
         profile.quicKey = jSONObject.optString("quicKey", "");
         profile.mode = jSONObject.optString("mode", "");
+        profile.ech = jSONObject.optString("ech", "");
         profile.allowInsecure = jSONObject.optBoolean("allowInsecure", false);
         profile.subscriptionId = jSONObject.optString("subscriptionId", "");
         profile.rawJson = jSONObject.optString("rawJson", "");
@@ -143,6 +152,7 @@ public class Profile {
         this.quicSecurity = safe(this.quicSecurity, "none");
         this.quicKey = safe(this.quicKey, "");
         this.mode = safe(this.mode, "");
+        this.ech = safe(this.ech, "");
         this.subscriptionId = safe(this.subscriptionId, "");
         this.rawLink = safe(this.rawLink, "");
         this.rawJson = safe(this.rawJson, "");
@@ -187,6 +197,9 @@ public class Profile {
         jSONObject.put("mode", this.mode);
         jSONObject.put("allowInsecure", this.allowInsecure);
         jSONObject.put("subscriptionId", this.subscriptionId);
+        if (!this.ech.isEmpty()) {
+            jSONObject.put("ech", this.ech);
+        }
         if (!this.rawJson.isEmpty()) {
             jSONObject.put("rawJson", this.rawJson);
         }

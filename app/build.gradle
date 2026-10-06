@@ -16,8 +16,8 @@ android {
         minSdk 24
         targetSdk 34
         resourceConfigurations += ['en', 'fa', 'ar', 'ru', 'tr'] // The languages offered by Settings; ar/ru/tr cover the main screens and fall back to English elsewhere.
-        versionCode 50
-        versionName "1.34.0"
+        versionCode 51
+        versionName "1.35.0"
         resValue "string", "bundled_core_version", new groovy.json.JsonSlurper().parse(rootProject.file('tools/release/core-lock.json')).tag
         resValue "string", "bundled_native_versions", new groovy.json.JsonSlurper().parse(rootProject.file('tools/native/engines-lock.json')).collect { it.name + ' ' + it.tag }.join(' • ')
         vectorDrawables.useSupportLibrary = true

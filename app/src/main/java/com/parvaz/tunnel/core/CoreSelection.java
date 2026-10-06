@@ -73,6 +73,11 @@ public final class CoreSelection {
         if (FullConfig.isFull(protocol)) {
             return false;
         }
+        if (profile.ech != null && !profile.ech.isEmpty()) {
+            // Encrypted Client Hello is an Xray-only capability in this build; see
+            // SingBoxOutbound.capable. Claiming otherwise would silently drop it.
+            return false;
+        }
         if (EngineConfig.external(protocol)) {
             return true;
         }
