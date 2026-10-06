@@ -131,6 +131,28 @@ public class ShadowTlsAndImportTest {
         assertEquals("3", p.mode);
     }
 
+    /**
+     * Real panels ship ShadowTLS nodes with `udp: false`, because the transport cannot
+     * carry UDP at all. That is an accurate description of the node, not an option the
+     * importer failed to map, so it must import instead of being rejected.
+     */
+    @Test
+    public void aShadowTlsClashNodeMayHonestlyDisableUdp() throws Exception {
+        List<Profile> profiles = ClashParser.parse("proxies:\n"
+                + "  - {name: n, type: ss, server: edge.invalid, port: 443,"
+                + " cipher: aes-128-gcm, password: ss-secret, udp: false, plugin: shadow-tls,"
+                + " plugin-opts: {host: www.bing.invalid, password: tls-secret, version: 3}}\n");
+        assertEquals(1, profiles.size());
+        assertEquals("shadowtls", profiles.get(0).protocol);
+
+        // A plain Shadowsocks node that disables UDP is still rejected, as before.
+        ImportResult plain = ClashParser.parseDetailed("proxies:\n"
+                + "  - {name: n, type: ss, server: edge.invalid, port: 8388,"
+                + " cipher: aes-128-gcm, password: pw, udp: false}\n");
+        assertTrue(plain.profiles.isEmpty());
+        assertEquals("[UDP_DISABLE_NOT_MAPPED #1]", plain.issues.toString());
+    }
+
     @Test
     public void singBoxFullConfigsNowImportHysteriaAnytlsAndSnell() throws Exception {
         List<Profile> profiles = SingBoxParser.parse("{\"outbounds\":["

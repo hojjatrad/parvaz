@@ -123,12 +123,15 @@ public final class ClashParser {
         if(o.has("fingerprint")) throw new Invalid("CERTIFICATE_PIN_NOT_MAPPED");
         p.alpn=list(o,"alpn","");
         p.flow=text(o,"flow","");
-        if(o.has("udp")&&!bool(o,"udp",true)) throw new Invalid("UDP_DISABLE_NOT_MAPPED");
+        String pluginName=text(o,"plugin","").trim().toLowerCase(Locale.US);
+        boolean shadowTls=pluginName.equals("shadow-tls")||pluginName.equals("shadowtls");
+        // ShadowTLS is a TCP-only transport wrapper, so `udp: false` is the honest
+        // description of such a node rather than an option we failed to map.
+        if(o.has("udp")&&!bool(o,"udp",true)&&!shadowTls) throw new Invalid("UDP_DISABLE_NOT_MAPPED");
         if(o.has("plugin")||o.has("plugin-opts")) {
             // Only the ShadowTLS plugin is mapped; obfs and friends would import as a
             // node that can never connect, so they are rejected instead.
-            String plugin=text(o,"plugin","").trim().toLowerCase(Locale.US);
-            if(!plugin.equals("shadow-tls")&&!plugin.equals("shadowtls")) throw new Invalid("PLUGIN_NOT_MAPPED");
+            if(!shadowTls) throw new Invalid("PLUGIN_NOT_MAPPED");
             JSONObject opts=object(o,"plugin-opts");keys(opts,"host password version");
             p.protocol="shadowtls";
             p.quicKey=required(opts,"password");
