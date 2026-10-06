@@ -521,4 +521,6 @@
     <string name="battery_opt_body">اندروید برنامه‌های پس‌زمینه را محدود می‌کند و ممکن است تونل را قطع کند. پرواز را از بهینه‌سازی باتری مستثنا کنید تا اتصال باقی بماند.</string>
     <string name="battery_opt_open">باز کردن تنظیمات</string>
     <string name="battery_opt_later">بعداً</string>
+    <string name="import_http_error">سرور اشتراک پاسخ %1$d داد. لینک منقضی یا اشتباه است، یا از این شبکه اجازهٔ دسترسی ندارد.</string>
+    <string name="import_failed_code">افزودن کامل نشد (%1$s).</string>
 </resources>

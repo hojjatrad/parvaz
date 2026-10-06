@@ -1169,8 +1169,14 @@ public class MainActivity extends com.parvaz.tunnel.LockedActivity {
                     +"\nSDK_"+android.os.Build.VERSION.SDK_INT+"; PARVAZ_RUNNING_"+com.parvaz.tunnel.core.TunnelVpnService.serviceRunning;
                 L.f343a.edit().putString("last_import_report",report).apply();
                 if(result.recognized>0)selectTab(1);
-                if(result.failed>0||result.recognized==0||result.parsed.rejected>0)
-                    Snackbar.make(findViewById(android.R.id.content),R.string.import_failed_short,Snackbar.LENGTH_SHORT).show();
+                if(result.failed>0||result.recognized==0||result.parsed.rejected>0){
+                    String cause=com.parvaz.tunnel.core.SmartImport.firstFailureCode(result);
+                    int status=com.parvaz.tunnel.core.SmartImport.httpStatusOf(cause);
+                    String message=status>0?getString(R.string.import_http_error,status)
+                        :cause!=null?getString(R.string.import_failed_code,cause)
+                        :getString(R.string.import_failed_short);
+                    Snackbar.make(findViewById(android.R.id.content),message,Snackbar.LENGTH_LONG).show();
+                }
                 else Snackbar.make(findViewById(android.R.id.content),R.string.import_done_short,Snackbar.LENGTH_SHORT).show();
             });
         },"parvaz-smart-import").start();

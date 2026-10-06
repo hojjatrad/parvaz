@@ -539,4 +539,6 @@ Tap + to paste a config link or add a subscription."</string>
     <string name="battery_opt_body">Android restricts background apps and can tear the tunnel down. Exclude Parvaz from battery optimisation so the connection survives.</string>
     <string name="battery_opt_open">Open settings</string>
     <string name="battery_opt_later">Later</string>
+    <string name="import_http_error">The subscription server answered %1$d. The link is expired, wrong, or not allowed from this network.</string>
+    <string name="import_failed_code">Import did not complete (%1$s).</string>
 </resources>

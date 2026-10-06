@@ -77,6 +77,15 @@ public class SmartImportAudit {
         check("Unlimited plan still carries actual usage",QuotaState.known(q)&&q.quotaUsed()==25&&QuotaState.percent(q.quotaUsed(),q.quotaTotal)==0);
         ProfileStore reload=new ProfileStore(s.context);
         check("Cleanup survives reload",reload.e().size()==s.store.e().size()&&reload.f().size()==s.store.f().size());
+        // A dead/expired subscription URL must name its real cause (the panel's HTTP
+        // status), not be reported as "nothing valid was found".
+        SmartImport.Result failing=SmartImport.run(s.store,s.prefs,"https://gone.invalid/sub/token",()->false,
+            url->{throw new SubscriptionHttpClient.FetchException(SubscriptionHttpClient.Error.HTTP_STATUS,404);});
+        String cause=SmartImport.firstFailureCode(failing);
+        check("Dead subscription reports its HTTP status","HTTP_STATUS_404".equals(cause));
+        check("HTTP status is readable for the message",SmartImport.httpStatusOf(cause)==404);
+        check("Parse codes are not mistaken for HTTP",SmartImport.httpStatusOf("NO_VALID_CONFIGURATIONS")==0);
+        check("A clean run has no failure cause",SmartImport.firstFailureCode(new SmartImport.Result())==null);
         System.out.println("SMART IMPORT TOTAL: "+count+" assertions passed.");
     }
 }

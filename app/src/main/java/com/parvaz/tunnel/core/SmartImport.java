@@ -19,6 +19,27 @@ public final class SmartImport {
         for(int i=0;i<Math.min(16,r.codes.size());i++)text.append("\n").append(r.codes.get(i));
         return text.toString();
     }
+    /**
+     * The first failure code of a run, or null when nothing failed.
+     *
+     * <p>The codes are fixed identifiers (never input or credentials), so they are safe to
+     * put in front of the user. "Nothing valid was found" is useless when the real answer
+     * is that the panel answered 404.
+     */
+    public static String firstFailureCode(Result r) {
+        for(String code:r.codes){
+            if(code==null||code.isEmpty())continue;
+            if(code.startsWith("STAGE_"))continue; // diagnostic detail, not a cause
+            return code;
+        }
+        return null;
+    }
+    /** The HTTP status inside a HTTP_STATUS_&lt;code&gt; failure, or 0 when it is not one. */
+    public static int httpStatusOf(String code) {
+        if(code==null||!code.startsWith("HTTP_STATUS_"))return 0;
+        try{return Integer.parseInt(code.substring("HTTP_STATUS_".length()));}
+        catch(NumberFormatException notANumber){return 0;}
+    }
     public static Result run(Context context,String text,BooleanSupplier cancelled) {
         return run(ProfileStore.f(context),context.getSharedPreferences("parvaz_prefs",0),text,cancelled,SubscriptionUpdater::a);
     }
