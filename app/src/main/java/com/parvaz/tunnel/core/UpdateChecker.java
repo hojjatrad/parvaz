@@ -30,6 +30,9 @@ public final class UpdateChecker {
     /** Public releases endpoint for the project repository. */
     private static final String RELEASES_API =
             "https://api.github.com/repos/hojjatrad/parvaz/releases/latest";
+    /** Checksum manifest of the latest release; a plain asset, so no API quota applies. */
+    private static final String RELEASES_SUMS =
+            "https://github.com/hojjatrad/parvaz/releases/latest/download/SHA256SUMS.txt";
 
     static final String SIGNING_SHA256 = "d1383b8f34da5d3299b13634de421487289d82c1bb47ec3bc7f20ae8d02fe500";
     private static final long MAX_APK_BYTES=128L*1024*1024;
@@ -69,6 +72,179 @@ public final class UpdateChecker {
      * @return the release when it is newer than the running build, otherwise null
      */
     public static Release check(Context context) throws Exception {
+        Exception apiFailure;
+        try {
+            return checkViaApi(context);
+        } catch (Exception failure) {
+            apiFailure = failure;
+        }
+        // GitHub's unauthenticated API allows 60 requests per hour per source address.
+        // Behind a shared VPN exit that budget is routinely spent by other users, and
+        // some networks block api.github.com outright while the release files stay
+        // reachable. The checksum manifest of the latest release is an ordinary release
+        // asset carrying the same facts, so it answers the same question without the API.
+        try {
+            return checkViaChecksums(context);
+        } catch (Exception fallbackFailure) {
+            throw new IllegalStateException(
+                    describe(apiFailure) + "; SUMS " + describe(fallbackFailure));
+        }
+    }
+
+    private static String describe(Exception failure) {
+        String message = failure.getMessage();
+        return message == null || message.isEmpty()
+                ? failure.getClass().getSimpleName() : message;
+    }
+
+    /**
+     * Reads the latest release's SHA256SUMS.txt and rebuilds the same metadata.
+     *
+     * <p>The digest comes from GitHub over TLS exactly as the API's digest does, the
+     * download URL is the deterministic release-asset path, and the signing certificate
+     * of the downloaded APK is still checked before anything is installed. Nothing about
+     * the verification is weakened; only the source of the version number changes.
+     */
+    private static Release checkViaChecksums(Context context) throws Exception {
+        String body = readText(RELEASES_SUMS, 256 * 1024);
+        Release release = fromChecksums(body, is64Bit());
+        if (release == null) {
+            return null;
+        }
+        // The manifest has no file sizes; ask the asset itself, then verify as usual.
+        release.size = contentLength(release.downloadUrl);
+        markChecked(context);
+        if (!release.valid()) {
+            return null;
+        }
+        return isNewer(release.version, currentVersion(context)) ? release : null;
+    }
+
+    /** Builds release metadata from a SHA256SUMS.txt body. Pure; unit tested. */
+    static Release fromChecksums(String body, boolean prefer64) {
+        if (body == null) {
+            return null;
+        }
+        String version = "", arm64Digest = "", universalDigest = "", universalName = "", arm64Name = "";
+        for (String rawLine : body.split("\\r?\\n")) {
+            String line = rawLine.trim();
+            int space = line.indexOf(' ');
+            if (space != 64) {
+                continue;
+            }
+            String digest = line.substring(0, 64).toLowerCase(Locale.ROOT);
+            String name = line.substring(space).trim();
+            if (!digest.matches("[0-9a-f]{64}") || !name.endsWith(".apk")) {
+                continue;
+            }
+            java.util.regex.Matcher m = java.util.regex.Pattern
+                    .compile("^Parvaz-([0-9]+(?:\\.[0-9]+){1,3})(-arm64)?\\.apk$")
+                    .matcher(name);
+            if (!m.matches()) {
+                continue;
+            }
+            if (!version.isEmpty() && !version.equals(m.group(1))) {
+                return null; // Mixed versions in one manifest: refuse to guess.
+            }
+            version = m.group(1);
+            if (m.group(2) != null) {
+                arm64Digest = digest;
+                arm64Name = name;
+            } else {
+                universalDigest = digest;
+                universalName = name;
+            }
+        }
+        if (version.isEmpty()) {
+            return null;
+        }
+        Release release = new Release();
+        release.version = version;
+        boolean useArm64 = prefer64 && !arm64Digest.isEmpty();
+        release.sha256 = useArm64 ? arm64Digest : universalDigest;
+        String name = useArm64 ? arm64Name : universalName;
+        if (release.sha256.isEmpty() || name.isEmpty()) {
+            return null;
+        }
+        release.downloadUrl = "https://github.com/hojjatrad/parvaz/releases/download/v"
+                + version + "/" + name;
+        return release;
+    }
+
+    /** Fetches a small text document over the app's current route. */
+    private static String readText(String url, int limit) throws Exception {
+        HttpURLConnection conn = null;
+        try {
+            conn = AppNetwork.open(new URL(url));
+            conn.setUseCaches(false);
+            conn.setRequestProperty("Cache-Control", "no-cache");
+            conn.setConnectTimeout(15000);
+            conn.setReadTimeout(15000);
+            conn.setRequestProperty("User-Agent", "Parvaz");
+            if (conn.getResponseCode() != 200) {
+                throw new IllegalStateException("HTTP " + conn.getResponseCode());
+            }
+            StringBuilder text = new StringBuilder();
+            InputStream in = conn.getInputStream();
+            try {
+                InputStreamReader reader = new InputStreamReader(in, "UTF-8");
+                char[] buf = new char[8192];
+                while (true) {
+                    int read = reader.read(buf);
+                    if (read <= 0) {
+                        break;
+                    }
+                    if (text.length() + read > limit) {
+                        throw new IllegalStateException("UPDATE_METADATA_TOO_LARGE");
+                    }
+                    text.append(buf, 0, read);
+                }
+            } finally {
+                closeQuietly(in);
+            }
+            return text.toString();
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.disconnect();
+                } catch (Exception ignored) {
+                    android.util.Log.w("Parvaz/UpdateChecker", "Exception ignored", ignored);
+                }
+            }
+        }
+    }
+
+    /** The published length of a release asset, used only as the download's expected size. */
+    private static long contentLength(String url) throws Exception {
+        HttpURLConnection conn = null;
+        try {
+            conn = AppNetwork.open(new URL(url));
+            conn.setRequestMethod("HEAD");
+            conn.setInstanceFollowRedirects(true);
+            conn.setConnectTimeout(15000);
+            conn.setReadTimeout(15000);
+            conn.setRequestProperty("User-Agent", "Parvaz");
+            int status = conn.getResponseCode();
+            if (status != 200) {
+                throw new IllegalStateException("HTTP " + status);
+            }
+            long length = conn.getContentLengthLong();
+            if (length <= 0) {
+                throw new IllegalStateException("UPDATE_SIZE_UNKNOWN");
+            }
+            return length;
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.disconnect();
+                } catch (Exception ignored) {
+                    android.util.Log.w("Parvaz/UpdateChecker", "Exception ignored", ignored);
+                }
+            }
+        }
+    }
+
+    private static Release checkViaApi(Context context) throws Exception {
         HttpURLConnection conn = null;
         try {
             conn = AppNetwork.open(new URL(RELEASES_API));

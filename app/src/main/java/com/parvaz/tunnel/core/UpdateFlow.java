@@ -176,8 +176,13 @@ public final class UpdateFlow {
         if(activity.isFinishing()||activity.isDestroyed())return;
         String report="Parvaz "+UpdateChecker.currentVersion(activity)+"; SDK_"+android.os.Build.VERSION.SDK_INT+"; "+failure;
         activity.getSharedPreferences("parvaz_update",0).edit().putString("last_error",report).apply();
+        // GitHub is unreachable on many networks unless the tunnel carries the request,
+        // and the app's own traffic only enters the tunnel while it is running. Say so
+        // instead of leaving the user with a bare error code.
+        String message=activity.getString(R.string.update_failed,report);
+        if(!TunnelVpnService.serviceRunning)message=message+"\n\n"+activity.getString(R.string.update_offline_hint);
         new SecureDialogBuilder(activity).setTitle(R.string.update_title)
-            .setMessage(activity.getString(R.string.update_failed,report))
+            .setMessage(message)
             .setPositiveButton(R.string.update_retry,(dialog,which)->retry.run())
             .setNeutralButton(R.string.update_official_page,(dialog,which)->{
                 try{activity.startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse("https://github.com/hojjatrad/parvaz/releases/latest")));}
